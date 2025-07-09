@@ -1,4 +1,3 @@
-# Use an official Python runtime as a parent image
 FROM python:3.8-slim-buster
 
 # Set the working directory in the container
@@ -14,5 +13,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY tools/ .
 
 # Specifies the entrypoint for the container.
-# This is the command that will be run when the container starts.
 ENTRYPOINT ["python", "/app/create_release_ticket_for_action.py"]
