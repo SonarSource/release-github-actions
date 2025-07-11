@@ -48,20 +48,6 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Set Action Ref
-      id: set_ref
-      shell: bash
-      run: echo "ref=${{ github.action_ref }}" >> $GITHUB_OUTPUT
-
-    - name: Checkout Action Repository
-      uses: actions/checkout@v4
-      with:
-        repository: SonarSource/release-github-actions
-        ref: ${{ steps.set_ref.outputs.ref }}
-        path: '.action-repo'
-        sparse-checkout: |
-          tools
-
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -69,13 +55,13 @@ runs:
 
     - name: Install dependencies
       shell: bash
-      run: pip install -r .action-repo/tools/requirements.txt
+      run: pip install -r ${{ github.action_path }}/requirements.txt
 
     - name: Run Python Script to Create Ticket
       id: run_python_script
       shell: bash
       run: |
-        TICKET_KEY=$(python .action-repo/tools/create_release_ticket.py \
+        TICKET_KEY=$(python ${{ github.action_path }}/create_release_ticket.py \
           --project-key="${{ inputs.project_key }}" \
           --project-name="${{ inputs.project_name }}" \
           --version="${{ inputs.version }}" \
