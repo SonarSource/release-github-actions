@@ -59,9 +59,9 @@ def get_jira_instance(use_sandbox=True):
         sys.exit(1)
 
 
-def get_jira_release_notes_info(jira_client, project_key, jira_server_url):
+def get_jira_release_notes_info(jira_client, project_key, jira_server_url, jira_release_name=None):
     """
-    Finds the latest unreleased version for a given project.
+    Finds a specific or the earliest unreleased version for a given project.
     """
     eprint(f"\nFetching versions for project '{project_key}'...")
     try:
@@ -73,28 +73,44 @@ def get_jira_release_notes_info(jira_client, project_key, jira_server_url):
             eprint(f"Error: Failed to fetch versions for project '{project_key}'. Status: {e.status_code}")
         sys.exit(1)
 
-    unreleased_versions = [v for v in versions if not v.released]
+    if jira_release_name:
+        eprint(f"Searching for specified release version: '{jira_release_name}'...")
+        found_versions = [v for v in versions if v.name == jira_release_name]
+        if not found_versions:
+            eprint(f"Error: Specified Jira release '{jira_release_name}' not found for project '{project_key}'.")
+            sys.exit(1)
 
-    if not unreleased_versions:
-        eprint(f"Error: No unreleased versions found for project '{project_key}'.")
-        eprint("Please ensure there is at least one unreleased version in Jira.")
-        sys.exit(1)
+        target_version = found_versions[0]
 
-    latest_unreleased_version = sorted(
-        unreleased_versions,
-        key=lambda v: int(v.id),
-        reverse=True
-    )[0]
+        if target_version.released:
+            eprint(f"Error: The specified version '{jira_release_name}' has already been released.")
+            eprint("Please provide an unreleased version or omit the 'jira_release' parameter.")
+            sys.exit(1)
+
+        eprint(f"✅ Found specified unreleased version: {target_version.name}")
+    else:
+        eprint("No specific release version provided. Searching for the earliest unreleased version...")
+        unreleased_versions = [v for v in versions if not v.released]
+
+        if not unreleased_versions:
+            eprint(f"Error: No unreleased versions found for project '{project_key}'.")
+            eprint("Please ensure there is at least one unreleased version in Jira.")
+            sys.exit(1)
+
+        earliest_unreleased_version = sorted(
+            unreleased_versions,
+            key=lambda v: int(v.id)
+        )[0]
+        target_version = earliest_unreleased_version
+        eprint(f"🚀 Earliest UNRELEASED version found: {target_version.name}")
 
     version_link = (
         f"{jira_server_url}/projects/{project_key}/"
-        f"versions/{latest_unreleased_version.id}/tab/release-report-all-issues"
+        f"versions/{target_version.id}/tab/release-report-all-issues"
     )
 
     ReleaseNotes = namedtuple("ReleaseNotes", "name url")
-    info = ReleaseNotes(latest_unreleased_version.name, version_link)
-
-    eprint(f"🚀 Latest UNRELEASED version found: {info.name}")
+    info = ReleaseNotes(target_version.name, version_link)
     eprint(f"   🔗 Direct Link: {info.url}")
 
     return info
@@ -145,12 +161,14 @@ def main():
     parser.add_argument("--documentation-status", default="N/A", help="Status of the documentation.")
     parser.add_argument("--rule-props-changed", default="No", choices=['Yes', 'No'],
                         help="Whether rule properties have changed.")
+    parser.add_argument("--jira-release", default="",
+                        help="The specific Jira release version to use. If omitted, the earliest unreleased version will be used.")
 
     args = parser.parse_args()
 
     jira, jira_server_url = get_jira_instance(args.use_sandbox)
 
-    release_notes_info = get_jira_release_notes_info(jira, args.project_key, jira_server_url)
+    release_notes_info = get_jira_release_notes_info(jira, args.project_key, jira_server_url, args.jira_release)
     ticket = create_release_ticket(jira, args, release_notes_info.url)
 
     eprint("\n" + "=" * 50)

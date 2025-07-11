@@ -39,6 +39,10 @@ inputs:
     description: 'Whether rule properties have changed'
     required: false
     default: 'No'
+  jira_release:
+    description: 'The specific Jira release version to use. If omitted, the earliest unreleased version will be used.'
+    required: false
+    default: ''
 
 outputs:
   ticket_key:
@@ -70,7 +74,8 @@ runs:
           --sq-compatibility="${{ inputs.sq_compatibility }}" \
           --use-sandbox="${{ inputs.use_sandbox }}" \
           --documentation-status="${{ inputs.documentation_status }}" \
-          --rule-props-changed="${{ inputs.rule_props_changed }}"
+          --rule-props-changed="${{ inputs.rule_props_changed }}" \
+          --jira-release="${{ inputs.jira_release }}"
         )
         echo "ticket_key=${TICKET_KEY}" >> $GITHUB_OUTPUT
       env:
