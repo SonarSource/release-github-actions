@@ -63,7 +63,7 @@ on:
         required: true
         default: '2025.3'
       jira_release:
-        description: 'Optional: Specify a Jira release version to use.'
+        description: 'Jira release version'
         required: false
 
 jobs:
