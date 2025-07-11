@@ -15,8 +15,8 @@ inputs:
   project_name:
     description: 'The display name of the project (e.g., SonarIaC)'
     required: true
-  new_version:
-    description: 'The new version being released (e.g., 11.44.2)'
+  version:
+    description: 'The version being released (e.g., 11.44.2)'
     required: true
   short_description:
     description: 'A short description for the release'
@@ -51,7 +51,7 @@ runs:
     - name: Checkout Action Repository
       uses: actions/checkout@v4
       with:
-        repository: ${{ github.action_repository }}
+        repository: SonarSource/release-github-actions
         ref: ${{ github.action_ref }}
         path: '.action-repo'
         sparse-checkout: |
@@ -69,14 +69,11 @@ runs:
     - name: Run Python Script to Create Ticket
       id: run_python_script
       shell: bash
-      # The python script prints the ticket key to stdout, which we capture.
-      # All inputs are passed as command-line arguments.
-      # The JIRA credentials are set as environment variables for the script to use.
       run: |
         TICKET_KEY=$(python .action-repo/tools/create_release_ticket.py \
           --project-key="${{ inputs.project_key }}" \
           --project-name="${{ inputs.project_name }}" \
-          --new-version="${{ inputs.new_version }}" \
+          --version="${{ inputs.version }}" \
           --short-description="${{ inputs.short_description }}" \
           --targeted-product="${{ inputs.targeted_product }}" \
           --sq-compatibility="${{ inputs.sq_compatibility }}" \

@@ -76,7 +76,7 @@ def create_release_ticket(jira_client, args, link_to_release_notes):
     ticket_details = {
         'project': 'REL',
         'issuetype': 'Ask for release',
-        'summary': f'{args.project_name} {args.new_version}',
+        'summary': f'{args.project_name} {args.version}',
         CUSTOM_FIELDS['SHORT_DESCRIPTION']: args.short_description,
         CUSTOM_FIELDS['TARGETED_PRODUCT']: {'value': args.targeted_product},
         CUSTOM_FIELDS['SQ_COMPATIBILITY']: args.sq_compatibility,
@@ -105,7 +105,7 @@ def main():
 
     parser.add_argument("--project-key", required=True, help="The key of the project (e.g., SONARIAC).")
     parser.add_argument("--project-name", required=True, help="The display name of the project (e.g., SonarIaC).")
-    parser.add_argument("--new-version", required=True, help="The new version being released (e.g., 11.44.2).")
+    parser.add_argument("--version", required=True, help="The version being released (e.g., 11.44.2).")
     parser.add_argument("--short-description", required=True, help="A short description for the release.")
     parser.add_argument("--targeted-product", required=True, help="The targeted product version (e.g., 11.0).")
     parser.add_argument("--sq-compatibility", required=True, help="SonarQube compatibility version (e.g., 2025.3).")
