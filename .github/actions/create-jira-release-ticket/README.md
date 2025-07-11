@@ -12,7 +12,7 @@ The following inputs can be configured for the action:
 |------------------------|--------------------------------------------------------|----------|---------|
 | `jira_user`            | The Jira user (email) for authentication.              | `true`   | `N/A`   |
 | `jira_token`           | The Jira API token for authentication.                 | `true`   | `N/A`   |
-| `project_key`          | The the project key (e.g., `SONARIAC`).                | `true`   | `N/A`   |
+| `project_key`          | The project key (e.g., `SONARIAC`).                    | `true`   | `N/A`   |
 | `project_name`         | The display name of the project (e.g., `SonarIaC`).    | `true`   | `N/A`   |
 | `version`              | The new version string being released (e.g., `1.2.3`). | `true`   | `N/A`   |
 | `short_description`    | A brief description of the release.                    | `true`   | `N/A`   |
