@@ -43,8 +43,8 @@ env:
 on:
   workflow_dispatch:
     inputs:
-      new_version:
-        description: 'New Version'
+     version:
+        description: 'Version'
         required: true
         default: '1.0.0'
       short_description:
@@ -78,7 +78,7 @@ jobs:
 
       - name: Create Jira Release Ticket
         id: create_ticket
-        uses: SonarSource/release-github-actions/.github/actions/create-jira-release-ticket@SONARIAC-2092
+        uses: SonarSource/release-github-actions/.github/actions/create-jira-release-ticket
         with:
           jira_user: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
           jira_token: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
