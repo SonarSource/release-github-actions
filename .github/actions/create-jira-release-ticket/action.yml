@@ -49,14 +49,15 @@ runs:
   using: "composite"
   steps:
     - name: Set Action Ref
+      id: set_ref
       shell: bash
-      run: echo "ACTION_REF=${{ github.action_ref }}" >> $GITHUB_ENV
+      run: echo "ref=${{ github.action_ref }}" >> $GITHUB_OUTPUT
 
     - name: Checkout Action Repository
       uses: actions/checkout@v4
       with:
         repository: SonarSource/release-github-actions
-        ref: ${{ env.ACTION_REF }}
+        ref: ${{ steps.set_ref.outputs.ref }}
         path: '.action-repo'
         sparse-checkout: |
           tools
