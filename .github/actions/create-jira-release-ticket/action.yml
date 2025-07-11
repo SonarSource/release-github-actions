@@ -1,5 +1,5 @@
 name: 'Create Jira Release Ticket'
-description: 'Creates an "Ask for release" ticket in Jira'
+description: 'Creates a Jira release ticket.'
 author: 'SonarSource'
 
 inputs:
@@ -43,20 +43,48 @@ inputs:
 outputs:
   ticket_key:
     description: 'The key of the created Jira ticket (e.g., REL-123)'
+    value: ${{ steps.run_python_script.outputs.ticket_key }}
 
 runs:
-  using: 'docker'
-  image: 'Dockerfile'
-  env:
-    JIRA_USER: ${{ inputs.jira_user }}
-    JIRA_TOKEN: ${{ inputs.jira_token }}
-  args:
-    - '--project-key=${{ inputs.project_key }}'
-    - '--project-name=${{ inputs.project_name }}'
-    - '--new-version=${{ inputs.new_version }}'
-    - '--short-description=${{ inputs.short_description }}'
-    - '--targeted-product=${{ inputs.targeted_product }}'
-    - '--sq-compatibility=${{ inputs.sq_compatibility }}'
-    - '--use-sandbox=${{ inputs.use_sandbox }}'
-    - '--documentation-status=${{ inputs.documentation_status }}'
-    - '--rule-props-changed=${{ inputs.rule_props_changed }}'
+  using: "composite"
+  steps:
+    - name: Checkout Action Repository
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ github.action_repository }}
+        ref: ${{ github.action_ref }}
+        path: '.action-repo'
+        sparse-checkout: |
+          tools
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.8'
+
+    - name: Install dependencies
+      shell: bash
+      run: pip install -r .action-repo/tools/requirements.txt
+
+    - name: Run Python Script to Create Ticket
+      id: run_python_script
+      shell: bash
+      # The python script prints the ticket key to stdout, which we capture.
+      # All inputs are passed as command-line arguments.
+      # The JIRA credentials are set as environment variables for the script to use.
+      run: |
+        TICKET_KEY=$(python .action-repo/tools/create_release_ticket.py \
+          --project-key="${{ inputs.project_key }}" \
+          --project-name="${{ inputs.project_name }}" \
+          --new-version="${{ inputs.new_version }}" \
+          --short-description="${{ inputs.short_description }}" \
+          --targeted-product="${{ inputs.targeted_product }}" \
+          --sq-compatibility="${{ inputs.sq_compatibility }}" \
+          --use-sandbox="${{ inputs.use_sandbox }}" \
+          --documentation-status="${{ inputs.documentation_status }}" \
+          --rule-props-changed="${{ inputs.rule_props_changed }}"
+        )
+        echo "ticket_key=${TICKET_KEY}" >> $GITHUB_OUTPUT
+      env:
+        JIRA_USER: ${{ inputs.jira_user }}
+        JIRA_TOKEN: ${{ inputs.jira_token }}

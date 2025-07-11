@@ -14,6 +14,10 @@ from jira.exceptions import JIRAError
 JIRA_SANDBOX_URL = "https://sonarsource-sandbox-608.atlassian.net/"
 JIRA_PROD_URL = "https://sonarsource.atlassian.net/"
 
+def eprint(*args, **kwargs):
+    """Helper function to print to stderr."""
+    print(*args, file=sys.stderr, **kwargs)
+
 def get_jira_instance(use_sandbox=True):
     """
     Initializes and returns a JIRA client instance and the server URL used.
@@ -40,23 +44,23 @@ def get_jira_instance(use_sandbox=True):
     jira_token = os.environ.get('JIRA_TOKEN')
 
     if not jira_user or not jira_token:
-        print("Error: JIRA_USER and JIRA_TOKEN environment variables must be set.", file=sys.stderr)
+        eprint("Error: JIRA_USER and JIRA_TOKEN environment variables must be set.")
         sys.exit(1)
 
     jira_url = JIRA_SANDBOX_URL if use_sandbox else JIRA_PROD_URL
 
-    print(f"Connecting to JIRA server at: {jira_url}")
-    print(f"Authenticating with user: {jira_user}")
+    eprint(f"Connecting to JIRA server at: {jira_url}")
+    eprint(f"Authenticating with user: {jira_user}")
 
     try:
         jira_client = JIRA(jira_url, basic_auth=(jira_user, jira_token), get_server_info=True)
-        print("JIRA authentication successful.")
+        eprint("JIRA authentication successful.")
         return jira_client, jira_url
     except JIRAError as e:
-        print(f"Error: JIRA authentication failed. Status: {e.status_code}", file=sys.stderr)
-        print("Please check your JIRA URL, user, and token.", file=sys.stderr)
-        print(f"Response text: {e.text}", file=sys.stderr)
+        eprint(f"Error: JIRA authentication failed. Status: {e.status_code}")
+        eprint("Please check your JIRA URL, user, and token.")
+        eprint(f"Response text: {e.text}")
         sys.exit(1)
     except Exception as e:
-        print(f"An unexpected error occurred during JIRA connection: {e}", file=sys.stderr)
+        eprint(f"An unexpected error occurred during JIRA connection: {e}")
         sys.exit(1)

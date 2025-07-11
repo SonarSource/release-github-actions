@@ -3,18 +3,14 @@
 
 """
 This script automates the creation of an 'Ask for release' ticket in Jira.
-
-It fetches the latest unreleased version for a specified Jira project,
-and then creates a new release ticket with the provided details.
-
-The script is designed to be run from a command line and is suitable for
-integration into CI/CD pipelines like GitHub Actions.
 """
 
 import argparse
 import sys
 from collections import namedtuple
 from jira.exceptions import JIRAError
+
+# Import the reusable function from our utility module
 from jira_utils import get_jira_instance
 
 # A dictionary mapping human-readable field names to Jira's custom field IDs.
@@ -27,42 +23,31 @@ CUSTOM_FIELDS = {
     'RULE_PROPS_CHANGED': 'customfield_11263',
 }
 
+def eprint(*args, **kwargs):
+    """Helper function to print to stderr."""
+    print(*args, file=sys.stderr, **kwargs)
 
 def get_jira_release_notes_info(jira_client, project_key, jira_server_url):
     """
     Finds the latest unreleased version for a given project.
-
-    Args:
-        jira_client (JIRA): The authenticated JIRA client.
-        project_key (str): The key of the project to search within (e.g., 'SONARIAC').
-        jira_server_url (str): The base URL of the Jira server.
-
-    Returns:
-        namedtuple: A named tuple 'ReleaseNotes' with 'name' and 'url' of the latest
-                    unreleased version.
-
-    Raises:
-        SystemExit: If the project is not found or no unreleased versions exist.
     """
-    print(f"\nFetching versions for project '{project_key}'...")
+    eprint(f"\nFetching versions for project '{project_key}'...")
     try:
         versions = jira_client.project_versions(project_key)
     except JIRAError as e:
         if e.status_code == 404:
-            print(f"Error: Project with key '{project_key}' not found.", file=sys.stderr)
+            eprint(f"Error: Project with key '{project_key}' not found.")
         else:
-            print(f"Error: Failed to fetch versions for project '{project_key}'. Status: {e.status_code}",
-                  file=sys.stderr)
+            eprint(f"Error: Failed to fetch versions for project '{project_key}'. Status: {e.status_code}")
         sys.exit(1)
 
     unreleased_versions = [v for v in versions if not v.released]
 
     if not unreleased_versions:
-        print(f"Error: No unreleased versions found for project '{project_key}'.", file=sys.stderr)
-        print("Please ensure there is at least one unreleased version in Jira.", file=sys.stderr)
+        eprint(f"Error: No unreleased versions found for project '{project_key}'.")
+        eprint("Please ensure there is at least one unreleased version in Jira.")
         sys.exit(1)
 
-    # Sort by version ID to find the most recently created one
     latest_unreleased_version = sorted(
         unreleased_versions,
         key=lambda v: int(v.id),
@@ -77,8 +62,8 @@ def get_jira_release_notes_info(jira_client, project_key, jira_server_url):
     ReleaseNotes = namedtuple("ReleaseNotes", "name url")
     info = ReleaseNotes(latest_unreleased_version.name, version_link)
 
-    print(f"🚀 Latest UNRELEASED version found: {info.name}")
-    print(f"   🔗 Direct Link: {info.url}")
+    eprint(f"🚀 Latest UNRELEASED version found: {info.name}")
+    eprint(f"   🔗 Direct Link: {info.url}")
 
     return info
 
@@ -86,19 +71,8 @@ def get_jira_release_notes_info(jira_client, project_key, jira_server_url):
 def create_release_ticket(jira_client, args, link_to_release_notes):
     """
     Creates the 'Ask for release' ticket in Jira.
-
-    Args:
-        jira_client (JIRA): The authenticated JIRA client.
-        args (argparse.Namespace): The parsed command-line arguments.
-        link_to_release_notes (str): The URL to the release notes report.
-
-    Returns:
-        jira.Issue: The newly created Jira issue object.
-
-    Raises:
-        SystemExit: If the ticket creation fails.
     """
-    print("\nPreparing to create release ticket...")
+    eprint("\nPreparing to create release ticket...")
     ticket_details = {
         'project': 'REL',
         'issuetype': 'Ask for release',
@@ -115,8 +89,8 @@ def create_release_ticket(jira_client, args, link_to_release_notes):
         new_ticket = jira_client.create_issue(fields=ticket_details)
         return new_ticket
     except JIRAError as e:
-        print(f"Error: Failed to create Jira ticket. Status: {e.status_code}", file=sys.stderr)
-        print(f"Response text: {e.response.text}", file=sys.stderr)
+        eprint(f"Error: Failed to create Jira ticket. Status: {e.status_code}")
+        eprint(f"Response text: {e.response.text}")
         sys.exit(1)
 
 
@@ -129,19 +103,15 @@ def main():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
-    # Mandatory arguments
     parser.add_argument("--project-key", required=True, help="The key of the project (e.g., SONARIAC).")
     parser.add_argument("--project-name", required=True, help="The display name of the project (e.g., SonarIaC).")
     parser.add_argument("--new-version", required=True, help="The new version being released (e.g., 11.44.2).")
     parser.add_argument("--short-description", required=True, help="A short description for the release.")
     parser.add_argument("--targeted-product", required=True, help="The targeted product version (e.g., 11.0).")
     parser.add_argument("--sq-compatibility", required=True, help="SonarQube compatibility version (e.g., 2025.3).")
-
-    # Optional arguments
     parser.add_argument('--use-sandbox', default=True, help="Use the sandbox server instead of the production Jira.")
     parser.add_argument("--documentation-status", default="N/A", help="Status of the documentation.")
-    parser.add_argument("--rule-props-changed", default="No", choices=['Yes', 'No'],
-                        help="Whether rule properties have changed.")
+    parser.add_argument("--rule-props-changed", default="No", choices=['Yes', 'No'], help="Whether rule properties have changed.")
 
     args = parser.parse_args()
 
@@ -150,13 +120,14 @@ def main():
     release_notes_info = get_jira_release_notes_info(jira, args.project_key, jira_server_url)
     ticket = create_release_ticket(jira, args, release_notes_info.url)
 
-    print("\n" + "=" * 50)
-    print("🎉 Successfully created release ticket!")
-    print(f"   Ticket Key: {ticket.key}")
-    print(f"   Ticket URL: {ticket.permalink()}")
-    print("=" * 50)
+    eprint("\n" + "=" * 50)
+    eprint("🎉 Successfully created release ticket!")
+    eprint(f"   Ticket Key: {ticket.key}")
+    eprint(f"   Ticket URL: {ticket.permalink()}")
+    eprint("=" * 50)
 
-    print(f"::set-output name=ticket-key::{ticket.key}")
+    print(ticket.key)
+
 
 if __name__ == "__main__":
     main()
