@@ -94,8 +94,6 @@ jobs:
           short_description: ${{ github.event.inputs.short_description }}
           targeted_product: ${{ github.event.inputs.targeted_product }}
           sq_compatibility: ${{ github.event.inputs.sq_compatibility }}
-          # If a specific jira_release is provided via dispatch, it will be used.
-          # Otherwise, the action defaults to finding the earliest unreleased version.
           jira_release: ${{ github.event.inputs.jira_release }}
 
       - name: Echo Ticket Key
