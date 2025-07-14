@@ -13,7 +13,7 @@ from jira import JIRA
 from jira.exceptions import JIRAError
 
 JIRA_SANDBOX_URL = "https://sonarsource-sandbox-608.atlassian.net/"
-JIRA_PROD_URL = "https://sonarsource.atlanain.net/"
+JIRA_PROD_URL = "https://sonarsource.atlassian.net/"
 CUSTOM_FIELDS = {
     'SHORT_DESCRIPTION': 'customfield_10146',
     'TARGETED_PRODUCT': 'customfield_10163',
