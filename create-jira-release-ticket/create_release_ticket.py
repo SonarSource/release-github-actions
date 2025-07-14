@@ -67,6 +67,54 @@ def get_jira_instance(use_sandbox=True):
         sys.exit(1)
 
 
+def _get_specific_jira_release(project_key, jira_release_name, versions):
+    """
+    Finds and returns a specific, unreleased version by its name.
+    """
+    eprint(f"Searching for specified release version: '{jira_release_name}'...")
+    found_versions = [v for v in versions if v.name == jira_release_name]
+    if not found_versions:
+        eprint(f"Error: Specified Jira release '{jira_release_name}' not found for project '{project_key}'.")
+        sys.exit(1)
+
+    target_version = found_versions[0]
+
+    if target_version.released:
+        eprint(f"Error: The specified version '{jira_release_name}' has already been released.")
+        eprint("Please provide an unreleased version or omit the 'jira_release_name' parameter.")
+        sys.exit(1)
+
+    return target_version
+
+
+def _get_unreleased_version(project_key, versions):
+    """
+    Retrieves the single unreleased version from a list of project versions.
+    """
+    eprint("No specific release version provided. Searching for unreleased versions...")
+    unreleased_versions = [v for v in versions if not v.released]
+
+    if not unreleased_versions:
+        eprint(f"Error: No unreleased versions found for project '{project_key}'.")
+        eprint("Please ensure there is at least one unreleased version in Jira.")
+        sys.exit(1)
+
+    if len(unreleased_versions) > 1:
+        eprint(f"Error: Multiple unreleased versions found for project '{project_key}'.")
+        eprint("Please specify which version to release using the '--jira-release-name' argument.")
+        eprint("Found versions:")
+        for v in unreleased_versions:
+            eprint(f"  - {v.name}")
+        sys.exit(1)
+
+    target_version = unreleased_versions[0]
+    eprint(f"✅ Found a single unreleased version: {target_version.name}")
+
+    eprint(f"✅ Found specified unreleased version: {target_version.name}")
+
+    return target_version
+
+
 def get_jira_release_notes_info(jira_client, project_key, jira_server_url, jira_release_name=None):
     """
     Finds a specific or the single unreleased version for a given project.
@@ -82,40 +130,9 @@ def get_jira_release_notes_info(jira_client, project_key, jira_server_url, jira_
         sys.exit(1)
 
     if jira_release_name:
-        eprint(f"Searching for specified release version: '{jira_release_name}'...")
-        found_versions = [v for v in versions if v.name == jira_release_name]
-        if not found_versions:
-            eprint(f"Error: Specified Jira release '{jira_release_name}' not found for project '{project_key}'.")
-            sys.exit(1)
-
-        target_version = found_versions[0]
-
-        if target_version.released:
-            eprint(f"Error: The specified version '{jira_release_name}' has already been released.")
-            eprint("Please provide an unreleased version or omit the 'jira_release_name' parameter.")
-            sys.exit(1)
-
-        eprint(f"✅ Found specified unreleased version: {target_version.name}")
+        target_version = _get_specific_jira_release(project_key, jira_release_name, versions)
     else:
-        eprint("No specific release version provided. Searching for unreleased versions...")
-        unreleased_versions = [v for v in versions if not v.released]
-
-        if not unreleased_versions:
-            eprint(f"Error: No unreleased versions found for project '{project_key}'.")
-            eprint("Please ensure there is at least one unreleased version in Jira.")
-            sys.exit(1)
-
-        if len(unreleased_versions) > 1:
-            eprint(f"Error: Multiple unreleased versions found for project '{project_key}'.")
-            eprint("Please specify which version to release using the '--jira-release-name' argument.")
-            eprint("Found versions:")
-            for v in unreleased_versions:
-                eprint(f"  - {v.name}")
-            sys.exit(1)
-
-        # If we reach here, there is exactly one unreleased version.
-        target_version = unreleased_versions[0]
-        eprint(f"✅ Found a single unreleased version: {target_version.name}")
+        target_version = _get_unreleased_version(project_key, versions)
 
     version_link = (
         f"{jira_server_url}/projects/{project_key}/"
