@@ -84,6 +84,8 @@ def _get_specific_jira_release(project_key, jira_release_name, versions):
         eprint("Please provide an unreleased version or omit the 'jira_release_name' parameter.")
         sys.exit(1)
 
+    eprint(f"✅ Found specified unreleased version: {target_version.name}")
+
     return target_version
 
 
@@ -109,8 +111,6 @@ def _get_unreleased_version(project_key, versions):
 
     target_version = unreleased_versions[0]
     eprint(f"✅ Found a single unreleased version: {target_version.name}")
-
-    eprint(f"✅ Found specified unreleased version: {target_version.name}")
 
     return target_version
 
