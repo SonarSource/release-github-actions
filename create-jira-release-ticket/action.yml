@@ -39,8 +39,8 @@ inputs:
     description: 'Whether rule properties have changed'
     required: false
     default: 'No'
-  jira_release:
-    description: 'The specific Jira release version to use. If omitted, the earliest unreleased version will be used.'
+  jira_release_name:
+    description: 'The specific Jira release version to use.'
     required: false
     default: ''
 

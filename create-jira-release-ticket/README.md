@@ -12,20 +12,20 @@ This can done using the SPEED self-service portal ([more info](https://xtranet-s
 
 The following inputs can be configured for the action:
 
-| Input                  | Description                                                                                    | Required | Default |
-|------------------------|------------------------------------------------------------------------------------------------|----------|---------|
-| `jira_user`            | The Jira user (email) for authentication.                                                      | `true`   | `N/A`   |
-| `jira_token`           | The Jira API token for authentication.                                                         | `true`   | `N/A`   |
-| `project_key`          | The project key (e.g., `SONARIAC`).                                                            | `true`   | `N/A`   |
-| `project_name`         | The display name of the project (e.g., `SonarIaC`).                                            | `true`   | `N/A`   |
-| `version`              | The new version string being released (e.g., `1.2.3`).                                         | `true`   | `N/A`   |
-| `short_description`    | A brief description of the release.                                                            | `true`   | `N/A`   |
-| `targeted_product`     | The targeted product version (e.g., `11.0`).                                                   | `true`   | `N/A`   |
-| `sq_compatibility`     | The SonarQube compatibility version (e.g., `2025.3`).                                          | `true`   | `N/A`   |
-| `use_sandbox`          | Set to `True` to use the Jira sandbox server.                                                  | `false`  | `True`  |
-| `documentation_status` | The status of the release documentation.                                                       | `false`  | `N/A`   |
-| `rule_props_changed`   | Whether rule properties have changed (`Yes` or `No`).                                          | `false`  | `No`    |
-| `jira_release_name`    | The specific Jira release version to use. If omitted, it uses the earliest unreleased version. | `false`  | `''`    |
+| Input                  | Description                                            | Required | Default |
+|------------------------|--------------------------------------------------------|----------|---------|
+| `jira_user`            | The Jira user (email) for authentication.              | `true`   | `N/A`   |
+| `jira_token`           | The Jira API token for authentication.                 | `true`   | `N/A`   |
+| `project_key`          | The project key (e.g., `SONARIAC`).                    | `true`   | `N/A`   |
+| `project_name`         | The display name of the project (e.g., `SonarIaC`).    | `true`   | `N/A`   |
+| `version`              | The new version string being released (e.g., `1.2.3`). | `true`   | `N/A`   |
+| `short_description`    | A brief description of the release.                    | `true`   | `N/A`   |
+| `targeted_product`     | The targeted product version (e.g., `11.0`).           | `true`   | `N/A`   |
+| `sq_compatibility`     | The SonarQube compatibility version (e.g., `2025.3`).  | `true`   | `N/A`   |
+| `use_sandbox`          | Set to `True` to use the Jira sandbox server.          | `false`  | `True`  |
+| `documentation_status` | The status of the release documentation.               | `false`  | `N/A`   |
+| `rule_props_changed`   | Whether rule properties have changed (`Yes` or `No`).  | `false`  | `No`    |
+| `jira_release_name`    | The specific Jira release version to use.              | `false`  | `''`    |
 
 ## Outputs
 
@@ -95,7 +95,7 @@ jobs:
           short_description: ${{ github.event.inputs.short_description }}
           targeted_product: ${{ github.event.inputs.targeted_product }}
           sq_compatibility: ${{ github.event.inputs.sq_compatibility }}
-          jira_release: ${{ github.event.inputs.jira_release }}
+          jira_release_name: ${{ github.event.inputs.jira_release }}
 
       - name: Echo Ticket Key
         run: echo "The created Jira ticket key is ${{ steps.create_ticket.outputs.ticket_key }}"
