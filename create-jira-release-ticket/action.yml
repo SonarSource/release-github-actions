@@ -28,9 +28,9 @@ inputs:
     description: 'SonarQube compatibility version (e.g., 2025.3)'
     required: true
   use_sandbox:
-    description: 'Use the sandbox server instead of the production Jira'
+    description: "Use the sandbox server instead of the production Jira."
     required: false
-    default: 'True'
+    default: 'true'
   documentation_status:
     description: 'Status of the documentation'
     required: false
@@ -41,6 +41,10 @@ inputs:
     default: 'No'
   jira_release_name:
     description: 'The specific Jira release version to use.'
+    required: false
+    default: ''
+  sonarlint_changelog:
+    description: 'The SonarLint changelog content.'
     required: false
     default: ''
 
@@ -65,6 +69,11 @@ runs:
       id: run_python_script
       shell: bash
       run: |
+        SANDBOX_FLAG=""
+        if [[ "${{ inputs.use_sandbox }}" == "true" ]]; then
+          SANDBOX_FLAG="--use-sandbox"
+        fi
+
         TICKET_KEY=$(python ${{ github.action_path }}/create_release_ticket.py \
           --project-key="${{ inputs.project_key }}" \
           --project-name="${{ inputs.project_name }}" \
@@ -72,10 +81,11 @@ runs:
           --short-description="${{ inputs.short_description }}" \
           --targeted-product="${{ inputs.targeted_product }}" \
           --sq-compatibility="${{ inputs.sq_compatibility }}" \
-          --use-sandbox="${{ inputs.use_sandbox }}" \
+          ${SANDBOX_FLAG} \
           --documentation-status="${{ inputs.documentation_status }}" \
           --rule-props-changed="${{ inputs.rule_props_changed }}" \
-          --jira-release="${{ inputs.jira_release }}"
+          --jira-release-name="${{ inputs.jira_release_name }}" \
+          --sonarlint-changelog="${{ inputs.sonarlint_changelog }}"
         )
         echo "ticket_key=${TICKET_KEY}" >> $GITHUB_OUTPUT
       env:

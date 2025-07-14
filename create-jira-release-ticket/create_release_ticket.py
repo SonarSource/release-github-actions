@@ -21,6 +21,7 @@ CUSTOM_FIELDS = {
     'LINK_TO_RELEASE_NOTES': 'customfield_10145',
     'DOCUMENTATION_STATUS': 'customfield_10147',
     'RULE_PROPS_CHANGED': 'customfield_11263',
+    'SONARLINT_CHANGELOG': 'customfield_11264',
 }
 
 
@@ -37,7 +38,7 @@ def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 
-def get_jira_instance(use_sandbox=True):
+def get_jira_instance(use_sandbox=False):
     """
     Initializes and returns a JIRA client instance and the server URL used.
     """
@@ -160,7 +161,8 @@ def create_release_ticket(jira_client, args, link_to_release_notes):
         CUSTOM_FIELDS['SQ_COMPATIBILITY']: args.sq_compatibility,
         CUSTOM_FIELDS['LINK_TO_RELEASE_NOTES']: link_to_release_notes,
         CUSTOM_FIELDS['DOCUMENTATION_STATUS']: args.documentation_status,
-        CUSTOM_FIELDS['RULE_PROPS_CHANGED']: {'value': args.rule_props_changed}
+        CUSTOM_FIELDS['RULE_PROPS_CHANGED']: {'value': args.rule_props_changed},
+        CUSTOM_FIELDS['SONARLINT_CHANGELOG']: args.sonarlint_changelog
     }
 
     try:
@@ -187,12 +189,12 @@ def main():
     parser.add_argument("--short-description", required=True, help="A short description for the release.")
     parser.add_argument("--targeted-product", required=True, help="The targeted product version (e.g., 11.0).")
     parser.add_argument("--sq-compatibility", required=True, help="SonarQube compatibility version (e.g., 2025.3).")
-    parser.add_argument('--use-sandbox', default=True, help="Use the sandbox server instead of the production Jira.")
+    parser.add_argument('--use-sandbox', action='store_true', help="Use the sandbox server instead of the production Jira.")
     parser.add_argument("--documentation-status", default="N/A", help="Status of the documentation.")
     parser.add_argument("--rule-props-changed", default="No", choices=['Yes', 'No'],
                         help="Whether rule properties have changed.")
-    parser.add_argument("--jira-release-name", default="",
-                        help="The specific Jira release version to use. If omitted and there is only one unreleased version it will released it")
+    parser.add_argument("--jira-release-name", default="", help="The specific Jira release version to use.")
+    parser.add_argument("--sonarlint-changelog", default="", help="The SonarLint changelog content.")
 
     args = parser.parse_args()
 

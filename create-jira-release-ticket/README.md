@@ -12,20 +12,21 @@ This can done using the SPEED self-service portal ([more info](https://xtranet-s
 
 The following inputs can be configured for the action:
 
-| Input                  | Description                                            | Required | Default |
-|------------------------|--------------------------------------------------------|----------|---------|
-| `jira_user`            | The Jira user (email) for authentication.              | `true`   | `N/A`   |
-| `jira_token`           | The Jira API token for authentication.                 | `true`   | `N/A`   |
-| `project_key`          | The project key (e.g., `SONARIAC`).                    | `true`   | `N/A`   |
-| `project_name`         | The display name of the project (e.g., `SonarIaC`).    | `true`   | `N/A`   |
-| `version`              | The new version string being released (e.g., `1.2.3`). | `true`   | `N/A`   |
-| `short_description`    | A brief description of the release.                    | `true`   | `N/A`   |
-| `targeted_product`     | The targeted product version (e.g., `11.0`).           | `true`   | `N/A`   |
-| `sq_compatibility`     | The SonarQube compatibility version (e.g., `2025.3`).  | `true`   | `N/A`   |
-| `use_sandbox`          | Set to `True` to use the Jira sandbox server.          | `false`  | `True`  |
-| `documentation_status` | The status of the release documentation.               | `false`  | `N/A`   |
-| `rule_props_changed`   | Whether rule properties have changed (`Yes` or `No`).  | `false`  | `No`    |
-| `jira_release_name`    | The specific Jira release version to use.              | `false`  | `''`    |
+| Input                  | Description                                                                                                        | Required | Default |
+|------------------------|--------------------------------------------------------------------------------------------------------------------|----------|---------|
+| `jira_user`            | The Jira user (email) for authentication.                                                                          | `true`   |         |
+| `jira_token`           | The Jira API token for authentication.                                                                             | `true`   |         |
+| `project_key`          | The project key (e.g., `SONARIAC`).                                                                                | `true`   |         |
+| `project_name`         | The display name of the project (e.g., `SonarIaC`). Will be used as the prefix of the resulting release ticket.    | `true`   |         |
+| `version`              | The new version string being released (e.g., `1.2.3`).                                                             | `true`   |         |
+| `short_description`    | A brief description of the release.                                                                                | `true`   |         |
+| `targeted_product`     | The targeted product version (e.g., `11.0`).                                                                       | `true`   |         |
+| `sq_compatibility`     | The SonarQube compatibility version (e.g., `2025.3`).                                                              | `true`   |         |
+| `use_sandbox`          | Set to `false` to use the Jira production server.                                                                  | `false`  | `true`  |
+| `documentation_status` | The status of the release documentation.                                                                           | `false`  | `N/A`   |
+| `rule_props_changed`   | Whether rule properties have changed (`Yes` or `No`).                                                              | `false`  | `No`    |
+| `jira_release_name`    | The specific Jira release version to use. If omitted and there is only one unreleased version it will released it. | `false`  | `''`    |
+| `sonarlint_changelog`  | The SonarLint changelog content.                                                                                   | `false`  | `''`    |
 
 ## Outputs
 
@@ -61,9 +62,11 @@ on:
       sq_compatibility:
         description: 'SonarQube Compatibility'
         required: true
-        default: '2025.3'
       jira_release:
         description: 'Jira release version'
+        required: false
+      sonarlint_changelog:
+        description: 'SonarLint changelog content'
         required: false
 
 jobs:
@@ -96,6 +99,7 @@ jobs:
           targeted_product: ${{ github.event.inputs.targeted_product }}
           sq_compatibility: ${{ github.event.inputs.sq_compatibility }}
           jira_release_name: ${{ github.event.inputs.jira_release }}
+          sonarlint_changelog: ${{ github.event.inputs.sonarlint_changelog }}
 
       - name: Echo Ticket Key
         run: echo "The created Jira ticket key is ${{ steps.create_ticket.outputs.ticket_key }}"
