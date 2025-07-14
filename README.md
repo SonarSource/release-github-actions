@@ -4,4 +4,4 @@ A centralized collection of reusable GitHub Actions designed to streamline and a
 
 ## Available Actions
 
-* [**Create Jira Release Ticket**](./.github/actions/create-jira-release-ticket/README.md): Automates the creation of an "Ask for release" ticket in Jira.
+* [**Create Jira Release Ticket**](create-jira-release-ticket/README.md): Automates the creation of an "Ask for release" ticket in Jira.

@@ -25,7 +25,7 @@ The following inputs can be configured for the action:
 | `use_sandbox`          | Set to `True` to use the Jira sandbox server.                                                  | `false`  | `True`  |
 | `documentation_status` | The status of the release documentation.                                                       | `false`  | `N/A`   |
 | `rule_props_changed`   | Whether rule properties have changed (`Yes` or `No`).                                          | `false`  | `No`    |
-| `jira_release`         | The specific Jira release version to use. If omitted, it uses the earliest unreleased version. | `false`  | `''`    |
+| `jira_release_name`    | The specific Jira release version to use. If omitted, it uses the earliest unreleased version. | `false`  | `''`    |
 
 ## Outputs
 

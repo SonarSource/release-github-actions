@@ -13,7 +13,7 @@ from jira import JIRA
 from jira.exceptions import JIRAError
 
 JIRA_SANDBOX_URL = "https://sonarsource-sandbox-608.atlassian.net/"
-JIRA_PROD_URL = "https://sonarsource.atlassian.net/"
+JIRA_PROD_URL = "https://sonarsource.atlanain.net/"
 CUSTOM_FIELDS = {
     'SHORT_DESCRIPTION': 'customfield_10146',
     'TARGETED_PRODUCT': 'customfield_10163',
@@ -25,7 +25,15 @@ CUSTOM_FIELDS = {
 
 
 def eprint(*args, **kwargs):
-    """Helper function to print to stderr."""
+    """
+    Prints messages to the standard error stream (stderr).
+
+    This function serves as a dedicated logger for informational messages,
+    warnings, or errors. In a CI/CD pipeline, this ensures that diagnostic
+    output is kept separate from the primary result of the script, which is
+    written to standard output (stdout). This separation allows for cleaner
+    data parsing and redirection.
+    """
     print(*args, file=sys.stderr, **kwargs)
 
 
@@ -61,7 +69,7 @@ def get_jira_instance(use_sandbox=True):
 
 def get_jira_release_notes_info(jira_client, project_key, jira_server_url, jira_release_name=None):
     """
-    Finds a specific or the earliest unreleased version for a given project.
+    Finds a specific or the single unreleased version for a given project.
     """
     eprint(f"\nFetching versions for project '{project_key}'...")
     try:
@@ -84,12 +92,12 @@ def get_jira_release_notes_info(jira_client, project_key, jira_server_url, jira_
 
         if target_version.released:
             eprint(f"Error: The specified version '{jira_release_name}' has already been released.")
-            eprint("Please provide an unreleased version or omit the 'jira_release' parameter.")
+            eprint("Please provide an unreleased version or omit the 'jira_release_name' parameter.")
             sys.exit(1)
 
         eprint(f"✅ Found specified unreleased version: {target_version.name}")
     else:
-        eprint("No specific release version provided. Searching for the earliest unreleased version...")
+        eprint("No specific release version provided. Searching for unreleased versions...")
         unreleased_versions = [v for v in versions if not v.released]
 
         if not unreleased_versions:
@@ -97,12 +105,17 @@ def get_jira_release_notes_info(jira_client, project_key, jira_server_url, jira_
             eprint("Please ensure there is at least one unreleased version in Jira.")
             sys.exit(1)
 
-        earliest_unreleased_version = sorted(
-            unreleased_versions,
-            key=lambda v: int(v.id)
-        )[0]
-        target_version = earliest_unreleased_version
-        eprint(f"🚀 Earliest UNRELEASED version found: {target_version.name}")
+        if len(unreleased_versions) > 1:
+            eprint(f"Error: Multiple unreleased versions found for project '{project_key}'.")
+            eprint("Please specify which version to release using the '--jira-release-name' argument.")
+            eprint("Found versions:")
+            for v in unreleased_versions:
+                eprint(f"  - {v.name}")
+            sys.exit(1)
+
+        # If we reach here, there is exactly one unreleased version.
+        target_version = unreleased_versions[0]
+        eprint(f"✅ Found a single unreleased version: {target_version.name}")
 
     version_link = (
         f"{jira_server_url}/projects/{project_key}/"
@@ -161,14 +174,14 @@ def main():
     parser.add_argument("--documentation-status", default="N/A", help="Status of the documentation.")
     parser.add_argument("--rule-props-changed", default="No", choices=['Yes', 'No'],
                         help="Whether rule properties have changed.")
-    parser.add_argument("--jira-release", default="",
-                        help="The specific Jira release version to use. If omitted, the earliest unreleased version will be used.")
+    parser.add_argument("--jira-release-name", default="",
+                        help="The specific Jira release version to use. If omitted and there is only one unreleased version it will released it")
 
     args = parser.parse_args()
 
     jira, jira_server_url = get_jira_instance(args.use_sandbox)
 
-    release_notes_info = get_jira_release_notes_info(jira, args.project_key, jira_server_url, args.jira_release)
+    release_notes_info = get_jira_release_notes_info(jira, args.project_key, jira_server_url, args.jira_release_name)
     ticket = create_release_ticket(jira, args, release_notes_info.url)
 
     eprint("\n" + "=" * 50)
