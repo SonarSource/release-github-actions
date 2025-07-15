@@ -16,7 +16,6 @@ JIRA_SANDBOX_URL = "https://sonarsource-sandbox-608.atlassian.net/"
 JIRA_PROD_URL = "https://sonarsource.atlassian.net/"
 CUSTOM_FIELDS = {
     'SHORT_DESCRIPTION': 'customfield_10146',
-    'TARGETED_PRODUCT': 'customfield_10163',
     'SQ_COMPATIBILITY': 'customfield_10148',
     'LINK_TO_RELEASE_NOTES': 'customfield_10145',
     'DOCUMENTATION_STATUS': 'customfield_10147',
@@ -157,7 +156,6 @@ def create_release_ticket(jira_client, args, link_to_release_notes):
         'issuetype': 'Ask for release',
         'summary': f'{args.project_name} {args.version}',
         CUSTOM_FIELDS['SHORT_DESCRIPTION']: args.short_description,
-        CUSTOM_FIELDS['TARGETED_PRODUCT']: {'value': args.targeted_product},
         CUSTOM_FIELDS['SQ_COMPATIBILITY']: args.sq_compatibility,
         CUSTOM_FIELDS['LINK_TO_RELEASE_NOTES']: link_to_release_notes,
         CUSTOM_FIELDS['DOCUMENTATION_STATUS']: args.documentation_status,
@@ -187,7 +185,6 @@ def main():
     parser.add_argument("--project-name", required=True, help="The display name of the project (e.g., SonarIaC).")
     parser.add_argument("--version", required=True, help="The version being released (e.g., 11.44.2).")
     parser.add_argument("--short-description", required=True, help="A short description for the release.")
-    parser.add_argument("--targeted-product", required=True, help="The targeted product version (e.g., 11.0).")
     parser.add_argument("--sq-compatibility", required=True, help="SonarQube compatibility version (e.g., 2025.3).")
     parser.add_argument('--use-sandbox', action='store_true', help="Use the sandbox server instead of the production Jira.")
     parser.add_argument("--documentation-status", default="N/A", help="Status of the documentation.")
