@@ -93,7 +93,16 @@ def update_ticket_status(jira_client, ticket_key, new_status, assignee_email):
             eprint("Please ensure the user exists and has assignable permissions for this project.")
             sys.exit(1)
 
+    # Debug: List all available transitions before attempting to switch
+    try:
+        available_transitions = jira_client.transitions(issue)
+        eprint("Available transitions for this ticket:")
+        for t in available_transitions:
+            eprint(f"  - {t}")
+    except JIRAError as e:
+        eprint(f"Could not fetch available transitions. Error: {e.text}")
     eprint(f"Attempting to transition ticket to status: '{new_status}'")
+
     try:
         jira_client.transition_issue(issue, new_status)
         eprint(f"Successfully transitioned ticket to '{new_status}'.")
