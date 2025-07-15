@@ -9,14 +9,14 @@ This can done using the SPEED self-service portal ([more info](https://xtranet-s
 
 ## Inputs
 
-| Input         | Description                                                                  | Required | Default |
-|---------------|------------------------------------------------------------------------------|----------|---------|
-| `jira_user`   | The Jira user (email) for authentication.                                    | `true`   |         |
-| `jira_token`  | The Jira API token for authentication.                                       | `true`   |         |
-| `ticket_key`  | The key of the Jira ticket to update (e.g., `REL-1234`).                     | `true`   |         |
-| `status`      | The target status. Possible values: `In Progress`, `Technical Release Done`. | `true`   |         |
-| `assignee`    | The email of the user to assign the ticket to.                               | `false`  | `''`    |
-| `use_sandbox` | Set to `false` to use the Jira production server.                            | `false`  | `true`  |
+| Input         | Description                                                                     | Required | Default |
+|---------------|---------------------------------------------------------------------------------|----------|---------|
+| `jira_user`   | The Jira user (email) for authentication.                                       | `true`   |         |
+| `jira_token`  | The Jira API token for authentication.                                          | `true`   |         |
+| `ticket_key`  | The key of the Jira ticket to update (e.g., `REL-1234`).                        | `true`   |         |
+| `status`      | The target status. Possible values: `Start Progress`, `Technical Release Done`. | `true`   |         |
+| `assignee`    | The email of the user to assign the ticket to.                                  | `false`  | `''`    |
+| `use_sandbox` | Set to `false` to use the Jira production server.                               | `false`  | `true`  |
 
 ## Example Usage
 
@@ -36,7 +36,7 @@ on:
         required: true
         type: choice
         options:
-        - In Progress
+        - Start Progress
         - Technical Release Done
       assignee_email:
         description: 'Email of the new assignee (optional)'
