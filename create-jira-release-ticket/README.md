@@ -57,7 +57,7 @@ on:
       sq_compatibility:
         description: 'SonarQube Compatibility'
         required: true
-      jira_release:
+      jira_release_name:
         description: 'Jira release version'
         required: false
       sonarlint_changelog:
