@@ -62,8 +62,15 @@ runs:
             core.setFailed('Found the successful check, but it has no annotations.');
             return;
           }
+          
+          const firstAnnotation = annotations[0];
 
-          const annotationMessage = annotations[0].message;
+          if (firstAnnotation.annotation_level === 'failure') {
+            core.setFailed(`The check annotation indicates a failure: "${firstAnnotation.message}"`);
+            return;
+          }
+
+          const annotationMessage = firstAnnotation.message;
           console.log(`Found annotation message: "${annotationMessage}"`);
 
           const match = annotationMessage.match(/of ([\d\.]+)/);

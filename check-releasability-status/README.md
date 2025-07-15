@@ -1,6 +1,6 @@
 # Check Releasability Status Action
 
-This GitHub Action checks the status of the releasability check on the `master` branch. If the check was successful, it extracts the version number from its annotation. The action is designed to be a prerequisite step in a release workflow, ensuring that a version is ready to be released before proceeding.
+This GitHub Action checks the releasability status of the master branch. If the check was successful, it extracts the version number from its annotation. It's important to note that this action doesn't run the releasability status check itself but rather finds previous runs. The action is designed to be a prerequisite step in a release workflow, ensuring that a version is ready to be released before proceeding.
 
 The action is self-contained and uses the `actions/github-script` toolkit to interact with the GitHub Checks API.
 
