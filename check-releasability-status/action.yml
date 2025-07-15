@@ -1,0 +1,84 @@
+name: 'Check releasability status'
+description: 'Gets the status of the latest releasability check on the master branch and returns the version if it succeeded.'
+
+inputs:
+  check-name:
+    description: 'The name of the check run to find.'
+    required: false
+    default: 'Releasability status'
+  github-token:
+    description: 'The GitHub token for API calls.'
+    required: true
+    default: ${{ github.token }}
+
+outputs:
+  version:
+    description: 'The extracted version string from the check annotation.'
+    value: ${{ steps.check_releasability_script.outputs.version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Check releasability status
+      id: check_releasability_script
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const { owner, repo } = context.repo;
+          const check_name = '${{ inputs.check-name }}';
+
+          console.log(`Searching for check runs on the "master" branch.`);
+          const { data: { check_runs } } = await github.rest.checks.listForRef({
+            owner,
+            repo,
+            ref: 'master',
+            per_page: 50
+          });
+
+          console.log(`Filtering for the first non-skipped check named "${check_name}".`);
+          const targetCheck = check_runs.find(check => check.name === check_name && check.conclusion !== 'skipped');
+
+          if (!targetCheck) {
+            core.setFailed(`Could not find a recent, non-skipped check named "${check_name}" on the master branch.`);
+            return;
+          }
+
+          console.log(`Found latest relevant check run #${targetCheck.id} (Conclusion: ${targetCheck.conclusion}) on commit ${targetCheck.head_sha}.`);
+
+          if (targetCheck.conclusion !== 'success') {
+            core.setFailed(`The check run "${check_name}" did not succeed. Conclusion: ${targetCheck.conclusion}.`);
+            return;
+          }
+
+          console.log('Check was successful. Fetching annotations...');
+          const { data: annotations } = await github.rest.checks.listAnnotations({
+            owner,
+            repo,
+            check_run_id: targetCheck.id
+          });
+
+          if (annotations.length === 0) {
+            core.setFailed('Found the successful check, but it has no annotations.');
+            return;
+          }
+          
+          const firstAnnotation = annotations[0];
+
+          if (firstAnnotation.annotation_level === 'failure') {
+            core.setFailed(`The check annotation indicates a failure: "${firstAnnotation.message}"`);
+            return;
+          }
+
+          const annotationMessage = firstAnnotation.message;
+          console.log(`Found annotation message: "${annotationMessage}"`);
+
+          const match = annotationMessage.match(/of ([\d\.]+)/);
+          if (!match || !match[1]) {
+            core.setFailed(`Could not parse version from annotation message: "${annotationMessage}"`);
+            return;
+          }
+
+          const version = match[1];
+          console.log(`✅ Extracted version from annotation: ${version}`);
+          core.setOutput('version', version);
