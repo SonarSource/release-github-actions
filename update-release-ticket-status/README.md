@@ -46,6 +46,9 @@ jobs:
   update_release_ticket:
     name: Update release ticket
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
       - name: Get Jira Credentials from Vault
