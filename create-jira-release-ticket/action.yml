@@ -54,7 +54,7 @@ runs:
   using: "composite"
   steps:
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@a26af69 # v5.6.0
       with:
         python-version: '3.8'
 
