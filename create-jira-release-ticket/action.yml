@@ -1,0 +1,93 @@
+name: 'Create Jira Release Ticket'
+description: 'Creates a Jira release ticket.'
+author: 'SonarSource'
+
+inputs:
+  jira_user:
+    description: 'Jira user for authentication'
+    required: true
+  jira_token:
+    description: 'Jira API token for authentication'
+    required: true
+  project_key:
+    description: 'The key of the project (e.g., SONARIAC)'
+    required: true
+  project_name:
+    description: 'The display name of the project (e.g., SonarIaC)'
+    required: true
+  version:
+    description: 'The version being released (e.g., 11.44.2)'
+    required: true
+  short_description:
+    description: 'A short description for the release'
+    required: true
+  targeted_product:
+    description: 'The targeted product version (e.g., 11.0)'
+    required: true
+  sq_compatibility:
+    description: 'SonarQube compatibility version (e.g., 2025.3)'
+    required: true
+  use_sandbox:
+    description: "Use the sandbox server instead of the production Jira."
+    required: false
+    default: 'true'
+  documentation_status:
+    description: 'Status of the documentation'
+    required: false
+    default: 'N/A'
+  rule_props_changed:
+    description: 'Whether rule properties have changed'
+    required: false
+    default: 'No'
+  jira_release_name:
+    description: 'The specific Jira release version to use.'
+    required: false
+    default: ''
+  sonarlint_changelog:
+    description: 'The SonarLint changelog content.'
+    required: false
+    default: ''
+
+outputs:
+  ticket_key:
+    description: 'The key of the created Jira ticket (e.g., REL-123)'
+    value: ${{ steps.run_python_script.outputs.ticket_key }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.8'
+
+    - name: Install dependencies
+      shell: bash
+      run: pip install -r ${{ github.action_path }}/requirements.txt
+
+    - name: Run Python Script to Create Ticket
+      id: run_python_script
+      shell: bash
+      run: |
+        SANDBOX_FLAG=""
+        if [[ "${{ inputs.use_sandbox }}" == "true" ]]; then
+          SANDBOX_FLAG="--use-sandbox"
+        fi
+
+        TICKET_KEY=$(python ${{ github.action_path }}/create_release_ticket.py \
+          --project-key="${{ inputs.project_key }}" \
+          --project-name="${{ inputs.project_name }}" \
+          --version="${{ inputs.version }}" \
+          --short-description="${{ inputs.short_description }}" \
+          --targeted-product="${{ inputs.targeted_product }}" \
+          --sq-compatibility="${{ inputs.sq_compatibility }}" \
+          ${SANDBOX_FLAG} \
+          --documentation-status="${{ inputs.documentation_status }}" \
+          --rule-props-changed="${{ inputs.rule_props_changed }}" \
+          --jira-release-name="${{ inputs.jira_release_name }}" \
+          --sonarlint-changelog="${{ inputs.sonarlint_changelog }}"
+        )
+        echo "ticket_key=${TICKET_KEY}" >> $GITHUB_OUTPUT
+      env:
+        JIRA_USER: ${{ inputs.jira_user }}
+        JIRA_TOKEN: ${{ inputs.jira_token }}
