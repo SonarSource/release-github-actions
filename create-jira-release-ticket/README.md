@@ -6,7 +6,7 @@ The action is self-contained and uses a Python script to interact with the Jira 
 ## Prerequisites
 
 The action requires that the repository needs to have the `development/kv/data/jira` token configured in vault.
-This can done using the SPEED self-service portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platform/pages/3553787989/Manage+Vault+Policy+-+SPEED)).
+This can be done using the SPEED self-service portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platform/pages/3553787989/Manage+Vault+Policy+-+SPEED)).
 
 ## Inputs
 
