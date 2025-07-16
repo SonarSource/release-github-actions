@@ -1,0 +1,60 @@
+name: 'Update Release ticket Status'
+description: 'Updates the status of a Jira release ticket and can change its assignee.'
+author: 'SonarSource'
+
+inputs:
+  jira_user:
+    description: 'Jira user (email) for authentication.'
+    required: true
+  jira_token:
+    description: 'Jira API token for authentication.'
+    required: true
+  ticket_key:
+    description: 'The key of the Jira ticket to update (e.g., REL-1234).'
+    required: true
+  status:
+    description: 'The target status for the ticket. Must be a valid transition.'
+    required: true
+  assignee:
+    description: 'The email of the user to assign the ticket to. Optional.'
+    required: false
+    default: ''
+  use_sandbox:
+    description: "Set to 'false' to use the production Jira server."
+    required: false
+    default: 'true'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      with:
+        python-version: '3.8'
+
+    - name: Install dependencies
+      shell: bash
+      run: pip install -r ${{ github.action_path }}/requirements.txt
+
+    - name: Run Python Script to Update Ticket
+      id: run_python_script
+      shell: bash
+      run: |
+        SANDBOX_FLAG=""
+        if [[ "${{ inputs.use_sandbox }}" == "true" ]]; then
+          SANDBOX_FLAG="--use-sandbox"
+        fi
+
+        ASSIGNEE_FLAG=""
+        if [[ -n "${{ inputs.assignee }}" ]]; then
+          ASSIGNEE_FLAG="--assignee=${{ inputs.assignee }}"
+        fi
+
+        python ${{ github.action_path }}/update_release_ticket.py \
+          --ticket-key="${{ inputs.ticket_key }}" \
+          --status="${{ inputs.status }}" \
+          ${ASSIGNEE_FLAG} \
+          ${SANDBOX_FLAG}
+      env:
+        JIRA_USER: ${{ inputs.jira_user }}
+        JIRA_TOKEN: ${{ inputs.jira_token }}

@@ -6,3 +6,4 @@ A centralized collection of reusable GitHub Actions designed to streamline and a
 
 * [**Create Jira Release Ticket**](create-jira-release-ticket/README.md): Automates the creation of an "Ask for release" ticket in Jira.
 * [**Check Releasability Status**](check-releasability-status/README.md): Checks the releasability status of the master branch and extracts the version if successful.
+* [**Update Release ticket Status**](update-release-ticket-status/README.md): Updates the status of a Jira release ticket and can change its assignee.
