@@ -16,6 +16,7 @@ from jira.exceptions import JIRAError
 JIRA_SANDBOX_URL = "https://sonarsource-sandbox-608.atlassian.net/"
 JIRA_PROD_URL = "https://sonarsource.atlassian.net/"
 
+
 def eprint(*args, **kwargs):
     """Prints messages to stderr to avoid polluting stdout, which is used for the script's output."""
     print(*args, file=sys.stderr, **kwargs)
@@ -47,6 +48,7 @@ def get_jira_instance(use_sandbox=False):
         eprint(f"An unexpected error occurred during JIRA connection: {e}")
         sys.exit(1)
 
+
 def get_project_name(jira_client, project_key):
     """Fetches the full project name from its key."""
     try:
@@ -63,7 +65,7 @@ def get_issues_for_release(jira_client, project_key, release_name):
     eprint(f"Searching for issues in project '{project_key}' with fixVersion '{release_name}'...")
     jql_query = f'project = "{project_key}" AND fixVersion = "{release_name}" ORDER BY issuetype ASC, key ASC'
     try:
-        issues = jira_client.search_issues(jql_query, maxResults=False) # maxResults=False to get all issues
+        issues = jira_client.search_issues(jql_query, maxResults=False)  # maxResults=False to get all issues
         eprint(f"Found {len(issues)} issues for release '{release_name}'.")
         return issues
     except JIRAError as e:
@@ -71,6 +73,7 @@ def get_issues_for_release(jira_client, project_key, release_name):
         eprint(f"JQL Query: {jql_query}")
         eprint(f"Response text: {e.text}")
         sys.exit(1)
+
 
 def format_notes_as_markdown(issues, jira_url, project_name, version, category_order):
     """Formats a list of Jira issues into a categorized Markdown string matching Jira's export."""
@@ -95,6 +98,7 @@ def format_notes_as_markdown(issues, jira_url, project_name, version, category_o
 
     return "\n".join(markdown_lines)
 
+
 def main():
     """Main function to orchestrate fetching and formatting notes."""
     parser = argparse.ArgumentParser(
@@ -102,8 +106,10 @@ def main():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument("--project-key", required=True, help="The Jira project key (e.g., PROJ).")
-    parser.add_argument("--release-name", required=True, help="The name of the 'fixVersion' in Jira. This will also be used as the version in the title.")
-    parser.add_argument("--issue-types", default="", help="Optional comma-separated list of issue types to include, in order.")
+    parser.add_argument("--release-name", required=True,
+                        help="The name of the 'fixVersion' in Jira. This will also be used as the version in the title.")
+    parser.add_argument("--issue-types", default="",
+                        help="Optional comma-separated list of issue types to include, in order.")
     parser.add_argument('--use-sandbox', action='store_true', help="Use the sandbox Jira server.")
     args = parser.parse_args()
 
@@ -127,6 +133,7 @@ def main():
     markdown_notes = format_notes_as_markdown(issues, jira_url, project_name, args.release_name, category_order)
 
     print(markdown_notes)
+
 
 if __name__ == "__main__":
     main()
