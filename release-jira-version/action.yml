@@ -55,7 +55,7 @@ runs:
           NEW_VERSION_FLAG="--new-version-name=${{ inputs.new_version_name }}"
         fi
 
-        python ${{ github.action_path }}/release_and_create_version.py \
+        python ${{ github.action_path }}/release_and_create_jira_version.py \
           --project-key="${{ inputs.project_key }}" \
           --jira-release-name="${{ inputs.jira_release_name }}" \
           ${SANDBOX_FLAG} \
