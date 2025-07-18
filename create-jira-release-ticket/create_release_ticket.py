@@ -192,7 +192,8 @@ def main():
     parser.add_argument("--short-description", required=True, help="A short description for the release.")
     parser.add_argument("--sq-compatibility", required=True, help="SonarQube compatibility version (e.g., 2025.3).")
     parser.add_argument("--targeted-product", help="The targeted product version (e.g., 11.0).")
-    parser.add_argument('--use-sandbox', action='store_true', help="Use the sandbox server instead of the production Jira.")
+    parser.add_argument('--use-sandbox', action='store_true',
+                        help="Use the sandbox server instead of the production Jira.")
     parser.add_argument("--documentation-status", default="N/A", help="Status of the documentation.")
     parser.add_argument("--rule-props-changed", default="No", choices=['Yes', 'No'],
                         help="Whether rule properties have changed.")
