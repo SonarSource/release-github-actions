@@ -71,9 +71,6 @@ runs:
       id: prepare_notes
       shell: bash
       run: |
-        # This step will prepare a file named 'release-notes.md'
-        # with the content for the GitHub release.
-
         # Case 1: Direct release_notes are provided.
         if [[ -n "${{ inputs.release_notes }}" ]]; then
           echo "Using provided release_notes."
@@ -97,7 +94,6 @@ runs:
             SANDBOX_FLAG="--use-sandbox"
           fi
 
-          # Run the script to fetch notes and save to the file.
           python ${{ github.action_path }}/fetch_jira_release_notes.py \
             --project-key "${{ inputs.jira_project_key }}" \
             --release-name "${{ inputs.jira_release_name }}" \
