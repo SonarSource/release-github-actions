@@ -72,10 +72,9 @@ jobs:
             development/kv/data/jira user | JIRA_USER;
             development/kv/data/jira token | JIRA_TOKEN;
 
-      - name: Publish GitHub Release with Jira Notes
+      - name: Publish GitHub Release
         id: publish
-        # Make sure to point to the correct path for your action
-        uses: ./path/to/your/publish-github-release-action
+        uses: SonarSource/release-github-actions/update-release-ticket-status@master
         with:
           version: ${{ github.event.inputs.version }}
           jira_project_key: 'YOUR_PROJ_KEY'

@@ -88,7 +88,7 @@ jobs:
 
       - name: Create Jira Release Ticket
         id: create_ticket
-        uses: SonarSource/release-github-actions/.github/actions/create-jira-release-ticket
+        uses: SonarSource/release-github-actions/.github/actions/create-jira-release-ticket@master
         with:
           jira_user: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
           jira_token: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
