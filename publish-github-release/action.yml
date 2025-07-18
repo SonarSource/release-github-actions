@@ -112,20 +112,17 @@ runs:
       id: create_release
       shell: bash
       run: |
-        # Set a flag for the 'gh release create' command based on the 'draft' input.
+        echo "${{ inputs.github_token }}" | gh auth login --with-token
+
         DRAFT_FLAG=""
         if [[ "${{ inputs.draft }}" == "true" ]]; then
           DRAFT_FLAG="--draft"
         fi
 
-        # Create the release using the GitHub CLI.
-        # The title will be automatically extracted from the first H1 header in the notes file.
-        RELEASE_URL=$(GH_TOKEN=${{ inputs.github-token }} gh release create "${{ inputs.version }}" \
+        RELEASE_URL=$(gh release create "${{ inputs.version }}" \
           --target "${{ inputs.branch }}" \
+          --title "${{ inputs.project_name }} ${{ inputs.version }}" \
           --notes-file "release-notes.md" \
           $DRAFT_FLAG)
 
-        # Set the action's output 'release_url' to the captured URL.
         echo "release_url=${RELEASE_URL}" >> $GITHUB_OUTPUT
-      env:
-        GH_TOKEN: ${{ inputs.github_token }}
