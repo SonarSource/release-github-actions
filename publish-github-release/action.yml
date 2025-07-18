@@ -14,10 +14,6 @@ inputs:
     description: 'A boolean value to indicate if the release should be a draft. Defaults to true.'
     required: false
     default: 'true'
-  github-token:
-    description: 'The GitHub token for API calls.'
-    required: true
-    default: ${{ github.token }}
   release_notes:
     description: 'The full markdown content for the release notes. If provided, this is used directly.'
     required: false
@@ -43,6 +39,10 @@ inputs:
     description: "Use the sandbox Jira server instead of production."
     required: false
     default: 'true'
+  github_token:
+    description: 'The GitHub token for API calls.'
+    required: true
+    default: ${{ github.token }}
 
 outputs:
   release_url:
@@ -120,7 +120,7 @@ runs:
 
         # Create the release using the GitHub CLI.
         # The title will be automatically extracted from the first H1 header in the notes file.
-        RELEASE_URL=$(gh release create "${{ inputs.version }}" \
+        RELEASE_URL=$(GH_TOKEN=${{ inputs.github-token }} gh release create "${{ inputs.version }}" \
           --target "${{ inputs.branch }}" \
           --notes-file "release-notes.md" \
           $DRAFT_FLAG)
