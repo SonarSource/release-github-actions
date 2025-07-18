@@ -14,9 +14,10 @@ inputs:
     description: 'A boolean value to indicate if the release should be a draft. Defaults to true.'
     required: false
     default: 'true'
-  github_token:
-    description: 'The GITHUB_TOKEN secret to authenticate with the GitHub API.'
+  github-token:
+    description: 'The GitHub token for API calls.'
     required: true
+    default: ${{ github.token }}
   release_notes:
     description: 'The full markdown content for the release notes. If provided, this is used directly.'
     required: false
@@ -41,7 +42,7 @@ inputs:
   use_sandbox:
     description: "Use the sandbox Jira server instead of production."
     required: false
-    default: 'false'
+    default: 'true'
 
 outputs:
   release_url:
@@ -127,4 +128,4 @@ runs:
         # Set the action's output 'release_url' to the captured URL.
         echo "release_url=${RELEASE_URL}" >> $GITHUB_OUTPUT
       env:
-        GITHUB_TOKEN: ${{ inputs.github_token }}
+        GH_TOKEN: ${{ inputs.github_token }}
