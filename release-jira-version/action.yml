@@ -1,0 +1,65 @@
+name: 'Release Jira Version'
+description: 'Releases a specified Jira version and creates a new one.'
+author: 'SonarSource'
+
+inputs:
+  jira_user:
+    description: 'Jira user for authentication (e.g., email address).'
+    required: true
+  jira_token:
+    description: 'Jira API token for authentication.'
+    required: true
+  project_key:
+    description: 'The key of the Jira project (e.g., SONARIAC).'
+    required: true
+  jira_release_name:
+    description: 'The name of the Jira version to release (e.g., 1.2.3).'
+    required: true
+  new_version_name:
+    description: 'The name for the next version. If not provided, it will increment the minor version of the released version.'
+    required: false
+    default: ''
+  use_sandbox:
+    description: "Use the sandbox Jira server instead of production."
+    required: false
+    default: 'true'
+
+outputs:
+  new_version_name:
+    description: 'The name of the new version that was created.'
+    value: ${{ steps.run_python_script.outputs.new_version_name }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.8'
+
+    - name: Install dependencies
+      shell: bash
+      run: pip install -r ${{ github.action_path }}/requirements.txt
+
+    - name: Run Python Script to Release and Create Version
+      id: run_python_script
+      shell: bash
+      run: |
+        SANDBOX_FLAG=""
+        if [[ "${{ inputs.use_sandbox }}" == "true" ]]; then
+          SANDBOX_FLAG="--use-sandbox"
+        fi
+
+        NEW_VERSION_FLAG=""
+        if [[ -n "${{ inputs.new_version_name }}" ]]; then
+          NEW_VERSION_FLAG="--new-version-name=${{ inputs.new_version_name }}"
+        fi
+
+        python ${{ github.action_path }}/release_and_create_version.py \
+          --project-key="${{ inputs.project_key }}" \
+          --jira-release-name="${{ inputs.jira_release_name }}" \
+          ${SANDBOX_FLAG} \
+          ${NEW_VERSION_FLAG} >> $GITHUB_OUTPUT
+      env:
+        JIRA_USER: ${{ inputs.jira_user }}
+        JIRA_TOKEN: ${{ inputs.jira_token }}

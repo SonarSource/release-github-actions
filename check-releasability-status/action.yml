@@ -1,5 +1,6 @@
 name: 'Check releasability status'
 description: 'Gets the status of the latest releasability check on the master branch and returns the version if it succeeded.'
+author: 'SonarSource'
 
 inputs:
   check-name:
