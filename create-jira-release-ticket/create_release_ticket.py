@@ -37,6 +37,7 @@ def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 
+# noinspection DuplicatedCode
 def get_jira_instance(use_sandbox=False):
     """
     Initializes and returns a JIRA client instance and the server URL used.
@@ -203,10 +204,12 @@ def main():
     eprint("\n" + "=" * 50)
     eprint("🎉 Successfully created release ticket!")
     eprint(f"   Ticket Key: {ticket.key}")
+    eprint(f"   Release Name: {release_notes_info.name}")
     eprint(f"   Ticket URL: {ticket.permalink()}")
     eprint("=" * 50)
 
-    print(ticket.key)
+    print(f"ticket_key={ticket.key}")
+    print(f"jira_release_name={release_notes_info.name}")
 
 
 if __name__ == "__main__":
