@@ -29,9 +29,10 @@ The following inputs can be configured for the action:
 
 ## Outputs
 
-| Output       | Description                                    |
-|--------------|------------------------------------------------|
-| `ticket_key` | The key of the jira ticket (e.g., `REL-1234`). |
+| Output              | Description                                      |
+|---------------------|--------------------------------------------------|
+| `ticket_key`        | The key of the Jira ticket (e.g., `REL-1234`).   |
+| `jira_release_name` | The name of the Jira release used by the action. |
 
 ## Example Usage
 
@@ -83,7 +84,7 @@ jobs:
 
       - name: Create Jira Release Ticket
         id: create_ticket
-        uses: SonarSource/release-github-actions/.github/actions/create-jira-release-ticket
+        uses: SonarSource/release-github-actions/.github/actions/create-jira-release-ticket@master
         with:
           jira_user: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
           jira_token: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
@@ -95,5 +96,7 @@ jobs:
           jira_release_name: ${{ github.event.inputs.jira_release }}
           sonarlint_changelog: ${{ github.event.inputs.sonarlint_changelog }}
 
-      - name: Echo Ticket Key
-        run: echo "The created Jira ticket key is ${{ steps.create_ticket.outputs.ticket_key }}"
+      - name: Echo Ticket Key and Release Name
+        run: |
+          echo "The created Jira ticket key is ${{ steps.create_ticket.outputs.ticket_key }}"
+          echo "The Jira release name used is ${{ steps.create_ticket.outputs.jira_release_name }}"

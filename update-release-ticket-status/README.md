@@ -60,7 +60,7 @@ jobs:
             development/kv/data/jira token | JIRA_TOKEN;
 
       - name: Update Jira Release Ticket
-        uses: SonarSource/release-github-actions/update-release-ticket-status@v1
+        uses: SonarSource/release-github-actions/update-release-ticket-status@master
         with:
           jira_user: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
           jira_token: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
