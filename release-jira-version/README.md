@@ -70,8 +70,8 @@ jobs:
         id: jira_release
         uses: SonarSource/release-github-actions/release-jira-version@master
         with:
-          jira_user: ${{ secrets.JIRA_USER }}
-          jira_token: ${{ secrets.JIRA_TOKEN }}
+          jira_user: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
+          jira_token: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
           project_key: 'SONARIAC'
           jira_release_name: ${{ github.event.inputs.version_to_release }}
           new_version_name: ${{ github.event.inputs.next_version }}
