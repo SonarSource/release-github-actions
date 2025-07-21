@@ -23,7 +23,7 @@ inputs:
     required: true
   targeted_product:
     description: 'The targeted product version (e.g., 11.0)'
-    required: true
+    required: false
   sq_compatibility:
     description: 'SonarQube compatibility version (e.g., 2025.3)'
     required: true

@@ -20,8 +20,8 @@ The following inputs can be configured for the action:
 | `project_name`         | The display name of the project (e.g., `SonarIaC`). Will be used as the prefix of the resulting release ticket.    | `true`   |         |
 | `version`              | The new version string being released (e.g., `1.2.3`).                                                             | `true`   |         |
 | `short_description`    | A brief description of the release.                                                                                | `true`   |         |
-| `targeted_product`     | The targeted product version (e.g., `11.0`).                                                                       | `true`   |         |
 | `sq_compatibility`     | The SonarQube compatibility version (e.g., `2025.3`).                                                              | `true`   |         |
+| `targeted_product`     | The targeted product version (e.g., `11.0`).                                                                       | `false`  |         |
 | `use_sandbox`          | Set to `false` to use the Jira production server.                                                                  | `false`  | `true`  |
 | `documentation_status` | The status of the release documentation.                                                                           | `false`  | `N/A`   |
 | `rule_props_changed`   | Whether rule properties have changed (`Yes` or `No`).                                                              | `false`  | `No`    |
