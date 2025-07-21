@@ -41,7 +41,6 @@ Here is an example of how to use this action in a workflow. This job will be tri
 ```yaml
 name: Create Release Ticket
 
-# Define environment variables for project-specific settings
 env:
   PROJECT_KEY: 'SONARIAC'
   PROJECT_NAME: 'SonarIaC'
@@ -56,13 +55,13 @@ on:
       short_description:
         description: 'Short Description'
         required: true
-      targeted_product:
-        description: 'Targeted Product'
-        required: true
       sq_compatibility:
         description: 'SonarQube Compatibility'
         required: true
-      jira_release:
+      targeted_product:
+        description: 'Targeted Product'
+        required: false
+      jira_release_name:
         description: 'Jira release version'
         required: false
       sonarlint_changelog:
