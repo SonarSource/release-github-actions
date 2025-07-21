@@ -7,13 +7,15 @@ This GitHub Action automates releasing a version in Jira and then creating a new
 1.  **Finds a Version**: It searches for a Jira version matching the `jira_release_name` input within the specified `project_key`.
 2.  **Releases It**: It marks that version as "released" in Jira, setting the release date to the current day.
 3.  **Creates the Next Version**:
-    * If you provide a `new_version_name`, it creates a new version with that exact name.
-    * If you don't, it attempts to increment the last number of the `jira_release_name` (e.g., `1.5.2` becomes `1.5.3`) and creates a new version with the incremented name.
+    - If you provide a `new_version_name`, it creates a new version with that exact name.
+    - If you don't, it attempts to increment the last number of the `jira_release_name` (e.g., `1.5.2` becomes `1.5.3`) and creates a new version with the incremented name.
 
 ## Prerequisites
 
-The action requires that the repository needs to have the `development/kv/data/jira` token configured in vault.
+The action requires that the repository has the `development/kv/data/jira` token configured in vault.
 This can be done using the SPEED self-service portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platform/pages/3553787989/Manage+Vault+Policy+-+SPEED)).
+
+The [Jira API user](https://sonarsource.atlassian.net/jira/people/712020:9dcffe4d-55ee-4d69-b5d1-535c6dbd9cc4)  must have the project role `Administrators` for the target project to manage releases.
 
 ## Inputs
 
@@ -43,10 +45,10 @@ on:
   workflow_dispatch:
     inputs:
       version_to_release:
-        description: 'Jira version to release'
+        description: "Jira version to release"
         required: true
       next_version:
-        description: 'Next Jira version to create'
+        description: "Next Jira version to create"
         required: false
 
 jobs:
@@ -80,3 +82,4 @@ jobs:
       - name: Echo Output
         run: |
           echo "Created new version: ${{ steps.jira_release.outputs.new_version_name }}"
+```
