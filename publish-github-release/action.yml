@@ -131,7 +131,7 @@ runs:
         echo "release_url=${RELEASE_URL}" >> $GITHUB_OUTPUT
 
     - name: Wait for '${{ inputs.wait_for_workflow_name }}' Workflow
-      if: inputs.wait_for_workflow_name != ''
+      if: inputs.draft == 'false' && inputs.wait_for_workflow_name != ''
       shell: bash
       run: |
         echo "${{ inputs.github_token }}" | gh auth login --with-token
@@ -141,9 +141,9 @@ runs:
 
         RUN_ID=""
         for i in {1..12}; do
-          RUN_ID=$(gh run list --workflow="${{ inputs.wait_for_workflow_name }}" --event="release" --limit=5 --json databaseId,headBranch --jq '.[] | select(.headBranch == "3.42.1.12942") | .databaseId' | sed -n '2 p')
+          RUN_ID=$(gh run list --workflow="${{ inputs.wait_for_workflow_name }}" --event="release" --limit=5 --json databaseId,headBranch --jq '.[] | select(.headBranch == "${{ inputs.version }}") | .databaseId' | head -n 1)
           if [[ -n "${RUN_ID}" ]]; then
-            echo "✅ Found workflow run with ID: ${RUN_ID} for tag '3.42.1.12942'."
+            echo "✅ Found workflow run with ID: ${RUN_ID} for tag '${{ inputs.version }}'."
             break
           fi
           echo "Run not found yet. Retrying in 10 seconds..."

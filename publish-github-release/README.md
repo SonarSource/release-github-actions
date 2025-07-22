@@ -15,25 +15,26 @@ The action also requires a `github_token` with `contents: write` permissions to 
 
 The following inputs can be configured for the action:
 
-| Input               | Description                                                                                                      | Required | Default               |
-|---------------------|------------------------------------------------------------------------------------------------------------------|----------|-----------------------|
-| `github_token`      | The GitHub token for API calls.                                                                                  | `true`   | `${{ github.token }}` |
-| `version`           | The version number for the new release (e.g., `v1.0.0`). This will also be the tag name.                         | `true`   |                       |
-| `branch`            | The branch, commit, or tag to create the release from.                                                           | `false`  | `master`              |
-| `draft`             | A boolean value to indicate if the release should be a draft.                                                    | `false`  | `true`                |
-| `release_notes`     | The full markdown content for the release notes. If provided, this is used directly, ignoring Jira inputs.       | `false`  | `''`                  |
-| `jira_release_name` | The name of the Jira release version. If provided and `release_notes` is empty, notes will be fetched from Jira. | `false`  | `''`                  |
-| `jira_project_key`  | The Jira project key (e.g., "SONARPHP") to fetch notes from. Required if using `jira_release_name`.              | `false`  |                       |
-| `jira_user`         | Jira user (email) for authentication. Required if using `jira_release_name`.                                     | `false`  |                       |
-| `jira_token`        | Jira API token for authentication. Required if using `jira_release_name`.                                        | `false`  |                       |
-| `issue_types`       | Optional comma-separated list of Jira issue types to include in the release notes, in order of appearance.       | `false`  | `''`                  |
-| `use_sandbox`       | Set to `false` to use the Jira production server instead of the sandbox.                                         | `false`  | `true`                |
+| Input                    | Description                                                                                                      | Required | Default               |
+|--------------------------|------------------------------------------------------------------------------------------------------------------|----------|-----------------------|
+| `github_token`           | The GitHub token for API calls.                                                                                  | `true`   | `${{ github.token }}` |
+| `version`                | The version number for the new release (e.g., `v1.0.0`). This will also be the tag name.                         | `true`   |                       |
+| `branch`                 | The branch, commit, or tag to create the release from.                                                           | `false`  | `master`              |
+| `draft`                  | A boolean value to indicate if the release should be a draft.                                                    | `false`  | `true`                |
+| `release_notes`          | The full markdown content for the release notes. If provided, this is used directly, ignoring Jira inputs.       | `false`  | `''`                  |
+| `jira_release_name`      | The name of the Jira release version. If provided and `release_notes` is empty, notes will be fetched from Jira. | `false`  | `''`                  |
+| `jira_project_key`       | The Jira project key (e.g., "SONARPHP") to fetch notes from. Required if using `jira_release_name`.              | `false`  |                       |
+| `jira_user`              | Jira user (email) for authentication. Required if using `jira_release_name`.                                     | `false`  |                       |
+| `jira_token`             | Jira API token for authentication. Required if using `jira_release_name`.                                        | `false`  |                       |
+| `issue_types`            | Optional comma-separated list of Jira issue types to include in the release notes, in order of appearance.       | `false`  | `''`                  |
+| `use_sandbox`            | Set to `false` to use the Jira production server instead of the sandbox.                                         | `false`  | `true`                |
+| `wait_for_workflow_name` | The name or file name of the workflow to wait for upon a non-draft release. If empty, this step is skipped.      | `false`  | `sonar-release`       |
 
 ## Outputs
 
-| Output        | Description                             |
-|---------------|-----------------------------------------|
-| `release_url` | The URL of the newly created release.   |
+| Output        | Description                           |
+|---------------|---------------------------------------|
+| `release_url` | The URL of the newly created release. |
 
 ## Example Usage
 
