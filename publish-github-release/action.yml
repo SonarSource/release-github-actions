@@ -141,9 +141,9 @@ runs:
 
         RUN_ID=""
         for i in {1..12}; do
-          RUN_ID=$(gh run list --workflow="${{ inputs.wait_for_workflow_name }}" --event="release" --limit=5 --json databaseId,headBranch --jq '.[] | select(.headBranch == "${{ inputs.version }}") | .databaseId')
+          RUN_ID=$(gh run list --workflow="${{ inputs.wait_for_workflow_name }}" --event="release" --limit=5 --json databaseId,headBranch --jq '.[] | select(.headBranch == "3.46.0.13151") | .databaseId')
           if [[ -n "${RUN_ID}" ]]; then
-            echo "✅ Found workflow run with ID: ${RUN_ID} for tag '${{ inputs.version }}'."
+            echo "✅ Found workflow run with ID: ${RUN_ID} for tag '3.46.0.13151'."
             break
           fi
           echo "Run not found yet. Retrying in 10 seconds..."
