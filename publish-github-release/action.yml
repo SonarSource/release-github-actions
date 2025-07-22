@@ -131,7 +131,7 @@ runs:
         echo "release_url=${RELEASE_URL}" >> $GITHUB_OUTPUT
 
     - name: Wait for '${{ inputs.wait_for_workflow_name }}' Workflow
-      if: inputs.draft == 'false' && inputs.wait_for_workflow_name != ''
+      if: inputs.wait_for_workflow_name != ''
       shell: bash
       run: |
         echo "${{ inputs.github_token }}" | gh auth login --with-token
