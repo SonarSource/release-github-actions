@@ -21,6 +21,9 @@ inputs:
   short_description:
     description: 'A short description for the release'
     required: true
+  targeted_product:
+    description: 'The targeted product version (e.g., 11.0)'
+    required: false
   sq_compatibility:
     description: 'SonarQube compatibility version (e.g., 2025.3)'
     required: true
@@ -76,6 +79,7 @@ runs:
           --project-name="${{ inputs.project_name }}" \
           --version="${{ inputs.version }}" \
           --short-description="${{ inputs.short_description }}" \
+          --targeted-product="${{ inputs.targeted_product }}" \
           --sq-compatibility="${{ inputs.sq_compatibility }}" \
           ${SANDBOX_FLAG} \
           --documentation-status="${{ inputs.documentation_status }}" \
