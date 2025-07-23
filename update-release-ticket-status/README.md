@@ -4,7 +4,7 @@ This GitHub Action automates updating the status of an "Ask for release" ticket 
 
 ## Prerequisites
 
-The action requires that the repository needs to have the `development/kv/data/jira` token configured in vault.
+The action requires that the repository has the `development/kv/data/jira` token configured in vault.
 This can be done using the SPEED self-service portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platform/pages/3553787989/Manage+Vault+Policy+-+SPEED)).
 
 ## Inputs
