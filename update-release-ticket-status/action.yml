@@ -16,7 +16,7 @@ inputs:
     description: 'The target status for the ticket. Must be a valid transition.'
     required: true
   assignee:
-    description: 'The email of the user to assign the ticket to. Optional.'
+    description: 'The email of the user to assign the ticket to.'
     required: false
     default: ''
   use_sandbox:

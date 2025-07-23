@@ -1,0 +1,186 @@
+name: 'Publish GitHub Release'
+description: 'Publishes a GitHub Release with release notes that are provided directly or fetched from Jira.'
+author: 'SonarSource'
+
+inputs:
+  version:
+    description: 'The version number for the new release (e.g., v1.0.0). This will also be the tag name.'
+    required: true
+  branch:
+    description: 'The branch, commit, or tag to create the release from.'
+    required: false
+    default: 'master'
+  draft:
+    description: 'A boolean value to indicate if the release should be a draft. Defaults to true.'
+    required: false
+    default: 'true'
+  release_notes:
+    description: 'The full markdown content for the release notes. If provided, this is used directly.'
+    required: false
+    default: ''
+  jira_release_name:
+    description: 'The name of the Jira release version. If provided and release_notes is empty, notes will be fetched from Jira.'
+    required: false
+    default: ''
+  jira_project_key:
+    description: 'The Jira project key (e.g., "SONARPHP") to fetch notes from.'
+    required: false
+  jira_user:
+    description: 'Jira user for authentication.'
+    required: false
+  jira_token:
+    description: 'Jira API token for authentication.'
+    required: false
+  issue_types:
+    description: 'Optional comma-separated list of Jira issue types to include in the release notes, in order.'
+    required: false
+    default: ''
+  use_sandbox:
+    description: "Use the sandbox Jira server instead of production."
+    required: false
+    default: 'true'
+  github_token:
+    description: 'The GitHub token for API calls.'
+    required: true
+    default: ${{ github.token }}
+  wait_for_workflow_name:
+    description: 'The name or file name of the workflow to wait for upon a non-draft release (e.g., "sonar-release" or "release.yml"). If empty, this step is skipped.'
+    required: false
+    default: 'sonar-release'
+
+outputs:
+  release_url:
+    description: 'The URL of the newly created release.'
+    value: ${{ steps.create_release.outputs.release_url }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check out repository
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+    - name: Validate Inputs
+      shell: bash
+      run: |
+        if [[ -z "${{ inputs.release_notes }}" && -z "${{ inputs.jira_release_name }}" ]]; then
+          echo "Error: You must provide either the 'release_notes' or the 'jira_release_name' input."
+          exit 1
+        fi
+        if [[ -n "${{ inputs.jira_release_name }}" && ( -z "${{ inputs.jira_project_key }}" || -z "${{ inputs.jira_user }}" || -z "${{ inputs.jira_token }}" ) ]]; then
+          echo "Error: When using 'jira_release_name', you must also provide 'jira_project_key', 'jira_user', and 'jira_token'."
+          exit 1
+        fi
+
+    - name: Prepare Release Notes
+      id: prepare_notes
+      shell: bash
+      run: |
+        # Case 1: Direct release_notes are provided.
+        if [[ -n "${{ inputs.release_notes }}" ]]; then
+          echo "Using provided release_notes."
+          echo "${{ inputs.release_notes }}" > release-notes.md
+          exit 0
+        fi
+
+        # Case 2: Fetch notes from Jira.
+        if [[ -n "${{ inputs.jira_release_name }}" ]]; then
+          echo "Fetching release notes from Jira for version: ${{ inputs.jira_release_name }}"
+
+          # Setup Python environment
+          echo "Setting up Python..."
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install -r ${{ github.action_path }}/requirements.txt
+          echo "Python setup complete."
+
+          SANDBOX_FLAG=""
+          if [[ "${{ inputs.use_sandbox }}" == "true" ]]; then
+            SANDBOX_FLAG="--use-sandbox"
+          fi
+
+          python ${{ github.action_path }}/fetch_jira_release_notes.py \
+            --project-key "${{ inputs.jira_project_key }}" \
+            --release-name "${{ inputs.jira_release_name }}" \
+            --issue-types "${{ inputs.issue_types }}" \
+            $SANDBOX_FLAG > release-notes.md
+
+          echo "Successfully fetched notes from Jira."
+          exit 0
+        fi
+      env:
+        JIRA_USER: ${{ inputs.jira_user }}
+        JIRA_TOKEN: ${{ inputs.jira_token }}
+
+    - name: Create Release with GitHub CLI
+      id: create_release
+      shell: bash
+      run: |
+        echo "${{ inputs.github_token }}" | gh auth login --with-token
+
+        DRAFT_FLAG=""
+        if [[ "${{ inputs.draft }}" == "true" ]]; then
+          DRAFT_FLAG="--draft"
+        fi
+
+        RELEASE_URL=$(gh release create "${{ inputs.version }}" \
+          --target "${{ inputs.branch }}" \
+          --title "${{ inputs.project_name }} ${{ inputs.version }}" \
+          --notes-file "release-notes.md" \
+          $DRAFT_FLAG)
+
+        echo "release_url=${RELEASE_URL}" >> $GITHUB_OUTPUT
+
+    - name: Wait for '${{ inputs.wait_for_workflow_name }}' Workflow
+      if: inputs.draft == 'false' && inputs.wait_for_workflow_name != ''
+      shell: bash
+      run: |
+        echo "${{ inputs.github_token }}" | gh auth login --with-token
+
+        echo "Waiting for the '${{ inputs.wait_for_workflow_name }}' workflow to be triggered by tag '${{ inputs.version }}'..."
+        sleep 15
+
+        RUN_ID=""
+        for i in {1..12}; do
+          RUN_ID=$(gh run list --workflow="${{ inputs.wait_for_workflow_name }}" --event="release" --limit=5 --json databaseId,headBranch --jq '.[] | select(.headBranch == "${{ inputs.version }}") | .databaseId' | head -n 1)
+          if [[ -n "${RUN_ID}" ]]; then
+            echo "✅ Found workflow run with ID: ${RUN_ID} for tag '${{ inputs.version }}'."
+            break
+          fi
+          echo "Run not found yet. Retrying in 10 seconds..."
+          sleep 10
+        done
+
+        if [[ -z "${RUN_ID}" ]]; then
+          echo "::error::Could not find a triggered '${{ inputs.wait_for_workflow_name }}' workflow run for tag '${{ inputs.version }}' after 2 minutes."
+          exit 1
+        fi
+
+        echo "Polling status of run ${RUN_ID}..."
+        # Timeout after 30 minutes
+        TIMEOUT_POLL=$(( $(date +%s) + 1800 ))
+        while true; do
+          if [[ $(date +%s) -gt $TIMEOUT_POLL ]]; then
+            echo "::error::Timeout of 30 minutes reached while waiting for workflow run ${RUN_ID} to complete."
+            exit 1
+          fi
+
+          RESULT=$(gh run view "${RUN_ID}" --json status,conclusion,url --jq '.status + "," + (.conclusion // "null") + "," + .url')
+          STATUS=$(echo "$RESULT" | cut -d, -f1)
+          CONCLUSION=$(echo "$RESULT" | cut -d, -f2)
+          URL=$(echo "$RESULT" | cut -d, -f3)
+
+          if [[ "${STATUS}" == "completed" ]]; then
+            echo "Workflow run has completed with conclusion: ${CONCLUSION}"
+            if [[ "${CONCLUSION}" == "success" ]]; then
+              echo "✅ '${{ inputs.wait_for_workflow_name }}' workflow completed successfully."
+              echo "Run URL: ${URL}"
+              exit 0
+            else
+              echo "::error::'${{ inputs.wait_for_workflow_name }}' workflow did not succeed. Final conclusion: ${CONCLUSION}."
+              echo "Run URL: ${URL}"
+              exit 1
+            fi
+          fi
+          echo "Current status is '${STATUS}'. Waiting 30 seconds..."
+          sleep 30
+        done

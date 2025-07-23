@@ -52,6 +52,9 @@ outputs:
   ticket_key:
     description: 'The key of the created Jira ticket (e.g., REL-123)'
     value: ${{ steps.run_python_script.outputs.ticket_key }}
+  jira_release_name:
+    description: 'The name of the Jira release found or used by the script.'
+    value: ${{ steps.run_python_script.outputs.jira_release_name }}
 
 runs:
   using: "composite"
@@ -74,7 +77,7 @@ runs:
           SANDBOX_FLAG="--use-sandbox"
         fi
 
-        TICKET_KEY=$(python ${{ github.action_path }}/create_release_ticket.py \
+        python ${{ github.action_path }}/create_release_ticket.py \
           --project-key="${{ inputs.project_key }}" \
           --project-name="${{ inputs.project_name }}" \
           --version="${{ inputs.version }}" \
@@ -85,9 +88,7 @@ runs:
           --documentation-status="${{ inputs.documentation_status }}" \
           --rule-props-changed="${{ inputs.rule_props_changed }}" \
           --jira-release-name="${{ inputs.jira_release_name }}" \
-          --sonarlint-changelog="${{ inputs.sonarlint_changelog }}"
-        )
-        echo "ticket_key=${TICKET_KEY}" >> $GITHUB_OUTPUT
+          --sonarlint-changelog="${{ inputs.sonarlint_changelog }}" >> $GITHUB_OUTPUT
       env:
         JIRA_USER: ${{ inputs.jira_user }}
         JIRA_TOKEN: ${{ inputs.jira_token }}
