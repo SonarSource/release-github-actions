@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # If using Vault for secrets
+      id-token: write
 
     steps:
       - name: Get Jira Credentials from Vault
@@ -64,7 +64,7 @@ jobs:
 
       - name: Find and Update Tickets
         id: integration_update
-        uses: SonarSource/release-github-actions/.github/actions/update-integrations-tickets@master
+        uses: SonarSource/release-github-actions/update-integration-tickets@master
         with:
           jira_user: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
           jira_token: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
