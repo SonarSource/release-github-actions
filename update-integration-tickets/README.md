@@ -11,15 +11,13 @@ This can be done using the SPEED self-service portal ([more info](https://xtrane
 
 ## Inputs
 
-| Input                | Description                                                                                         | Required | Default |
-|----------------------|-----------------------------------------------------------------------------------------------------|----------|---------|
-| `jira_user`          | The Jira user (email) for authentication.                                                           | `true`   |         |
-| `jira_token`         | The Jira API token for authentication.                                                              | `true`   |         |
-| `release_ticket_key` | The key of the release ticket (e.g., `REL-1234`) to find the linked integration tickets from.       | `true`   |         |
-| `sqs_project_key`    | The Jira project key to search for the linked SQS integration ticket.                               | `false`  | `SONAR` |
-| `sc_project_key`     | The Jira project key to search for the linked SC integration ticket.                                | `false`  | `SC`    |
-| `sqs_fix_versions`   | A comma-separated list of fix versions to set on the SQS integration ticket (e.g., `"10.1, 10.2"`). | `false`  |         |
-| `use_sandbox`        | Set to `false` to use the Jira production server.                                                   | `false`  | `true`  |
+| Input                | Description                                                                                                    | Required | Default |
+|----------------------|----------------------------------------------------------------------------------------------------------------|----------|---------|
+| `jira_user`          | The Jira user (email) for authentication.                                                                      | `true`   |         |
+| `jira_token`         | The Jira API token for authentication.                                                                         | `true`   |         |
+| `release_ticket_key` | The key of the release ticket (e.g., `REL-1234`) to find the linked integration tickets from.                  | `true`   |         |
+| `sqs_fix_versions`   | A comma-separated list of fix versions to set on the SQS integration ticket (e.g., `"sqs-2025.4, sqcb-25.7"`). | `false`  |         |
+| `use_sandbox`        | Set to `false` to use the Jira production server.                                                              | `false`  | `true`  |
 
 ## Outputs
 
