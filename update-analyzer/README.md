@@ -54,7 +54,7 @@ on:
 
 jobs:
   update-analyzer:
-    name: Update Architecture Analyzer in SonarQube
+    name: Update PHP Analyzer in SonarQube
     runs-on: ubuntu-latest
     outputs:
       pull_request_url: ${{ steps.update_step.outputs.pr-url }}
