@@ -14,8 +14,6 @@ from jira.exceptions import JIRAError
 
 JIRA_SANDBOX_URL = "https://sonarsource-sandbox-608.atlassian.net/"
 JIRA_PROD_URL = "https://sonarsource.atlassian.net/"
-SQS_PROJECT_KEY = "SONAR"
-SC_PROJECT_KEY = "SC"
 
 
 def eprint(*args, **kwargs):
@@ -88,6 +86,8 @@ def update_sqs_fix_versions(jira, ticket_key, fix_versions_str):
 def main():
     parser = argparse.ArgumentParser(description="Finds linked Jira tickets and optionally updates one.")
     parser.add_argument("--release-ticket-key", required=True, help="The key of the release ticket.")
+    parser.add_argument("--sqs-project-key", default="SONAR", help="The project key for the SQS ticket.")
+    parser.add_argument("--sc-project-key", default="SC", help="The project key for the SC ticket.")
     parser.add_argument("--sqs-fix-versions", help="Comma-separated list of fix versions for the SQS ticket.")
     parser.add_argument('--use-sandbox', action='store_true', help="Use the sandbox Jira server.")
 
@@ -103,8 +103,8 @@ def main():
             f"Error: Could not retrieve issue '{args.release_ticket_key}'. Status: {e.status_code}, Response: {e.text}")
         sys.exit(1)
 
-    sqs_ticket_key = find_linked_ticket(release_issue, SQS_PROJECT_KEY)
-    sc_ticket_key = find_linked_ticket(release_issue, SC_PROJECT_KEY)
+    sqs_ticket_key = find_linked_ticket(release_issue, args.sqs_project_key)
+    sc_ticket_key = find_linked_ticket(release_issue, args.sc_project_key)
 
     update_sqs_fix_versions(jira, sqs_ticket_key, args.sqs_fix_versions)
 
