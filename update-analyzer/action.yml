@@ -1,0 +1,89 @@
+name: 'Update Analyzer'
+description: 'Updates the version of a specified analyzer in SonarQube or SonarCloud and creates a pull request.'
+author: 'SonarSource'
+
+inputs:
+  version:
+    description: 'The new version to set for the analyzer (e.g., 1.12.0.12345).'
+    required: true
+  ticket:
+    description: 'The Jira ticket number (e.g., SONAR-12345 or SC-12345). This determines the target product.'
+    required: true
+  plugin-language:
+    description: 'The language key of the plugin to update (e.g., architecture, java, csharp).'
+    required: true
+  github-token:
+    description: 'A GitHub token with permissions to create pull requests in the target repository.'
+    required: true
+  base_branch:
+    description: 'The base branch for the product pull request.'
+    required: false
+    default: 'master'
+  draft:
+    description: 'A boolean value to control if the pull request is created as a draft.'
+    required: false
+    default: 'false'
+  reviewers:
+    description: 'A comma-separated list of GitHub usernames to request a review from.'
+    required: false
+  pr_body:
+    description: 'The body of the pull request.'
+    required: false
+
+outputs:
+  pr-url:
+    description: 'The URL of the created pull request.'
+    value: ${{ steps.create_pr.outputs.pull-request-url }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up environment
+      id: setup_env
+      shell: bash
+      run: |
+        if [[ "${{ inputs.ticket }}" == SONAR-* ]]; then
+          echo "PRODUCT_REPOSITORY=sonar-enterprise" >> $GITHUB_ENV
+          echo "BUILD_GRADLE_FILE=build.gradle" >> $GITHUB_ENV
+        elif [[ "${{ inputs.ticket }}" == SC-* ]]; then
+          echo "PRODUCT_REPOSITORY=sonarcloud-core" >> $GITHUB_ENV
+          echo "BUILD_GRADLE_FILE=private/edition-sonarcloud/build.gradle" >> $GITHUB_ENV
+        else
+          echo "::error::Invalid ticket format. Must start with SONAR- or SC-."
+          exit 1
+        fi
+
+    - name: Checkout target repository
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        repository: SonarSource/${{ env.PRODUCT_REPOSITORY }}
+        ref: ${{ inputs.base_branch }}
+        sparse-checkout: ${{ env.BUILD_GRADLE_FILE }}
+        sparse-checkout-cone-mode: false
+        fetch-depth: 0
+        token: ${{ inputs.github-token }}
+
+    - name: Update analyzer version in build file
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "Updating analyzer version in ${{ env.BUILD_GRADLE_FILE }} for plugin ${{ inputs.plugin-language }}"
+        
+        sed -i "s/\(:sonar-${{ inputs.plugin-language }}.*-plugin:\)[0-9.]*/\1${{ inputs.version }}/g" ${{ env.BUILD_GRADLE_FILE }}
+        
+        echo "Showing diff:"
+        git --no-pager diff ${{ env.BUILD_GRADLE_FILE }}
+
+    - name: Create Pull Request
+      id: create_pr
+      uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
+      with:
+        author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+        commit-message: '${{ inputs.ticket }} Update `${{ inputs.plugin-language }}` plugins to version ${{ inputs.version }}'
+        title: '${{ inputs.ticket }} Update `${{ inputs.plugin-language }}` to version ${{ inputs.version }}'
+        body: ${{ inputs.pr_body }}
+        base: ${{ inputs.base_branch }}
+        branch: '${{ inputs.plugin-language }}/update-analyzer-${{ inputs.version }}'
+        token: ${{ inputs.github-token }}
+        draft: ${{ inputs.draft }}
+        reviewers: ${{ inputs.reviewers }}

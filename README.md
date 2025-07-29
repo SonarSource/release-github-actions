@@ -10,4 +10,4 @@ A centralized collection of reusable GitHub Actions designed to streamline and a
 * [**Publish GitHub Release**](publish-github-release/README.md): Publishes a GitHub Release with notes fetched from Jira or provided directly.
 * [**Release Jira Version**](release-jira-version/README.md): Releases a Jira version and creates the next one.
 * [**Update integration tickets**](update-integration-tickets/README.md): Finds and optionally updates SQS and SC integration tickets.
-
+* [**Update Analyzer**](update-analyzer/README.md): Updates an analyzer version in SonarQube or SonarCloud and creates a pull request.
