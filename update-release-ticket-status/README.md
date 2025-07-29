@@ -1,11 +1,13 @@
 # Update Jira Release Ticket Status Action
 
-This GitHub Action automates updating the status of an "Ask for release" ticket in Jira. It can also be used to change the assignee of the ticket.
+This GitHub Action automates updating the status of an "Ask for release" ticket in Jira. It can also be used to change
+the assignee of the ticket.
 
 ## Prerequisites
 
 The action requires that the repository has the `development/kv/data/jira` token configured in vault.
-This can be done using the SPEED self-service portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platform/pages/3553787989/Manage+Vault+Policy+-+SPEED)).
+This can be done using the SPEED self-service
+portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platform/pages/3553787989/Manage+Vault+Policy+-+SPEED)).
 
 ## Inputs
 
@@ -20,7 +22,8 @@ This can be done using the SPEED self-service portal ([more info](https://xtrane
 
 ## Example Usage
 
-Here is an example of how to use this action in a workflow. This step would typically run after a release ticket has been created.
+Here is an example of how to use this action in a workflow. This step would typically run after a release ticket has
+been created.
 
 ```yaml
 name: Update Release Ticket
@@ -36,8 +39,8 @@ on:
         required: true
         type: choice
         options:
-        - Start Progress
-        - Technical Release Done
+          - Start Progress
+          - Technical Release Done
       assignee_email:
         description: 'Email of the new assignee (optional)'
         required: false
@@ -70,3 +73,4 @@ jobs:
 
       - name: Echo Status
         run: echo "Successfully updated ticket ${{ github.event.inputs.ticket_key }} to status ${{ github.event.inputs.new_status }}."
+```
