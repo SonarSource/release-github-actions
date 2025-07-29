@@ -1,12 +1,15 @@
 # Create Jira Release Ticket Action
 
-This GitHub Action automates the creation of an "Ask for release" ticket in Jira. It is designed to be used in release workflows to standardize the process of requesting a new software release.
+This GitHub Action automates the creation of an "Ask for release" ticket in Jira. It is designed to be used in release
+workflows to standardize the process of requesting a new software release.
 
 The action is self-contained and uses a Python script to interact with the Jira API.
+
 ## Prerequisites
 
 The action requires that the repository has the `development/kv/data/jira` token configured in vault.
-This can be done using the SPEED self-service portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platform/pages/3553787989/Manage+Vault+Policy+-+SPEED)).
+This can be done using the SPEED self-service
+portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platform/pages/3553787989/Manage+Vault+Policy+-+SPEED)).
 
 ## Inputs
 
@@ -34,10 +37,13 @@ The following inputs can be configured for the action:
 |---------------------|--------------------------------------------------|
 | `ticket_key`        | The key of the Jira ticket (e.g., `REL-1234`).   |
 | `jira_release_name` | The name of the Jira release used by the action. |
+| `ticket_url`        | The URL of the created Jira ticket.              |
+| `release_url`       | The URL of the Jira release page.                |
 
 ## Example Usage
 
-Here is an example of how to use this action in a workflow. This job will be triggered manually and will create a Jira release ticket using the provided inputs and secrets from HashiCorp Vault.
+Here is an example of how to use this action in a workflow. This job will be triggered manually and will create a Jira
+release ticket using the provided inputs and secrets from HashiCorp Vault.
 
 ```yaml
 name: Create Release Ticket
@@ -49,7 +55,7 @@ env:
 on:
   workflow_dispatch:
     inputs:
-     version:
+      version:
         description: 'Version'
         required: true
         default: '1.0.0'
@@ -101,7 +107,10 @@ jobs:
           jira_release_name: ${{ github.event.inputs.jira_release }}
           sonarlint_changelog: ${{ github.event.inputs.sonarlint_changelog }}
 
-      - name: Echo Ticket Key and Release Name
+      - name: Echo Ticket Details
         run: |
-          echo "The created Jira ticket key is ${{ steps.create_ticket.outputs.ticket_key }}"
-          echo "The Jira release name used is ${{ steps.create_ticket.outputs.jira_release_name }}"
+          echo "Ticket Key: ${{ steps.create_ticket.outputs.ticket_key }}"
+          echo "Ticket URL: ${{ steps.create_ticket.outputs.ticket_url }}"
+          echo "Release Name: ${{ steps.create_ticket.outputs.jira_release_name }}"
+          echo "Release URL: ${{ steps.create_ticket.outputs.release_url }}"
+```

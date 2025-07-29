@@ -1,21 +1,26 @@
 # Release Jira Version Action
 
-This GitHub Action automates releasing a version in Jira and then creating a new, subsequent version. It is useful for end-of-release-cycle workflows.
+This GitHub Action automates releasing a version in Jira and then creating a new, subsequent version. It is useful for
+end-of-release-cycle workflows.
 
 ## How It Works
 
-1.  **Finds a Version**: It searches for a Jira version matching the `jira_release_name` input within the specified `project_key`.
-2.  **Releases It**: It marks that version as "released" in Jira, setting the release date to the current day.
-3.  **Creates the Next Version**:
+1. **Finds a Version**: It searches for a Jira version matching the `jira_release_name` input within the specified
+   `project_key`.
+2. **Releases It**: It marks that version as "released" in Jira, setting the release date to the current day.
+3. **Creates the Next Version**:
     - If you provide a `new_version_name`, it creates a new version with that exact name.
-    - If you don't, it attempts to increment the last number of the `jira_release_name` (e.g., `1.5.2` becomes `1.5.3`) and creates a new version with the incremented name.
+    - If you don't, it attempts to increment the last number of the `jira_release_name` (e.g., `1.5.2` becomes `1.5.3`)
+      and creates a new version with the incremented name.
 
 ## Prerequisites
 
 The action requires that the repository has the `development/kv/data/jira` token configured in vault.
-This can be done using the SPEED self-service portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platform/pages/3553787989/Manage+Vault+Policy+-+SPEED)).
+This can be done using the SPEED self-service
+portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platform/pages/3553787989/Manage+Vault+Policy+-+SPEED)).
 
-The [Jira API user](https://sonarsource.atlassian.net/jira/people/712020:9dcffe4d-55ee-4d69-b5d1-535c6dbd9cc4)  must have the project role `Administrators` for the target project to manage releases.
+The [Jira API user](https://sonarsource.atlassian.net/jira/people/712020:9dcffe4d-55ee-4d69-b5d1-535c6dbd9cc4)  must
+have the project role `Administrators` for the target project to manage releases.
 
 ## Inputs
 
@@ -36,7 +41,8 @@ The [Jira API user](https://sonarsource.atlassian.net/jira/people/712020:9dcffe4
 
 ## Example Usage
 
-This example demonstrates a manually triggered workflow that releases the provided version and creates a new one in the `SONARIAC` project.
+This example demonstrates a manually triggered workflow that releases the provided version and creates a new one in the
+`SONARIAC` project.
 
 ```yaml
 name: Release Jira Version

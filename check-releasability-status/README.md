@@ -1,12 +1,16 @@
 # Check Releasability Status Action
 
-This GitHub Action checks the releasability status of the master branch. If the check was successful, it extracts the version number from its annotation. It's important to note that this action doesn't run the releasability status check itself but rather finds previous runs. The action is designed to be a prerequisite step in a release workflow, ensuring that a version is ready to be released before proceeding.
+This GitHub Action checks the releasability status of the master branch. If the check was successful, it extracts the
+version number from its annotation. It's important to note that this action doesn't run the releasability status check
+itself but rather finds previous runs. The action is designed to be a prerequisite step in a release workflow, ensuring
+that a version is ready to be released before proceeding.
 
 The action is self-contained and uses the `actions/github-script` toolkit to interact with the GitHub Checks API.
 
 ## Prerequisites
 
-The action requires that the workflow has `checks: read` permissions for the `GITHUB_TOKEN` to be able to access the Checks API.
+The action requires that the workflow has `checks: read` permissions for the `GITHUB_TOKEN` to be able to access the
+Checks API.
 
 ## Inputs
 
@@ -25,7 +29,9 @@ The following inputs can be configured for the action:
 
 ## Example Usage
 
-Here is an example of how to use this action in a workflow. This workflow can be triggered manually. The first job checks the releasability status and exposes the found version as an output. A second job then consumes this version to perform a subsequent step, such as creating a release.
+Here is an example of how to use this action in a workflow. This workflow can be triggered manually. The first job
+checks the releasability status and exposes the found version as an output. A second job then consumes this version to
+perform a subsequent step, such as creating a release.
 
 ```yaml
 name: Check Releasability and Use Version
@@ -55,3 +61,4 @@ jobs:
         if: needs.check_releasability.outputs.release_version
         run: |
           echo "The releasable version is ${{ needs.check_releasability.outputs.release_version }}"
+```

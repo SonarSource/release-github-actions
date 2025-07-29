@@ -55,6 +55,12 @@ outputs:
   jira_release_name:
     description: 'The name of the Jira release found or used by the script.'
     value: ${{ steps.run_python_script.outputs.jira_release_name }}
+  ticket_url:
+    description: 'The URL of the created Jira ticket.'
+    value: ${{ steps.run_python_script.outputs.ticket_url }}
+  release_url:
+    description: 'The URL of the Jira release page.'
+    value: ${{ steps.run_python_script.outputs.release_url }}
 
 runs:
   using: "composite"

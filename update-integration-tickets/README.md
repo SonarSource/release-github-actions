@@ -2,12 +2,16 @@
 
 This GitHub Action automates the process of finding and updating Jira integration tickets.
 
-The action finds both a SonarQube (SQS) integration ticket and a SonarCloud (SC) integration ticket by searching for tickets linked to a specified release ticket. It can then optionally update the `fixVersions` field of the found SQS ticket. If updating the `fixVersions` fails (e.g., due to a non-existent version), it will issue a warning without failing the action.
+The action finds both a SonarQube (SQS) integration ticket and a SonarCloud (SC) integration ticket by searching for
+tickets linked to a specified release ticket. It can then optionally update the `fixVersions` field of the found SQS
+ticket. If updating the `fixVersions` fails (e.g., due to a non-existent version), it will issue a warning without
+failing the action.
 
 ## Prerequisites
 
 The action requires that the repository has the `development/kv/data/jira` token configured in vault.
-This can be done using the SPEED self-service portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platform/pages/3553787989/Manage+Vault+Policy+-+SPEED)).
+This can be done using the SPEED self-service
+portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platform/pages/3553787989/Manage+Vault+Policy+-+SPEED)).
 
 ## Inputs
 
@@ -23,14 +27,17 @@ This can be done using the SPEED self-service portal ([more info](https://xtrane
 
 ## Outputs
 
-| Output           | Description                                                        |
-|------------------|--------------------------------------------------------------------|
-| `sqs_ticket_key` | The key of the SQS integration ticket that was found.              |
-| `sc_ticket_key`  | The key of the SC integration ticket that was found.               |
+| Output           | Description                                           |
+|------------------|-------------------------------------------------------|
+| `sqs_ticket_key` | The key of the SQS integration ticket that was found. |
+| `sc_ticket_key`  | The key of the SC integration ticket that was found.  |
+| `sqs_ticket_url` | The URL of the SQS integration ticket that was found. |
+| `sc_ticket_url`  | The URL of the SC integration ticket that was found.  |
 
 ## Example Usage
 
-Here is an example of how to use this action in a workflow. This job will be triggered manually, find the linked SQS and SC tickets, and update the SQS ticket's fix versions.
+Here is an example of how to use this action in a workflow. This job will be triggered manually, find the linked SQS and
+SC tickets, and update the SQS ticket's fix versions.
 
 ```yaml
 name: Update Integration Tickets
@@ -71,7 +78,10 @@ jobs:
           release_ticket_key: ${{ github.event.inputs.release_ticket }}
           sqs_fix_versions: ${{ github.event.inputs.fix_versions }}
 
-      - name: Echo Found Ticket Keys
+      - name: Echo Found Ticket Keys and URLs
         run: |
           echo "Found SQS integration ticket: ${{ steps.integration_update.outputs.sqs_ticket_key }}"
+          echo "SQS ticket URL: ${{ steps.integration_update.outputs.sqs_ticket_url }}"
           echo "Found SC integration ticket: ${{ steps.integration_update.outputs.sc_ticket_key }}"
+          echo "SC ticket URL: ${{ steps.integration_update.outputs.sc_ticket_url }}"
+```
