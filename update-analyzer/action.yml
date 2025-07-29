@@ -79,8 +79,8 @@ runs:
       uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
       with:
         author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
-        commit-message: '${{ inputs.ticket }} Update ${{ inputs.plugin-name }} analyzer to version ${{ inputs.version }}'
-        title: '${{ inputs.ticket }} Update ${{ inputs.plugin-name }} analyzer to version ${{ inputs.version }}'
+        commit-message: '${{ inputs.ticket }} Update `${{ inputs.plugin-language }}` plugins to version ${{ inputs.version }}'
+        title: '${{ inputs.ticket }} Update `${{ inputs.plugin-language }}` to version ${{ inputs.version }}'
         body:
         base: ${{ inputs.base_branch }}
         branch: '${{ inputs.plugin-language }}/update-analyzer-${{ inputs.version }}'
