@@ -212,10 +212,13 @@ def main():
     eprint(f"   Ticket Key: {ticket.key}")
     eprint(f"   Release Name: {release_notes_info.name}")
     eprint(f"   Ticket URL: {ticket.permalink()}")
+    eprint(f"   Release URL: {release_notes_info.url}")
     eprint("=" * 50)
 
     print(f"ticket_key={ticket.key}")
     print(f"jira_release_name={release_notes_info.name}")
+    print(f"ticket_url={ticket.permalink()}")
+    print(f"release_url={release_notes_info.url}")
 
 
 if __name__ == "__main__":

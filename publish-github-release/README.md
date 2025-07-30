@@ -1,16 +1,21 @@
 # Publish GitHub Release Action
 
-This GitHub Action automates the creation of a GitHub Release. It can generate release notes by fetching the details directly from a Jira release version, or it can use release notes provided directly as an input.
-If not publishing a draft release, the action will wait for the release workflow to complete before reporting its status.
+This GitHub Action automates the creation of a GitHub Release. It can generate release notes by fetching the details
+directly from a Jira release version, or it can use release notes provided directly as an input.
+If not publishing a draft release, the action will wait for the release workflow to complete before reporting its
+status.
 
 This action uses the GitHub CLI to create the release and a Python script to interact with the Jira API.
 
 ## Prerequisites
 
-To fetch release notes from Jira, the action requires that the repository has the `development/kv/data/jira` token configured in vault.
-This can be done using the SPEED self-service portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platform/pages/3553787989/Manage+Vault+Policy+-+SPEED)).
+To fetch release notes from Jira, the action requires that the repository has the `development/kv/data/jira` token
+configured in vault.
+This can be done using the SPEED self-service
+portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platform/pages/3553787989/Manage+Vault+Policy+-+SPEED)).
 
-The action also requires a `github_token` with `contents: write` permissions to create the release. The default `${{ github.token }}` is usually sufficient.
+The action also requires a `github_token` with `contents: write` permissions to create the release. The default
+`${{ github.token }}` is usually sufficient.
 
 ## Inputs
 
@@ -39,7 +44,8 @@ The following inputs can be configured for the action:
 
 ## Example Usage
 
-Here is an example of how to use this action in a workflow. This job can be triggered manually to publish a new release, with release notes generated from a specified Jira version.
+Here is an example of how to use this action in a workflow. This job can be triggered manually to publish a new release,
+with release notes generated from a specified Jira version.
 
 ```yaml
 name: Publish New Release
@@ -88,3 +94,4 @@ jobs:
 
       - name: Print Release URL
         run: echo "Successfully published release at ${{ steps.publish.outputs.release_url }}"
+```

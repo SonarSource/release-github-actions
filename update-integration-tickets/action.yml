@@ -35,6 +35,12 @@ outputs:
   sc_ticket_key:
     description: 'The key of the found SC integration ticket.'
     value: ${{ steps.run_python_script.outputs.sc_ticket_key }}
+  sqs_ticket_url:
+    description: 'The URL of the found SQS integration ticket.'
+    value: ${{ steps.run_python_script.outputs.sqs_ticket_url }}
+  sc_ticket_url:
+    description: 'The URL of the found SC integration ticket.'
+    value: ${{ steps.run_python_script.outputs.sc_ticket_url }}
 
 runs:
   using: "composite"

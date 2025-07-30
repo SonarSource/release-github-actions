@@ -3,7 +3,7 @@
 
 """
 This script finds SQS and SC integration tickets linked to a given release ticket,
-optionally updates the SQS ticket's fix versions, and returns both keys.
+optionally updates the SQS ticket's fix versions, and returns both keys and URLs.
 """
 
 import argparse
@@ -23,7 +23,7 @@ def eprint(*args, **kwargs):
 
 # noinspection DuplicatedCode
 def get_jira_instance(use_sandbox=False):
-    """Initializes and returns a JIRA client instance."""
+    """Initializes and returns a JIRA client instance and the server URL."""
     jira_user = os.environ.get('JIRA_USER')
     jira_token = os.environ.get('JIRA_TOKEN')
 
@@ -36,7 +36,7 @@ def get_jira_instance(use_sandbox=False):
 
     try:
         jira_client = JIRA(jira_url, basic_auth=(jira_user, jira_token))
-        return jira_client
+        return jira_client, jira_url
     except JIRAError as e:
         eprint(f"Error: JIRA authentication failed. Status: {e.status_code}, Response: {e.text}")
         sys.exit(1)
@@ -93,7 +93,7 @@ def main():
 
     args = parser.parse_args()
 
-    jira = get_jira_instance(args.use_sandbox)
+    jira, jira_url = get_jira_instance(args.use_sandbox)
 
     try:
         eprint(f"Fetching release ticket '{args.release_ticket_key}' to find linked issues...")
@@ -108,9 +108,16 @@ def main():
 
     update_sqs_fix_versions(jira, sqs_ticket_key, args.sqs_fix_versions)
 
+    # Construct browse URLs
+    base_url = jira_url.rstrip('/')
+    sqs_ticket_url = f"{base_url}/browse/{sqs_ticket_key}"
+    sc_ticket_url = f"{base_url}/browse/{sc_ticket_key}"
+
     # Output for the GitHub Action
     print(f"sqs_ticket_key={sqs_ticket_key}")
     print(f"sc_ticket_key={sc_ticket_key}")
+    print(f"sqs_ticket_url={sqs_ticket_url}")
+    print(f"sc_ticket_url={sc_ticket_url}")
 
 
 if __name__ == "__main__":

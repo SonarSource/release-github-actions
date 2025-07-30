@@ -1,16 +1,22 @@
 # Update Analyzer Action
 
-This GitHub Action automates the process of updating an analyzer's version within SonarQube or SonarCloud. It checks out the respective product repository, modifies the `build.gradle` file with the new version, and opens a pull request with the changes.
+This GitHub Action automates the process of updating an analyzer's version within SonarQube or SonarCloud. It checks out
+the respective product repository, modifies the `build.gradle` file with the new version, and opens a pull request with
+the changes.
 
-The action determines whether to target SonarQube (`sonar-enterprise`) or SonarCloud (`sonarcloud-core`) based on the prefix of the provided `ticket` number (`SONAR-` or `SC-`).
+The action determines whether to target SonarQube (`sonar-enterprise`) or SonarCloud (`sonarcloud-core`) based on the
+prefix of the provided `ticket` number (`SONAR-` or `SC-`).
 
 ## Prerequisites
 
-The `github-token` provided to the action must have the following permissions for the target repository (e.g., `SonarSource/sonar-enterprise`):
-  * `contents: write`
-  * `pull-requests: write`
+The `github-token` provided to the action must have the following permissions for the target repository (e.g.,
+`SonarSource/sonar-enterprise`):
 
-An example PR how to request a token with those permissions can be found [here](https://github.com/SonarSource/re-terraform-aws-vault/pull/6693).
+* `contents: write`
+* `pull-requests: write`
+
+An example PR how to request a token with those permissions can be
+found [here](https://github.com/SonarSource/re-terraform-aws-vault/pull/6693).
 
 ## Inputs
 
@@ -25,7 +31,6 @@ An example PR how to request a token with those permissions can be found [here](
 | `reviewers`       | A comma-separated list of GitHub usernames to request a review from (e.g., `user1,user2`).  | `false`  |          |
 | `body`            | The body of the pull request.                                                               | `false`  |          |
 
-
 ## Outputs
 
 | Output   | Description                          |
@@ -34,7 +39,9 @@ An example PR how to request a token with those permissions can be found [here](
 
 ## Example Usage
 
-Here is an example of how to use this action in a workflow. This workflow can be triggered manually (`workflow_dispatch`) and uses a secret to provide the required token. The second job demonstrates how to use the `pr-url` output.
+Here is an example of how to use this action in a workflow. This workflow can be triggered manually (
+`workflow_dispatch`) and uses a secret to provide the required token. The second job demonstrates how to use the
+`pr-url` output.
 
 ```yaml
 # .github/workflows/update-my-analyzer.yml
@@ -65,7 +72,7 @@ jobs:
         with:
           secrets: |
             development/github/token/SonarSource-sonar-php-release-automation token | GITHUB_TOKEN;
- 
+
       - name: Update analyzer and create PR
         id: update_step
         uses: SonarSource/release-github-actions/update-analyzer@master
@@ -85,3 +92,4 @@ jobs:
       - name: Echo the PR URL
         run: |
           echo "Pull request created at: ${{ needs.update-analyzer.outputs.pull_request_url }}"
+```
