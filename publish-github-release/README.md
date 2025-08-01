@@ -2,8 +2,6 @@
 
 This GitHub Action automates the creation of a GitHub Release. It can generate release notes by fetching the details
 directly from a Jira release version, or it can use release notes provided directly as an input.
-If not publishing a draft release, the action will wait for the release workflow to complete before reporting its
-status.
 
 This action uses the GitHub CLI to create the release and a Python script to interact with the Jira API.
 
@@ -34,7 +32,6 @@ The following inputs can be configured for the action:
 | `jira_token`             | Jira API token for authentication. Required if using `jira_release_name`.                                        | `false`  |                       |
 | `issue_types`            | Optional comma-separated list of Jira issue types to include in the release notes, in order of appearance.       | `false`  | `''`                  |
 | `use_sandbox`            | Set to `false` to use the Jira production server instead of the sandbox.                                         | `false`  | `true`                |
-| `wait_for_workflow_name` | The name or file name of the workflow to wait for upon a non-draft release. If empty, this step is skipped.      | `false`  | `sonar-release`       |
 
 ## Outputs
 

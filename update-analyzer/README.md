@@ -29,7 +29,7 @@ found [here](https://github.com/SonarSource/re-terraform-aws-vault/pull/6693).
 | `base_branch`     | The base branch for the pull request.                                                       | `false`  | `master` |
 | `draft`           | A boolean value (`true`/`false`) to control if the pull request is created as a draft.      | `false`  | `false`  |
 | `reviewers`       | A comma-separated list of GitHub usernames to request a review from (e.g., `user1,user2`).  | `false`  |          |
-| `body`            | The body of the pull request.                                                               | `false`  |          |
+| `pr_body`         | The body of the pull request.                                                               | `false`  |          |
 
 ## Outputs
 
