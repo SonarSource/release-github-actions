@@ -43,11 +43,6 @@ on:
         description: "Use the sandbox Jira server instead of production."
         required: false
         default: true
-      github_token:
-        type: string
-        description: 'The GitHub token for API calls.'
-        required: false
-        default: ${{ github.token }}
       publishToBinaries:
         type: boolean
         description: Flag to enable the publication to binaries
@@ -102,7 +97,7 @@ jobs:
           jira_token: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
           issue_types: ${{ inputs.issue_types }}
           use_sandbox: ${{ inputs.use_sandbox }}
-          github_token: ${{ inputs.github_token }}
+          github_token: ${{ github.token }}
 
   sonar_release:
     name: Do Sonar Release
