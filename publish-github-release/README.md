@@ -5,6 +5,13 @@ directly from a Jira release version, or it can use release notes provided direc
 
 This action uses the GitHub CLI to create the release and a Python script to interact with the Jira API.
 
+## Duplicate Release Handling
+
+The action automatically checks for existing releases with the same title before creating a new one:
+
+- **When `draft=true`**: If a release with the same title already exists, the action logs a warning and skips creation without failing.
+- **When `draft=false`**: If an existing draft release with the same title is found, it will be published instead of creating a new release. If a published release with the same title already exists, the action will fail with an error.
+
 ## Prerequisites
 
 To fetch release notes from Jira, the action requires that the repository has the `development/kv/data/jira` token
