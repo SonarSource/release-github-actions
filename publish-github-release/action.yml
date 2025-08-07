@@ -52,6 +52,9 @@ outputs:
   release_url:
     description: 'The URL of the newly created release.'
     value: ${{ steps.create_release.outputs.release_url }}
+  release_id:
+    description: 'The ID of the newly created release.'
+    value: ${{ steps.create_release.outputs.release_id }}
 
 runs:
   using: "composite"
@@ -129,3 +132,9 @@ runs:
           $DRAFT_FLAG)
 
         echo "release_url=${RELEASE_URL}" >> $GITHUB_OUTPUT
+
+        # Get the release ID only for published releases
+        if [[ "${{ inputs.draft }}" != "true" ]]; then
+          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/${{ inputs.version }} --jq '.id')
+          echo "release_id=${RELEASE_ID}" >> $GITHUB_OUTPUT
+        fi
