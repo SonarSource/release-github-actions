@@ -46,13 +46,8 @@ on:
       github_token:
         type: string
         description: 'The GitHub token for API calls.'
-        required: true
-        default: ${{ github.token }}
-      wait_for_workflow_name:
-        type: string
-        description: 'The name or file name of the workflow to wait for upon a non-draft release (e.g., "sonar-release" or "release.yml"). If empty, this step is skipped.'
         required: false
-        default: 'sonar-release'
+        default: ${{ github.token }}
       publishToBinaries:
         type: boolean
         description: Flag to enable the publication to binaries
