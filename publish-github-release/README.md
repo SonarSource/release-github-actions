@@ -30,8 +30,7 @@ configured in vault.
 This can be done using the SPEED self-service
 portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platform/pages/3553787989/Manage+Vault+Policy+-+SPEED)).
 
-The action also requires a `github_token` with `contents: write` permissions to create the release. The default
-`${{ github.token }}` is usually sufficient.
+The action also requires a `github_token` with `contents: write`, `id-token:write` and `actions:write` permissions to create the release. 
 
 ## Inputs
 
