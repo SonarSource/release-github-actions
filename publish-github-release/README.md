@@ -54,9 +54,9 @@ The following inputs can be configured for the action:
 
 ## Outputs
 
-| Output        | Description                                                                  |
-|---------------|------------------------------------------------------------------------------|
-| `release_url` | The URL of the newly created release.                                        |
+| Output        | Description                           |
+|---------------|---------------------------------------|
+| `release_url` | The URL of the newly created release. |
 
 ## Example Usage
 
