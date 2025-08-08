@@ -1,0 +1,94 @@
+# yamllint disable rule:line-length
+---
+name: Maven Central
+"on":
+  workflow_call:
+    inputs:
+      releaseTagName:
+        type: string
+        description: Release tag name (alternative to release event)
+        required: false
+      vaultAddr:
+        type: string
+        description: Custom Vault installation
+        default: https://vault.sonar.build:8200
+        required: false
+      artifactoryRoleSuffix:
+        type: string
+        description: Artifactory reader suffix specified in vault repo config
+        default: private-reader
+        required: false
+      downloadExclusions:
+        type: string
+        description: exclusions for the JFrog build download
+        default: "-"
+        required: false
+      projectName:
+        type: string
+        description: Project name for build info (may be different from repository name for multi-artifact repos)
+        required: false
+
+jobs:
+  maven-central:
+    name: Push to maven Central
+    runs-on: ubuntu-24.04-large
+    permissions:
+      id-token: write  # to authenticate via OIDC
+      contents: read  # to revert a github release
+    timeout-minutes: 60
+    if: ${{ (github.event_name == 'release' && github.event.action == 'published') || inputs.releaseTagName != '' }}
+    outputs:
+      maven-central: ${{ steps.maven-central-sync.outcome }}
+    steps:
+      - name: Get the version
+        id: get_version
+        run: |
+          IFS=. read -r major minor patch build <<< "${{ inputs.releaseTagName || github.event.release.tag_name }}"
+          echo "build=${build}" >> $GITHUB_OUTPUT
+          echo "patch=${patch}" >> $GITHUB_OUTPUT
+          echo "minor=${minor}" >> $GITHUB_OUTPUT
+          echo "major=${major}" >> $GITHUB_OUTPUT
+      - name: Create local repository directory
+        id: local_repo
+        run: echo "dir=$(mktemp -d repo.XXXXXXXX)" >> $GITHUB_OUTPUT
+      - name: Vault
+        id: secrets
+        uses: SonarSource/vault-action-wrapper@d6d745ffdbc82b040df839b903bc33b5592cd6b0 # 3.0.2
+        with:
+          url: ${{ inputs.vaultAddr }}
+          secrets:
+            development/artifactory/token/{REPO_OWNER_NAME_DASH}-${{ inputs.artifactoryRoleSuffix }} access_token  | artifactory_access_token;
+            development/kv/data/ossrh token | central_token;
+            development/kv/data/slack webhook | slack_webhook;
+      - name: Setup JFrog
+        uses: SonarSource/jfrog-setup-wrapper@e0f353c7f1bcc7b2f663063d72b5fec7948f6815 # 3.6.0
+        with:
+          jfrogAccessToken: ${{ fromJSON(steps.secrets.outputs.vault).artifactory_access_token }}
+      - name: Download Artifacts
+        uses: SonarSource/gh-action_release/download-build@master
+        with:
+          build-number: ${{ steps.get_version.outputs.build }}
+          local-repo-dir: ${{ steps.local_repo.outputs.dir }}
+          exclusions: ${{ inputs.downloadExclusions }}
+          project-name: ${{ inputs.projectName }}
+      - name: Maven Central Sync
+        id: maven-central-sync
+        continue-on-error: true
+        uses: SonarSource/gh-action_release/maven-central-sync@master
+        with:
+          local-repo-dir: ${{ steps.local_repo.outputs.dir }}
+          central-url: https://central.sonatype.com
+          auto-publish: "true"
+        env:
+          CENTRAL_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).central_token }}
+      - name: Notify on failure
+        if: ${{ failure() || steps.maven-central-sync.outcome == 'failure' }}
+        uses: 8398a7/action-slack@1750b5085f3ec60384090fb7c52965ef822e869e # v3.18.0
+        with:
+          status: failure
+          fields: repo,author,eventName
+        env:
+          SLACK_WEBHOOK_URL: ${{ fromJSON(steps.secrets.outputs.vault).slack_webhook }}
+      - name: Exit with error
+        if: ${{ failure() || steps.maven-central-sync.outcome == 'failure' }}
+        run: exit 1

@@ -1,0 +1,309 @@
+# yamllint disable rule:line-length
+---
+name: Release reusable workflow
+
+on:
+  workflow_call:
+    inputs:
+      releaseTagName:
+        type: string
+        description: Release tag name (alternative to release event)
+        required: false
+      releaseId:
+        type: string
+        description: Release ID (alternative to release event)
+        required: false
+      dryRun:
+        type: boolean
+        description: Flag to enable the dry-run execution
+        default: false
+        required: false
+      publishToBinaries:
+        type: boolean
+        description: Flag to enable the publication to binaries
+        default: false
+        required: false
+      publicRelease:
+        type: boolean
+        description: Indicate if the project is generating a public release or not
+        required: false
+        default: false
+      binariesS3Bucket:
+        type: string
+        description: Target bucket
+        default: downloads-cdn-eu-central-1-prod
+        required: false
+      slackChannel:
+        type: string
+        description: Channel to post notifications
+        default: build
+        required: false
+      vaultAddr:
+        type: string
+        description: Custom vault installation
+        default: https://vault.sonar.build:8200
+        required: false
+      artifactoryRoleSuffix:
+        type: string
+        description: Artifactory promoter suffix specified in Vault repo config
+        default: promoter
+        required: false
+      mavenCentralSync:
+        type: boolean
+        description: Enable synchronization to Maven Central
+        default: false
+        required: false
+      mavenCentralSyncExclusions:
+        type: string
+        description: exclusions for the JFrog build download
+        default: "-"
+        required: false
+      skipPythonReleasabilityChecks:
+        type: boolean
+        description: Skip releasability checks for Python projects
+        default: false
+        required: false
+      skipJavascriptReleasabilityChecks:
+        type: boolean
+        description: Skip releasability checks for javascript projects
+        default: false
+        required: false
+      pushToDatadog:
+        type: boolean
+        description: Push results to datadog for monitoring
+        default: true
+        required: false
+      isDummyProject:
+        type: boolean
+        description: Indicate whether this is a dummy project.
+        default: false
+        required: false
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-24.04-large
+    permissions:
+      id-token: write  # to authenticate via OIDC
+      contents: write  # to revert a github release
+    timeout-minutes: 30
+    if: ${{ inputs.dryRun == true || (github.event_name == 'release' && github.event.action == 'published') || (inputs.releaseTagName != '' && inputs.releaseId != '') }}
+    outputs:
+      releasability: ${{ steps.release.outputs.releasability }}
+      promote: ${{ steps.release.outputs.promote }}
+      publish_to_binaries: ${{ steps.release.outputs.publish_to_binaries }}
+      release: ${{ steps.release.outputs.release }}
+      project_name: ${{ steps.release.outputs.project_name }}
+      releasabilityCheckDependencies: ${{ steps.releasability.outputs.releasabilityCheckDependencies }}
+      releasabilityQA: ${{ steps.releasability.outputs.releasabilityQA }}
+      releasabilityJira: ${{ steps.releasability.outputs.releasabilityJira }}
+      releasabilityWhiteSource: ${{ steps.releasability.outputs.releasabilityWhiteSource }}
+      releasabilityCheckPeacheeLanguagesStatistics: ${{ steps.releasability.outputs.releasabilityCheckPeacheeLanguagesStatistics }}
+      releasabilityQualityGate: ${{ steps.releasability.outputs.releasabilityQualityGate }}
+      releasabilityParentPOM: ${{ steps.releasability.outputs.releasabilityParentPOM }}
+      releasabilityGitHub: ${{ steps.releasability.outputs.releasabilityGitHub }}
+      releasabilityCheckManifestValues: ${{ steps.releasability.outputs.releasabilityCheckManifestValues }}
+
+    steps:
+      # Clone gh-action_release repository to run actions locally
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          # Hardcode the repository name, because GitHub Actions does not provide a built-in context or variable
+          # to directly reference the repository where the reusable workflow is defined
+          repository: SonarSource/gh-action_release
+          # This property is changed during the release process to reference the correct tag
+          # During development change this to your branch name to run it in another repository
+          ref: ${{ github.ref }}
+          path: gh-action_release
+      # Clone the calling repo for checking releasability prerequisites
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          path: ${{ github.event.repository.name }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        with:
+          aws-region: eu-central-1
+          role-to-assume: "arn:aws:iam::064493320159:role/ReleasbilityChecksCICDRole"
+      - name: Vault Secrets
+        id: secrets
+        if: ${{ inputs.dryRun != true }}
+        uses: SonarSource/vault-action-wrapper@d6d745ffdbc82b040df839b903bc33b5592cd6b0 # 3.0.2
+        with:
+          url: ${{ inputs.vaultAddr }}
+          secrets: |
+            development/artifactory/token/{REPO_OWNER_NAME_DASH}-${{ inputs.artifactoryRoleSuffix }} access_token | artifactory_access_token;
+            development/kv/data/slack token | slack_api_token;
+            development/kv/data/slack webhook | slack_webhook;
+            development/kv/data/repox url | artifactory_url;
+      - name: Vault Binaries AWS Secrets
+        id: secrets-binaries-aws
+        if: ${{ inputs.dryRun != true && inputs.publishToBinaries }}
+        uses: SonarSource/vault-action-wrapper@d6d745ffdbc82b040df839b903bc33b5592cd6b0 # 3.0.2
+        with:
+          url: ${{ inputs.vaultAddr }}
+          secrets: |
+            development/aws/sts/downloads access_key | binaries_aws_access_key_id;
+            development/aws/sts/downloads secret_key | binaries_aws_secret_access_key;
+            development/aws/sts/downloads security_token | binaries_aws_security_token;
+      - name: Parse Vault Output
+        id: parse_vault
+        env:
+          DUMMY_VALUES: ${{ inputs.dryRun }}
+          SECRET_OUTPUTS: ${{ toJson(steps.secrets.outputs) }}
+          SECRET_AWS_OUTPUTS: ${{ toJson(steps.secrets-binaries-aws.outputs) }}
+        run: |
+          if [[ "${DUMMY_VALUES}" == "true" ]]; then
+            {
+              echo "artifactory_access_token=test"
+              echo "slack_api_token=test"
+              echo "binaries_aws_access_key_id=test"
+              echo "binaries_aws_secret_access_key=test"
+              echo "binaries_aws_security_token=test"
+            } >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          echo "${SECRET_OUTPUTS}" | jq -r '.vault | fromjson | to_entries[] | (.key + "<<EOF\n" + .value + "\nEOF")' >> "${GITHUB_OUTPUT}"
+          if [[ "${SECRET_AWS_OUTPUTS}" != "{}" ]]; then
+            echo "${SECRET_AWS_OUTPUTS}" | jq -r '.vault | fromjson | to_entries[] | (.key + "<<EOF\n" + .value + "\nEOF")' >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Releasability check prerequisites
+        id: releasability_prerequisites
+        env:
+          SKIP_PYTHON_RELEASABILITY_CHECKS: ${{ inputs.skipPythonReleasabilityChecks }}
+          SKIP_JAVASCRIPT_RELEASABILITY_CHECKS: ${{ inputs.skipJavascriptReleasabilityChecks }}
+        run: |
+          # Skip releasability checks if the project contains pyproject.toml file
+          if test -f "${{ github.event.repository.name }}/pyproject.toml" && "$SKIP_PYTHON_RELEASABILITY_CHECKS" == "true"  ; then
+            echo "skip_releasability_checks=true" >> "${GITHUB_OUTPUT}"
+          elif test -f "${{ github.event.repository.name }}/package.json" && "$SKIP_JAVASCRIPT_RELEASABILITY_CHECKS" == "true"  ; then
+            echo "skip_releasability_checks=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "skip_releasability_checks=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - uses: SonarSource/gh-action_releasability@48220006021661f66278901a369cfede25b1d458 # 2.2.0
+        id: releasability
+        if: ${{ steps.releasability_prerequisites.outputs.skip_releasability_checks != 'true' && inputs.dryRun != true }}
+        with:
+          branch: ${{ github.ref_name }}
+          commit-sha: ${{ github.sha }}
+          organization: ${{ github.repository_owner }}
+          repository: ${{ github.event.repository.name }}
+          version: ${{ inputs.releaseTagName || github.event.release.tag_name }}
+
+      - name: Revoke release on releasability check failure
+        if: failure() && steps.releasability.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/releases/${{ inputs.releaseId || github.event.release.id }} -X DELETE
+          gh api repos/${{ github.repository }}/git/refs/tags/${{ inputs.releaseTagName || github.event.release.tag_name }} -X DELETE
+
+      - name: Send Slack notification on releasability check failure
+        if: failure() && steps.releasability.outcome == 'failure'
+        uses: slackapi/slack-github-action@fcfb566f8b0aab22203f066d80ca1d7e4b5d05b3 # v1.27.1
+        env:
+          SLACK_WEBHOOK_URL: ${{ steps.parse_vault.outputs.slack_webhook }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        with:
+          payload: |
+            {
+              "channel": "${{ inputs.slackChannel }}",
+              "attachments": [
+                {
+                  "color": "#ff0000",
+                  "text": "Releasability checks failed in `${{ github.repository }}`. Release `${{ inputs.releaseTagName || github.event.release.tag_name }}` was revoked. Publish the release again after resolving the issue. \n <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Link to workflow run>"
+                }
+              ]
+            }
+
+      - name: Release ${{ inputs.releaseTagName || github.event.release.tag_name }}
+        id: release
+        uses: ./gh-action_release/main
+        with:
+          publish_to_binaries: ${{ inputs.publishToBinaries }}  # Used only if the binaries are delivered to customers
+          slack_channel: ${{ inputs.slackChannel }}
+          dry_run: ${{ inputs.dryRun }}
+        env:
+          PYTHONUNBUFFERED: 1
+          ARTIFACTORY_ACCESS_TOKEN: ${{ steps.parse_vault.outputs.artifactory_access_token }}
+          BINARIES_AWS_DEPLOY: ${{ inputs.binariesS3Bucket }}  # Required for pushing the binaries
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_API_TOKEN: ${{ steps.parse_vault.outputs.slack_api_token }}
+          BINARIES_AWS_ACCESS_KEY_ID: ${{ steps.parse_vault.outputs.binaries_aws_access_key_id }}
+          BINARIES_AWS_SECRET_ACCESS_KEY: ${{ steps.parse_vault.outputs.binaries_aws_secret_access_key }}
+          BINARIES_AWS_SESSION_TOKEN: ${{ steps.parse_vault.outputs.binaries_aws_security_token }}
+          BINARIES_AWS_DEFAULT_REGION: eu-central-1
+
+      - name: Release action results
+        if: always()
+        run: |
+          echo "${{ steps.releasability.outputs.status }}"
+          echo "${{ steps.release.outputs.promote }}"
+          echo "${{ steps.release.outputs.publish_to_binaries }}"
+          echo "${{ steps.release.outputs.release }}"
+
+  mavenCentral:
+    name: Maven Central
+    needs: release
+    if: ${{ inputs.mavenCentralSync && inputs.dryRun != true }}
+    uses: SonarSource/release-github-actions/.github/workflows/maven-central.yaml@temp_release_workflow
+    with:
+      releaseTagName: ${{ inputs.releaseTagName }}
+      vaultAddr: ${{ inputs.vaultAddr }}
+      artifactoryRoleSuffix: ${{ inputs.artifactoryRoleSuffix }}
+      downloadExclusions: ${{ inputs.mavenCentralSyncExclusions }}
+      projectName: ${{ github.event.repository.name == 'sonar-enterprise' && needs.release.outputs.project_name || '' }}  # Only sonar-enterprise needs multi-artifact build info lookup
+
+  datadog:
+    name: Push results to datadog
+    runs-on: ubuntu-24.04-large
+    needs:
+      - release
+      - mavenCentral
+    if: ${{ always() && inputs.pushToDatadog && inputs.dryRun != true }}
+    steps:
+      # Clone gh-action_release repository to run actions locally
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          # Hardcode the repository name, because GitHub Actions does not provide a built-in context or variable
+          # to directly reference the repository where the reusable workflow is defined
+          repository: SonarSource/gh-action_release
+          # This property is changed during the release process to reference the correct tag
+          # During development change this to your branch name to run it in another repository
+          ref: ${{ github.ref }}
+          path: gh-action_release
+
+      - name: Vault
+        id: secrets
+        uses: SonarSource/vault-action-wrapper@d6d745ffdbc82b040df839b903bc33b5592cd6b0 # 3.0.2
+        with:
+          url: ${{ inputs.vaultAddr }}
+          secrets:
+            development/kv/data/datadog token | datadog_token;
+
+      - name: Push to datadog
+        id: datadog
+        env:
+          datadog_token: ${{ fromJSON(steps.secrets.outputs.vault).datadog_token }}
+          releasabilityCheckDependencies: ${{ needs.release.outputs.releasabilityCheckDependencies }}
+          releasabilityQA: ${{ needs.release.outputs.releasabilityQA }}
+          releasabilityJira: ${{ needs.release.outputs.releasabilityJira }}
+          releasabilityWhiteSource: ${{ needs.release.outputs.releasabilityWhiteSource }}
+          releasabilityCheckPeacheeLanguagesStatistics: ${{ needs.release.outputs.releasabilityCheckPeacheeLanguagesStatistics }}
+          releasabilityQualityGate: ${{ needs.release.outputs.releasabilityQualityGate }}
+          releasabilityParentPOM: ${{ needs.release.outputs.releasabilityParentPOM }}
+          releasabilityGitHub: ${{ needs.release.outputs.releasabilityGitHub }}
+          releasabilityCheckManifestValues: ${{ needs.release.outputs.releasabilityCheckManifestValues }}
+          release_passed: ${{ needs.release.result }}
+          maven_central_published: ${{ needs.mavenCentral.result }}
+          javadoc_published: ${{ needs.javadocPublication.result }}
+          testpypi_published: ${{ needs.testPypi.result }}
+          pypi_published: ${{ needs.pypi.result }}
+          npmjs_published: ${{ needs.npmjs.result }}
+          status: ${{ job.status == 'success' && needs.release.result == 'success' && needs.mavenCentral.result != 'failure' }}
+          repo: ${{ github.repository }}
+          run_id: ${{ github.run_id }}
+          is_dummy_project: ${{ inputs.isDummyProject }}
+        run: python ./gh-action_release/datadog-ingest/main.py
