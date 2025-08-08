@@ -47,6 +47,10 @@ inputs:
     description: 'The filename of the release workflow to trigger in the caller repository.'
     required: false
     default: 'release.yml'
+  release_workflow_ref:
+    description: 'The branch or ref to trigger the release workflow from.'
+    required: false
+    default: 'master'
 
 outputs:
   release_url:
@@ -179,7 +183,7 @@ runs:
         # Trigger the workflow and get the run ID from the returned URL
         WORKFLOW_RUN_URL=$(gh workflow run "${{ inputs.release_workflow }}" \
           --repo "${{ github.repository }}" \
-          --ref "publish_draft_version" \
+          --ref "${{ inputs.release_workflow_ref }}" \
           -f "releaseTagName=${{ inputs.version }}" \
           -f "releaseId=${{ steps.create_release.outputs.release_id }}" \
           -f "dryRun=${{ inputs.draft }}")
