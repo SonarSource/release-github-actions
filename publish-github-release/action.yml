@@ -43,6 +43,10 @@ inputs:
     description: 'The GitHub token for API calls.'
     required: true
     default: ${{ github.token }}
+  release_workflow_filename:
+    description: 'The filename of the release workflow to trigger in the caller repository.'
+    required: false
+    default: 'release.yml'
 
 outputs:
   release_url:
@@ -167,3 +171,61 @@ runs:
           RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/${{ inputs.version }} --jq '.id')
           echo "release_id=${RELEASE_ID}" >> $GITHUB_OUTPUT
         fi
+
+    - name: Trigger Release Workflow
+      shell: bash
+      run: |
+        echo "${{ inputs.github_token }}" | gh auth login --with-token
+        
+        echo "Triggering release workflow '${{ inputs.release_workflow_filename }}' with tag '${{ inputs.version }}', release ID '${{ steps.create_release.outputs.release_id }}', and dryRun=${{ inputs.draft }}..."
+        
+        # Trigger the workflow and get the run ID from the returned URL
+        WORKFLOW_RUN_URL=$(gh workflow run "${{ inputs.release_workflow_filename }}" \
+          --repo "${{ github.repository }}" \
+          --ref "publish_draft_version" \
+          -f "releaseTagName=${{ inputs.version }}" \
+          -f "releaseId=${{ steps.create_release.outputs.release_id }}" \
+          -f "dryRun=${{ inputs.draft }}")
+        
+        echo "Workflow triggered successfully: $WORKFLOW_RUN_URL"
+        
+        # Extract run ID from the URL (format: https://github.com/owner/repo/actions/runs/123456789)
+        RUN_ID=$(echo "$WORKFLOW_RUN_URL" | sed 's/.*\/runs\///')
+        
+        if [[ -z "$RUN_ID" ]]; then
+          echo "::error::Failed to get workflow run ID"
+          exit 1
+        fi
+        
+        echo "Monitoring workflow run ID: $RUN_ID"
+        
+        # Wait for the workflow to complete
+        while true; do
+          RUN_STATUS=$(gh run view "$RUN_ID" \
+            --repo "${{ github.repository }}" \
+            --json status,conclusion \
+            --jq '{status: .status, conclusion: .conclusion}')
+          
+          STATUS=$(echo "$RUN_STATUS" | jq -r '.status')
+          CONCLUSION=$(echo "$RUN_STATUS" | jq -r '.conclusion')
+          
+          echo "Workflow status: $STATUS, conclusion: $CONCLUSION"
+          
+          if [[ "$STATUS" == "completed" ]]; then
+            if [[ "$CONCLUSION" == "success" ]]; then
+              echo "✅ Release workflow completed successfully!"
+              break
+            else
+              echo "::error::❌ Release workflow failed with conclusion: $CONCLUSION"
+              gh run view "$RUN_ID" --repo "${{ github.repository }}" --log-failed
+              exit 1
+            fi
+          elif [[ "$STATUS" == "cancelled" ]] || [[ "$STATUS" == "failure" ]]; then
+            echo "::error::❌ Release workflow was cancelled or failed"
+            gh run view "$RUN_ID" --repo "${{ github.repository }}" --log-failed
+            exit 1
+          fi
+          
+          # Wait 15 seconds before checking again
+          sleep 15
+        done
