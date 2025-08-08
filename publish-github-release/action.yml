@@ -43,7 +43,7 @@ inputs:
     description: 'The GitHub token for API calls.'
     required: true
     default: ${{ github.token }}
-  release_workflow_filename:
+  release_workflow:
     description: 'The filename of the release workflow to trigger in the caller repository.'
     required: false
     default: 'release.yml'
@@ -52,9 +52,6 @@ outputs:
   release_url:
     description: 'The URL of the newly created release.'
     value: ${{ steps.create_release.outputs.release_url }}
-  release_id:
-    description: 'The ID of the newly created release.'
-    value: ${{ steps.create_release.outputs.release_id }}
 
 runs:
   using: "composite"
@@ -177,10 +174,10 @@ runs:
       run: |
         echo "${{ inputs.github_token }}" | gh auth login --with-token
         
-        echo "Triggering release workflow '${{ inputs.release_workflow_filename }}' with tag '${{ inputs.version }}', release ID '${{ steps.create_release.outputs.release_id }}', and dryRun=${{ inputs.draft }}..."
+        echo "Triggering release workflow '${{ inputs.release_workflow }}' with tag '${{ inputs.version }}', release ID '${{ steps.create_release.outputs.release_id }}', and dryRun=${{ inputs.draft }}..."
         
         # Trigger the workflow and get the run ID from the returned URL
-        WORKFLOW_RUN_URL=$(gh workflow run "${{ inputs.release_workflow_filename }}" \
+        WORKFLOW_RUN_URL=$(gh workflow run "${{ inputs.release_workflow }}" \
           --repo "${{ github.repository }}" \
           --ref "publish_draft_version" \
           -f "releaseTagName=${{ inputs.version }}" \
