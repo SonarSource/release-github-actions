@@ -187,20 +187,27 @@ runs:
         
         echo "Triggering release workflow '${{ inputs.release_workflow }}' with tag '${{ inputs.version }}', release ID '$RELEASE_ID_VALUE', and dryRun=${{ inputs.draft }}..."
         
-        # Trigger the workflow and get the run ID from the returned URL
-        WORKFLOW_RUN_URL=$(gh workflow run "${{ inputs.release_workflow }}" \
+        # Trigger the workflow
+        gh workflow run "${{ inputs.release_workflow }}" \
           --repo "${{ github.repository }}" \
           --ref "${{ inputs.release_workflow_ref }}" \
           -f "releaseTagName=${{ inputs.version }}" \
           -f "releaseId=$RELEASE_ID_VALUE" \
-          -f "dryRun=${{ inputs.draft }}")
+          -f "dryRun=${{ inputs.draft }}"
         
-        echo "Workflow triggered successfully: $WORKFLOW_RUN_URL"
+        echo "Workflow triggered successfully"
         
-        # Extract run ID from the URL (format: https://github.com/owner/repo/actions/runs/123456789)
-        RUN_ID=$(echo "$WORKFLOW_RUN_URL" | sed 's/.*\/runs\///')
+        # Wait a moment for the workflow to start, then get the run ID
+        sleep 5
         
-        if [[ -z "$RUN_ID" ]]; then
+        RUN_ID=$(gh run list \
+          --repo "${{ github.repository }}" \
+          --workflow "${{ inputs.release_workflow }}" \
+          --limit 1 \
+          --json databaseId \
+          --jq '.[0].databaseId')
+        
+        if [[ -z "$RUN_ID" ]] || [[ "$RUN_ID" == "null" ]]; then
           echo "::error::Failed to get workflow run ID"
           exit 1
         fi
