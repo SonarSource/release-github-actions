@@ -178,14 +178,21 @@ runs:
       run: |
         echo "${{ inputs.github_token }}" | gh auth login --with-token
         
-        echo "Triggering release workflow '${{ inputs.release_workflow }}' with tag '${{ inputs.version }}', release ID '${{ steps.create_release.outputs.release_id }}', and dryRun=${{ inputs.draft }}..."
+        # Set release ID based on draft status
+        if [[ "${{ inputs.draft }}" == "true" ]]; then
+          RELEASE_ID_VALUE="N/A"
+        else
+          RELEASE_ID_VALUE="${{ steps.create_release.outputs.release_id }}"
+        fi
+        
+        echo "Triggering release workflow '${{ inputs.release_workflow }}' with tag '${{ inputs.version }}', release ID '$RELEASE_ID_VALUE', and dryRun=${{ inputs.draft }}..."
         
         # Trigger the workflow and get the run ID from the returned URL
         WORKFLOW_RUN_URL=$(gh workflow run "${{ inputs.release_workflow }}" \
           --repo "${{ github.repository }}" \
           --ref "${{ inputs.release_workflow_ref }}" \
           -f "releaseTagName=${{ inputs.version }}" \
-          -f "releaseId=${{ steps.create_release.outputs.release_id }}" \
+          -f "releaseId=$RELEASE_ID_VALUE" \
           -f "dryRun=${{ inputs.draft }}")
         
         echo "Workflow triggered successfully: $WORKFLOW_RUN_URL"
