@@ -43,10 +43,14 @@ inputs:
     description: 'The GitHub token for API calls.'
     required: true
     default: ${{ github.token }}
-  wait_for_workflow_name:
-    description: 'The name or file name of the workflow to wait for upon a non-draft release (e.g., "sonar-release" or "release.yml"). If empty, this step is skipped.'
+  release_workflow:
+    description: 'The filename of the release workflow to trigger in the caller repository.'
     required: false
-    default: 'sonar-release'
+    default: 'release.yml'
+  release_workflow_ref:
+    description: 'The branch or ref to trigger the release workflow from.'
+    required: false
+    default: 'master'
 
 outputs:
   release_url:
@@ -117,6 +121,39 @@ runs:
       run: |
         echo "${{ inputs.github_token }}" | gh auth login --with-token
 
+        # Check if a release with the same title already exists
+        EXPECTED_TITLE="${{ inputs.version }}"
+        EXISTING_RELEASE=$(gh api repos/${{ github.repository }}/releases --jq ".[] | select(.name == \"$EXPECTED_TITLE\")" || echo "")
+
+        if [[ -n "$EXISTING_RELEASE" ]]; then
+          EXISTING_DRAFT=$(echo "$EXISTING_RELEASE" | jq -r '.draft')
+          EXISTING_TAG=$(echo "$EXISTING_RELEASE" | jq -r '.tag_name')
+          EXISTING_URL=$(echo "$EXISTING_RELEASE" | jq -r '.html_url')
+          EXISTING_ID=$(echo "$EXISTING_RELEASE" | jq -r '.id')
+          
+          if [[ "${{ inputs.draft }}" == "true" ]]; then
+            # If draft=true and release exists, log warning and do nothing
+            echo "::warning::A release with title '$EXPECTED_TITLE' already exists. Skipping creation since draft=true."
+            echo "release_url=${EXISTING_URL}" >> $GITHUB_OUTPUT
+            echo "release_id=${EXISTING_ID}" >> $GITHUB_OUTPUT
+            exit 0
+          else
+            if [[ "$EXISTING_DRAFT" == "true" ]]; then
+            # If draft=false and existing release is a draft, publish it
+              echo "Found existing draft release with title '$EXPECTED_TITLE'. Publishing it instead of creating a new one."
+              gh release edit "$EXISTING_TAG" --draft=false
+              echo "release_url=${EXISTING_URL}" >> $GITHUB_OUTPUT
+              echo "release_id=${EXISTING_ID}" >> $GITHUB_OUTPUT
+              exit 0
+            else
+              # If draft=false and existing release is already published, this is an error
+              echo "::error::A published release with title '$EXPECTED_TITLE' already exists. Cannot create or publish another release with the same title."
+              exit 1
+            fi
+          fi
+        fi
+
+        # No existing release found, proceed with normal creation
         DRAFT_FLAG=""
         if [[ "${{ inputs.draft }}" == "true" ]]; then
           DRAFT_FLAG="--draft"
@@ -124,8 +161,86 @@ runs:
 
         RELEASE_URL=$(gh release create "${{ inputs.version }}" \
           --target "${{ inputs.branch }}" \
-          --title "${{ inputs.project_name }} ${{ inputs.version }}" \
+          --title "${{ inputs.version }}" \
           --notes-file "release-notes.md" \
           $DRAFT_FLAG)
 
         echo "release_url=${RELEASE_URL}" >> $GITHUB_OUTPUT
+
+        # Get the release ID only for published releases
+        if [[ "${{ inputs.draft }}" != "true" ]]; then
+          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/${{ inputs.version }} --jq '.id')
+          echo "release_id=${RELEASE_ID}" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Trigger Release Workflow
+      shell: bash
+      run: |
+        echo "${{ inputs.github_token }}" | gh auth login --with-token
+        
+        # Set release ID based on draft status
+        if [[ "${{ inputs.draft }}" == "true" ]]; then
+          RELEASE_ID_VALUE="N/A"
+        else
+          RELEASE_ID_VALUE="${{ steps.create_release.outputs.release_id }}"
+        fi
+        
+        echo "Triggering release workflow '${{ inputs.release_workflow }}' with tag '${{ inputs.version }}', release ID '$RELEASE_ID_VALUE', and dryRun=${{ inputs.draft }}..."
+        
+        # Trigger the workflow
+        gh workflow run "${{ inputs.release_workflow }}" \
+          --repo "${{ github.repository }}" \
+          --ref "${{ inputs.release_workflow_ref }}" \
+          -f "version=${{ inputs.version }}" \
+          -f "releaseId=$RELEASE_ID_VALUE" \
+          -f "dryRun=${{ inputs.draft }}"
+        
+        echo "Workflow triggered successfully"
+        
+        # Wait a moment for the workflow to start, then get the run ID
+        sleep 30
+        
+        RUN_ID=$(gh run list \
+          --repo "${{ github.repository }}" \
+          --workflow "${{ inputs.release_workflow }}" \
+          --limit 1 \
+          --json databaseId \
+          --jq '.[0].databaseId')
+        
+        if [[ -z "$RUN_ID" ]] || [[ "$RUN_ID" == "null" ]]; then
+          echo "::error::Failed to get workflow run ID"
+          exit 1
+        fi
+        
+        echo "Monitoring workflow run ID: $RUN_ID"
+        
+        # Wait for the workflow to complete
+        while true; do
+          RUN_STATUS=$(gh run view "$RUN_ID" \
+            --repo "${{ github.repository }}" \
+            --json status,conclusion \
+            --jq '{status: .status, conclusion: .conclusion}')
+          
+          STATUS=$(echo "$RUN_STATUS" | jq -r '.status')
+          CONCLUSION=$(echo "$RUN_STATUS" | jq -r '.conclusion')
+          
+          echo "Workflow status: $STATUS, conclusion: $CONCLUSION"
+          
+          if [[ "$STATUS" == "completed" ]]; then
+            if [[ "$CONCLUSION" == "success" ]]; then
+              echo "✅ Release workflow completed successfully!"
+              break
+            else
+              echo "::error::❌ Release workflow failed with conclusion: $CONCLUSION"
+              gh run view "$RUN_ID" --repo "${{ github.repository }}" --log-failed
+              exit 1
+            fi
+          elif [[ "$STATUS" == "cancelled" ]] || [[ "$STATUS" == "failure" ]]; then
+            echo "::error::❌ Release workflow was cancelled or failed"
+            gh run view "$RUN_ID" --repo "${{ github.repository }}" --log-failed
+            exit 1
+          fi
+          
+          # Wait 15 seconds before checking again
+          sleep 15
+        done
