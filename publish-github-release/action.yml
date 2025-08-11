@@ -198,7 +198,7 @@ runs:
         echo "Workflow triggered successfully"
         
         # Wait a moment for the workflow to start, then get the run ID
-        sleep 5
+        sleep 30
         
         RUN_ID=$(gh run list \
           --repo "${{ github.repository }}" \
