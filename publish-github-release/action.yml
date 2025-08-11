@@ -138,8 +138,8 @@ runs:
             echo "release_id=${EXISTING_ID}" >> $GITHUB_OUTPUT
             exit 0
           else
-            # If draft=false and existing release is a draft, publish it
             if [[ "$EXISTING_DRAFT" == "true" ]]; then
+            # If draft=false and existing release is a draft, publish it
               echo "Found existing draft release with title '$EXPECTED_TITLE'. Publishing it instead of creating a new one."
               gh release edit "$EXISTING_TAG" --draft=false
               echo "release_url=${EXISTING_URL}" >> $GITHUB_OUTPUT
