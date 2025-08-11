@@ -4,9 +4,9 @@ name: Maven Central
 "on":
   workflow_call:
     inputs:
-      releaseTagName:
+      version:
         type: string
-        description: Release tag name (alternative to release event)
+        description: Version (alternative to release event)
         required: false
       vaultAddr:
         type: string
@@ -36,14 +36,14 @@ jobs:
       id-token: write  # to authenticate via OIDC
       contents: read  # to revert a github release
     timeout-minutes: 60
-    if: ${{ (github.event_name == 'release' && github.event.action == 'published') || inputs.releaseTagName != '' }}
+    if: ${{ (github.event_name == 'release' && github.event.action == 'published') || inputs.version != '' }}
     outputs:
       maven-central: ${{ steps.maven-central-sync.outcome }}
     steps:
       - name: Get the version
         id: get_version
         run: |
-          IFS=. read -r major minor patch build <<< "${{ inputs.releaseTagName || github.event.release.tag_name }}"
+          IFS=. read -r major minor patch build <<< "${{ inputs.version || github.event.release.tag_name }}"
           echo "build=${build}" >> $GITHUB_OUTPUT
           echo "patch=${patch}" >> $GITHUB_OUTPUT
           echo "minor=${minor}" >> $GITHUB_OUTPUT

@@ -5,9 +5,9 @@ name: Release reusable workflow
 on:
   workflow_call:
     inputs:
-      releaseTagName:
+      version:
         type: string
-        description: Release tag name (alternative to release event)
+        description: Version (alternative to release event)
         required: false
       releaseId:
         type: string
@@ -87,7 +87,7 @@ jobs:
       id-token: write  # to authenticate via OIDC
       contents: write  # to revert a github release
     timeout-minutes: 30
-    if: ${{ inputs.dryRun == true || (github.event_name == 'release' && github.event.action == 'published') || (inputs.releaseTagName != '' && inputs.releaseId != '') }}
+    if: ${{ inputs.dryRun == true || (github.event_name == 'release' && github.event.action == 'published') || (inputs.version != '' && inputs.releaseId != '') }}
     outputs:
       releasability: ${{ steps.release.outputs.releasability }}
       promote: ${{ steps.release.outputs.promote }}
@@ -190,7 +190,7 @@ jobs:
           commit-sha: ${{ github.sha }}
           organization: ${{ github.repository_owner }}
           repository: ${{ github.event.repository.name }}
-          version: ${{ inputs.releaseTagName || github.event.release.tag_name }}
+          version: ${{ inputs.version || github.event.release.tag_name }}
 
       - name: Revoke release on releasability check failure
         if: failure() && steps.releasability.outcome == 'failure'
@@ -198,7 +198,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh api repos/${{ github.repository }}/releases/${{ inputs.releaseId || github.event.release.id }} -X PATCH -F draft=true
-          gh api repos/${{ github.repository }}/git/refs/tags/${{ inputs.releaseTagName || github.event.release.tag_name }} -X DELETE
+          gh api repos/${{ github.repository }}/git/refs/tags/${{ inputs.version || github.event.release.tag_name }} -X DELETE
 
       - name: Send Slack notification on releasability check failure
         if: failure() && steps.releasability.outcome == 'failure'
@@ -213,12 +213,12 @@ jobs:
               "attachments": [
                 {
                   "color": "#ff0000",
-                  "text": "Releasability checks failed in `${{ github.repository }}`. Release `${{ inputs.releaseTagName || github.event.release.tag_name }}` was revoked. Publish the release again after resolving the issue. \n <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Link to workflow run>"
+                  "text": "Releasability checks failed in `${{ github.repository }}`. Release `${{ inputs.version || github.event.release.tag_name }}` was revoked. Publish the release again after resolving the issue. \n <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Link to workflow run>"
                 }
               ]
             }
 
-      - name: Release ${{ inputs.releaseTagName || github.event.release.tag_name }}
+      - name: Release ${{ inputs.version || github.event.release.tag_name }}
         id: release
         uses: ./gh-action_release/main
         with:
@@ -250,7 +250,7 @@ jobs:
     if: ${{ inputs.mavenCentralSync && inputs.dryRun != true }}
     uses: SonarSource/release-github-actions/.github/workflows/maven-central.yaml@temp_release_workflow
     with:
-      releaseTagName: ${{ inputs.releaseTagName }}
+      version: ${{ inputs.version }}
       vaultAddr: ${{ inputs.vaultAddr }}
       artifactoryRoleSuffix: ${{ inputs.artifactoryRoleSuffix }}
       downloadExclusions: ${{ inputs.mavenCentralSyncExclusions }}
