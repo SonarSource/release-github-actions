@@ -272,7 +272,7 @@ jobs:
           repository: SonarSource/gh-action_release
           # This property is changed during the release process to reference the correct tag
           # During development change this to your branch name to run it in another repository
-          ref: ${{ github.ref }}
+          ref: v5
           path: gh-action_release
 
       - name: Vault
