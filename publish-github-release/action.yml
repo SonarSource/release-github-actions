@@ -191,7 +191,7 @@ runs:
         gh workflow run "${{ inputs.release_workflow }}" \
           --repo "${{ github.repository }}" \
           --ref "${{ inputs.release_workflow_ref }}" \
-          -f "releaseTagName=${{ inputs.version }}" \
+          -f "version=${{ inputs.version }}" \
           -f "releaseId=$RELEASE_ID_VALUE" \
           -f "dryRun=${{ inputs.draft }}"
         
