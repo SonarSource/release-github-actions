@@ -15,6 +15,9 @@ inputs:
   secret_name:
     description: 'Name of the secret to fetch from the vault that has access to the target repository.'
     required: true
+  plugin_names:
+    description: 'Comma-separated list of plugin names to update instead of plugin_language.'
+    required: false
   base_branch:
     description: 'The base branch for the product pull request.'
     required: false
@@ -74,9 +77,21 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        echo "Updating analyzer version in ${{ env.BUILD_GRADLE_FILE }} for plugin ${{ inputs.plugin-language }}"
+        # Prepare the list of plugins to update
+        if [[ -n "${{ inputs.plugin_names }}" ]]; then
+          echo "Using plugin_names: ${{ inputs.plugin_names }}"
+          IFS=',' read -ra PLUGINS <<< "${{ inputs.plugin_names }}"
+        else
+          echo "Using plugin_language: ${{ inputs.plugin_language }}"
+          PLUGINS=("${{ inputs.plugin_language }}")
+        fi
         
-        sed -i "s/\(:sonar-${{ inputs.plugin-language }}.*-plugin:\)[0-9.]*/\1${{ inputs.version }}/g" ${{ env.BUILD_GRADLE_FILE }}
+        # Update each plugin
+        for plugin in "${PLUGINS[@]}"; do
+          plugin=$(echo "$plugin" | xargs)
+          echo "Updating analyzer version in ${{ env.BUILD_GRADLE_FILE }} for plugin $plugin"
+          sed -i "s/\(:sonar-$plugin.*-plugin:\)[0-9.]*/\1${{ inputs.version }}/g" ${{ env.BUILD_GRADLE_FILE }}
+        done
         
         echo "Showing diff:"
         git --no-pager diff ${{ env.BUILD_GRADLE_FILE }}
@@ -86,11 +101,11 @@ runs:
       uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
       with:
         author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
-        commit-message: '${{ inputs.ticket }} Update `${{ inputs.plugin-language }}` plugins to version ${{ inputs.version }}'
-        title: '${{ inputs.ticket }} Update `${{ inputs.plugin-language }}` to version ${{ inputs.version }}'
+        commit-message: '${{ inputs.ticket }} Update `${{ inputs.plugin_language }}` plugins to version ${{ inputs.version }}'
+        title: '${{ inputs.ticket }} Update `${{ inputs.plugin_language }}` to version ${{ inputs.version }}'
         body: ${{ inputs.pr_body }}
         base: ${{ inputs.base_branch }}
-        branch: '${{ inputs.plugin-language }}/update-analyzer-${{ inputs.version }}'
+        branch: '${{ inputs.plugin_language }}/update-analyzer-${{ inputs.version }}'
         token: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
         draft: ${{ inputs.draft }}
         reviewers: ${{ inputs.reviewers }}

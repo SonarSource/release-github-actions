@@ -26,6 +26,7 @@ found [here](https://github.com/SonarSource/re-terraform-aws-vault/pull/6693).
 | `ticket`          | The Jira ticket number. Must start with `SONAR-` (for SonarQube) or `SC-` (for SonarCloud). | `true`   |          |
 | `plugin_language` | The language key of the plugin to update (e.g., `architecture`, `java`).                    | `true`   |          |
 | `secret_name`     | Name of the secret to fetch from the vault that has access to the target repository.        | `true`   |          |
+| `plugin_names`    | Comma-separated list of plugin names to update instead of plugin_language.                  | `false`  |          |
 | `base_branch`     | The base branch for the pull request.                                                       | `false`  | `master` |
 | `draft`           | A boolean value (`true`/`false`) to control if the pull request is created as a draft.      | `false`  | `false`  |
 | `reviewers`       | A comma-separated list of GitHub usernames to request a review from (e.g., `user1,user2`).  | `false`  |          |
@@ -85,4 +86,18 @@ jobs:
       - name: Echo the PR URL
         run: |
           echo "Pull request created at: ${{ needs.update-analyzer.outputs.pull_request_url }}"
+```
+
+### Using `plugin_names` for Multiple Plugins
+
+You can also update multiple plugins in a single PR by using the `plugin_names` input instead of `plugin_language`:
+
+```yaml
+- name: Update multiple analyzers and create PR
+  uses: SonarSource/release-github-actions/update-analyzer@master
+  with:
+    version: ${{ inputs.version }}
+    ticket: ${{ inputs.ticket }}
+    plugin_names: 'java,kotlin,scala'
+    secret_name: 'jvm-release-automation'
 ```
