@@ -13,8 +13,6 @@ portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platfo
 
 | Input         | Description                                                                     | Required | Default |
 |---------------|---------------------------------------------------------------------------------|----------|---------|
-| `jira_user`   | The Jira user (email) for authentication.                                       | `true`   |         |
-| `jira_token`  | The Jira API token for authentication.                                          | `true`   |         |
 | `ticket_key`  | The key of the Jira ticket to update (e.g., `REL-1234`).                        | `true`   |         |
 | `status`      | The target status. Possible values: `Start Progress`, `Technical Release Done`. | `true`   |         |
 | `assignee`    | The email of the user to assign the ticket to.                                  | `false`  | `''`    |
@@ -54,19 +52,9 @@ jobs:
       id-token: write
 
     steps:
-      - name: Get Jira Credentials from Vault
-        id: secrets
-        uses: SonarSource/vault-action-wrapper@v3
-        with:
-          secrets: |
-            development/kv/data/jira user | JIRA_USER;
-            development/kv/data/jira token | JIRA_TOKEN;
-
       - name: Update Jira Release Ticket
         uses: SonarSource/release-github-actions/update-release-ticket-status@master
         with:
-          jira_user: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
-          jira_token: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
           ticket_key: ${{ github.event.inputs.ticket_key }}
           status: ${{ github.event.inputs.new_status }}
           assignee: ${{ github.event.inputs.assignee_email }}

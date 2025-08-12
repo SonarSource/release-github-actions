@@ -9,11 +9,11 @@ inputs:
   ticket:
     description: 'The Jira ticket number (e.g., SONAR-12345 or SC-12345). This determines the target product.'
     required: true
-  plugin-language:
+  plugin_language:
     description: 'The language key of the plugin to update (e.g., architecture, java, csharp).'
     required: true
-  github-token:
-    description: 'A GitHub token with permissions to create pull requests in the target repository.'
+  secret_name:
+    description: 'Name of the secret to fetch from the vault that has access to the target repository.'
     required: true
   base_branch:
     description: 'The base branch for the product pull request.'
@@ -38,6 +38,13 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    - name: Get GitHub token from Vault
+      id: secrets
+      uses: SonarSource/vault-action-wrapper@v3
+      with:
+        secrets: |
+          development/github/token/SonarSource-${{ inputs.secret_name}} token | GITHUB_TOKEN;
+
     - name: Set up environment
       id: setup_env
       shell: bash
@@ -61,7 +68,7 @@ runs:
         sparse-checkout: ${{ env.BUILD_GRADLE_FILE }}
         sparse-checkout-cone-mode: false
         fetch-depth: 0
-        token: ${{ inputs.github-token }}
+        token: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
 
     - name: Update analyzer version in build file
       shell: bash
@@ -84,6 +91,6 @@ runs:
         body: ${{ inputs.pr_body }}
         base: ${{ inputs.base_branch }}
         branch: '${{ inputs.plugin-language }}/update-analyzer-${{ inputs.version }}'
-        token: ${{ inputs.github-token }}
+        token: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
         draft: ${{ inputs.draft }}
         reviewers: ${{ inputs.reviewers }}

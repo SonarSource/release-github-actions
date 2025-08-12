@@ -17,8 +17,6 @@ portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platfo
 
 | Input                | Description                                                                                                    | Required | Default |
 |----------------------|----------------------------------------------------------------------------------------------------------------|----------|---------|
-| `jira_user`          | The Jira user (email) for authentication.                                                                      | `true`   |         |
-| `jira_token`         | The Jira API token for authentication.                                                                         | `true`   |         |
 | `release_ticket_key` | The key of the release ticket (e.g., `REL-1234`) to find the linked integration tickets from.                  | `true`   |         |
 | `sqs_project_key`    | The Jira project key to search for the linked SQS integration ticket.                                          | `false`  | `SONAR` |
 | `sc_project_key`     | The Jira project key to search for the linked SC integration ticket.                                           | `false`  | `SC`    |
@@ -61,20 +59,10 @@ jobs:
       id-token: write
 
     steps:
-      - name: Get Jira Credentials from Vault
-        id: secrets
-        uses: SonarSource/vault-action-wrapper@v3
-        with:
-          secrets: |
-            development/kv/data/jira user | JIRA_USER;
-            development/kv/data/jira token | JIRA_TOKEN;
-
       - name: Find and Update Tickets
         id: integration_update
         uses: SonarSource/release-github-actions/update-integration-tickets@master
         with:
-          jira_user: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
-          jira_token: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
           release_ticket_key: ${{ github.event.inputs.release_ticket }}
           sqs_fix_versions: ${{ github.event.inputs.fix_versions }}
 
