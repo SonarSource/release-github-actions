@@ -1,0 +1,250 @@
+name: 'Automated Release'
+
+inputs:
+  public:
+    description: Whether to build and deploy with/to public repositories. Set to `true` for public repositories (OSS), `false` for private.
+    default: ${{ github.event.repository.visibility == 'public' && 'true' || 'false' }}
+
+  jira_project_key:
+    description: |
+      The key of the Jira project where the release ticket will be created.
+    required: true
+
+  jira_project_name:
+    description: |
+      The display name of the Jira project where the release ticket will be created.
+    required: true
+
+  short_description:
+    description: |
+      A brief summary of what the release contains. 
+      This will be added directly to the release ticket.
+    required: true
+
+  slack_channel:
+    description: |
+      The Slack channel where notifications will be sent (e.g., squad-security-cloud-notifs).
+    required: true
+
+  sq_compatibility:
+    description: |
+      SonarQube compatibility.
+      Default needs to be changed only in case of LTA fix release.
+    default: '>=10.8'
+
+  next_version:
+    description: |
+      Specify the version for the next release (e.g., 4.2.0).
+      If left blank, the minor version will be automatically incremented.
+    required: false
+
+  jira_release_name:
+    description: |
+      The name of the release version in Jira.
+      If blank, the action will try to use the *only* unreleased version in the project.
+    required: false
+
+  release_notes:
+    description: |
+      Github release notes.
+      If blank, release notes will be generated from the Jira Release.
+
+  sonarlint_changelog:
+    description: |
+      A summary of release notes relevant to the SonarQube IDE extensions.
+    required: false
+
+  sqs_fix_versions:
+    description: |
+      A comma-separated list of fix versions for the SQS integration ticket.
+      (e.g., sqs-2025.4, sqcb-25.7)
+    required: false
+
+  analyzer_artifact_identifier:
+    description: |
+        The identifier for the analyzer artifact, used to update to the next version.
+        (e.g., php, python)
+    required: true
+
+  integration_prs_reviewers:
+    description: |
+      A comma-separated list of GitHub usernames to request as reviewers on integration PRs.
+      (e.g., gh-username,another-user)
+    required: false
+
+  update_sqs:
+    description: |
+      If true, the action will update the analyzer in SQS.
+      Default is true.
+    default: 'true'
+
+  update_sqc:
+    description: |
+      If true, the action will update the analyzer in SQC.
+      Default is true.
+    default: 'true'
+
+  rel_ticket_assignee:
+    description: |
+      The email of the person to assign the release ticket to after the technical release is done.
+    required: false
+
+  use_jira_sandbox:
+    description: |
+      Use the sandbox server instead of the production Jira.
+      Default is false, set to true for testing purposes.
+    default: 'false'
+
+  is_draft_release:
+    description: |
+      If true, the release will be created as a draft.
+      Useful for preparing releases without publishing them immediately.
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - id: secrets
+      uses: SonarSource/vault-action-wrapper@v3
+      with:
+        secrets: |
+          development/github/token/{REPO_OWNER_NAME_DASH}-lock token | lock_token;
+          development/kv/data/slack token | slack_api_token;
+
+    - name: Lock Master Branch
+      uses: SonarSource/gh-action-lt-backlog/ToggleLockBranch@v2
+      with:
+        github-token: ${{ secrets.LOCK_TOKEN }}
+        slack-token: ${{ secrets.SLACK_API_TOKEN }}
+        slack-channel: ${{ inputs.slack_channel }}
+
+    - name: Check Releasability and Get Version
+      uses: SonarSource/release-github-actions/check-releasability-status@09c557fb83722adbe2af2ca7e625324e15739362
+    - uses: SonarSource/SonarSource/ci-github-actions/get-build-number@v1
+
+    - name: Create Jira Release Ticket
+      id: create_ticket
+      uses: SonarSource/release-github-actions/create-jira-release-ticket@09b8b3b315362772140b0db837c08648533ead88
+      with:
+        project_key: ${{ inputs.project_key }}
+        project_name: ${{ inputs.project_name }}
+        version: ${{ env.BUILD_NUMBER }}
+        short_description: ${{ inputs.short_description }}
+        sq_compatibility: ${{ inputs.sq_compatibility }}
+        targeted_product: "11.0"
+        jira_release_name: ${{ inputs.jira_release_name }}
+        sonarlint_changelog: ${{ inputs.sonarlint_changelog }}
+        use_sandbox: ${{ inputs.use_jira_sandbox }}
+
+    - name: Transition Jira Release Ticket to "Start Progress"
+      id: rel_ticket_start_progress
+      uses: SonarSource/release-github-actions/update-release-ticket-status@09c557fb83722adbe2af2ca7e625324e15739362
+      with:
+        ticket_key: ${{ steps.create_ticket.outputs.ticket_key }}
+        status: "Start Progress"
+        use_sandbox: ${{ inputs.use_jira_sandbox }}
+
+    - name: Publish Github Release
+      id: publish_github_release
+      uses: SonarSource/release-github-actions/publish-github-release@09c557fb83722adbe2af2ca7e625324e15739362
+      with:
+        version: ${{ needs.check_releasability.outputs.version }}
+        jira_project_key: ${{ inputs.jira_project_key }}
+        jira_release_name: ${{ needs.create_release_ticket.outputs.release_name }}
+        draft: ${{ inputs.is_draft_release }}
+        release_notes: ${{ inputs.release_notes }}
+    - uses: SonarSource/gh-action_release/.github/workflows/main.yaml@v5
+      with:
+        publishToBinaries: true
+        mavenCentralSync: ${{ inputs.public }}
+        slackChannel: ${{ inputs.slack_channel }}
+
+    - name: Release in Jira and Create Next Version
+      id: jira_release
+      uses: SonarSource/release-github-actions/release-jira-version@09c557fb83722adbe2af2ca7e625324e15739362
+      with:
+        project_key: ${{ inputs.jira_project_key }}
+        jira_release_name: ${{ needs.create_release_ticket.outputs.release_name }}
+        new_version_name: ${{ inputs.next_version }}
+        use_sandbox: ${{ inputs.use_jira_sandbox }}
+
+    - name: Transition Jira Release Ticket to "Technical Release Done"
+      id: rel_ticket_move_to_done
+      uses: SonarSource/release-github-actions/update-release-ticket-status@09c557fb83722adbe2af2ca7e625324e15739362
+      with:
+        ticket_key: ${{ needs.create_release_ticket.outputs.release_ticket_key }}
+        status: "Technical Release Done"
+        assignee: ${{ env.PM_EMAIL }}
+        use_sandbox: ${{ env.USE_JIRA_SANDBOX }}
+
+    - name: Unlock master branch
+      uses: SonarSource/gh-action-lt-backlog/ToggleLockBranch@v2
+      with:
+        github-token: ${{ secrets.LOCK_TOKEN }}
+        slack-token: ${{ secrets.SLACK_API_TOKEN }}
+        slack-channel: ${{ inputs.slack_channel }}
+
+    - name: Find and Update Tickets
+      id: integration_update
+      uses: SonarSource/release-github-actions/update-integration-tickets@09c557fb83722adbe2af2ca7e625324e15739362
+      with:
+        release_ticket_key: ${{ needs.create_release_ticket.outputs.release_ticket_key }}
+        sqs_fix_versions: ${{ inputs.sqs_fix_versions }}
+        use_sandbox: ${{ inputs.use_jira_sandbox }}
+
+    - name: Update analyzer in SQS
+      id: update_step_sqs
+      if: ${{ inputs.update_sqs == 'true' }}
+      uses: SonarSource/release-github-actions/update-analyzer@09c557fb83722adbe2af2ca7e625324e15739362
+      with:
+        version: ${{ needs.check_releasability.outputs.version }}
+        ticket: ${{ needs.update-integration-tickets.outputs.sqs_ticket_key }}
+        plugin-language: ${{ inputs.analyzer_artifact_identifier }}
+        draft: ${{ inputs.is_draft_release }}
+        reviewers: ${{ github.event.inputs.integration_prs_reviewers }}
+
+    - name: Update analyzer in SQC
+      id: update_step_sqc
+      if: ${{ inputs.update_sqc == 'true' }}
+      uses: SonarSource/release-github-actions/update-analyzer@09c557fb83722adbe2af2ca7e625324e15739362
+      with:
+        version: ${{ needs.check_releasability.outputs.version }}
+        ticket: ${{ needs.update-integration-tickets.outputs.sqc_ticket_key }}
+        plugin-language: ${{ inputs.analyzer_artifact_identifier }}
+        draft: ${{ inputs.is_draft_release }}
+        reviewers: ${{ github.event.inputs.integration_prs_reviewers }}
+
+
+outputs:
+  release_name:
+    description: Name of the release as generated by the Jira release ticket creation step.
+    value: ${{ steps.create_ticket.outputs.jira_release_name }}
+
+  release_ticket_key:
+    description: Key of the created Jira release ticket (e.g., REL-123).
+    value: ${{ steps.create_ticket.outputs.ticket_key }}
+
+  release_url:
+    description: URL of the Jira release page.
+    value: ${{ steps.create_ticket.outputs.release_url }}
+
+  release_ticket_url:
+    description: URL of the created Jira release ticket.
+    value: ${{ steps.create_ticket.outputs.ticket_url }}
+
+  sqs_ticket_key:
+    description: Key of the created SQS integration ticket (e.g., SQS-123).
+    value: ${{ steps.integration_update.outputs.sqs_ticket_key }}
+
+
+  sqc_ticket_key:
+    description: Key of the created SQC integration ticket (e.g., SQC-456).
+    value: ${{ steps.integration_update.outputs.sc_ticket_key }}
+
+  sqs_ticket_url:
+    description: URL of the created SQS integration ticket.
+    value: ${{ steps.integration_update.outputs.sqs_ticket_url}}
+
+  sqc_ticket_url:
+    description: URL of the created SQC integration ticket.
+    value: ${{ steps.integration_update.outputs.sc_ticket_url }}
