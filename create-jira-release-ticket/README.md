@@ -19,15 +19,16 @@ The following inputs can be configured for the action:
 |------------------------|-------------------------------------------------------------------------------------------------------------------|----------|---------|
 | `project_key`          | The project key (e.g., `SONARIAC`).                                                                               | `true`   |         |
 | `project_name`         | The display name of the project (e.g., `SonarIaC`). Will be used as the prefix of the resulting release ticket.   | `true`   |         |
-| `version`              | The new version string being released (e.g., `1.2.3`).                                                            | `true`   |         |
+| `version`              | The version being released (e.g., `1.2.3`), or leave empty to use the build number.                              | `false`  |         |
 | `short_description`    | A brief description of the release.                                                                               | `true`   |         |
 | `sq_compatibility`     | The SonarQube compatibility version (e.g., `2025.3`).                                                             | `true`   |         |
 | `targeted_product`     | The targeted product version (e.g., `11.0`).                                                                      | `false`  |         |
 | `use_sandbox`          | Set to `false` to use the Jira production server.                                                                 | `false`  | `true`  |
-| `documentation_status` | The status of the release documentation.                                                                          | `false`  | `N/A`   |
+| `documentation_status` | Status of the documentation.                                                                                      | `false`  | `N/A`   |
 | `rule_props_changed`   | Whether rule properties have changed (`Yes` or `No`).                                                             | `false`  | `No`    |
-| `jira_release_name`    | The specific Jira release version to use. If omitted and there is only one unreleased version it will release it. | `false`  | `''`    |
-| `sonarlint_changelog`  | The SonarLint changelog content.                                                                                  | `false`  | `''`    |
+| `jira_release_name`    | The specific Jira release version to use. If not provided, will auto-detect the single unreleased version.       | `false`  |         |
+| `sonarlint_changelog`  | The SonarLint changelog content.                                                                                  | `false`  |         |
+| `start_progress`       | Whether to start progress on the release ticket after creation.                                                   | `false`  | `false` |
 
 ## Outputs
 
@@ -55,34 +56,15 @@ Here is an example of how to use this action in a workflow. This job will be tri
 release ticket using the provided inputs and secrets from HashiCorp Vault.
 
 ```yaml
-name: Create Release Ticket
-
-env:
-  PROJECT_KEY: 'SONARIAC'
-  PROJECT_NAME: 'SonarIaC'
-
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version'
         required: true
-        default: '1.0.0'
       short_description:
-        description: 'Short Description'
         required: true
       sq_compatibility:
-        description: 'SonarQube Compatibility'
         required: true
-      targeted_product:
-        description: 'Targeted Product'
-        required: false
-      jira_release_name:
-        description: 'Jira release version'
-        required: false
-      sonarlint_changelog:
-        description: 'SonarLint changelog content'
-        required: false
 
 jobs:
   create_release_ticket:
@@ -91,20 +73,16 @@ jobs:
     permissions:
       contents: read
       id-token: write
-
     steps:
       - name: Create Jira Release Ticket
         id: create_ticket
         uses: SonarSource/release-github-actions/.github/actions/create-jira-release-ticket@master
         with:
-          project_key: ${{ env.PROJECT_KEY }}
-          project_name: ${{ env.PROJECT_NAME }}
+          project_key: 'SONARIAC'
+          project_name: 'SonarIaC'
           version: ${{ github.event.inputs.version }}
           short_description: ${{ github.event.inputs.short_description }}
-          targeted_product: ${{ github.event.inputs.targeted_product }}
           sq_compatibility: ${{ github.event.inputs.sq_compatibility }}
-          jira_release_name: ${{ github.event.inputs.jira_release }}
-          sonarlint_changelog: ${{ github.event.inputs.sonarlint_changelog }}
 
       - name: Echo Ticket Details
         run: |
