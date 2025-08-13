@@ -46,7 +46,7 @@ runs:
       uses: SonarSource/vault-action-wrapper@v3
       with:
         secrets: |
-          development/github/token/SonarSource-${{ inputs.secret_name}} token | GITHUB_TOKEN;
+          development/github/token/SonarSource-${{ inputs.secret_name }} token | GITHUB_TOKEN;
 
     - name: Set up environment
       id: setup_env
