@@ -12,7 +12,7 @@ on:
         required: true
         type: string
       language:
-        description: "The programming language"
+        description: "The project language"
         required: true
         type: string
       use_jira_sandbox:
