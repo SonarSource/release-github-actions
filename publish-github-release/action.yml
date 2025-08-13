@@ -65,7 +65,7 @@ runs:
           exit 1
         fi
         if [[ -n "${{ inputs.jira_release_name }}" && -z "${{ inputs.jira_project_key }}" ]]; then
-          echo "Error: When using 'jira_release_name', you must also provide 'jira_project_key', 'jira_user', and 'jira_token'."
+          echo "Error: When using 'jira_release_name', you must also provide 'jira_project_key'."
           exit 1
         fi
 
