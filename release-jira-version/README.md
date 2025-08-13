@@ -26,8 +26,6 @@ have the project role `Administrators` for the target project to manage releases
 
 | Input               | Description                                                                                         | Required | Default |
 |---------------------|-----------------------------------------------------------------------------------------------------|----------|---------|
-| `jira_user`         | The Jira user (email) for authentication.                                                           | `true`   |         |
-| `jira_token`        | The Jira API token for authentication. **Store as a secret!**                                       | `true`   |         |
 | `project_key`       | The project key in Jira (e.g., `SONARIAC`).                                                         | `true`   |         |
 | `jira_release_name` | The exact name of the Jira version you want to release (e.g., `1.2.3`).                             | `true`   |         |
 | `new_version_name`  | The name for the next version. If omitted, the action will auto-increment from `jira_release_name`. | `false`  | `''`    |
@@ -66,20 +64,10 @@ jobs:
       id-token: write
 
     steps:
-      - name: Get Jira Credentials from Vault
-        id: secrets
-        uses: SonarSource/vault-action-wrapper@v3
-        with:
-          secrets: |
-            development/kv/data/jira user | JIRA_USER;
-            development/kv/data/jira token | JIRA_TOKEN;
-
       - name: Release and Create Next Version
         id: jira_release
         uses: SonarSource/release-github-actions/release-jira-version@master
         with:
-          jira_user: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
-          jira_token: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
           project_key: 'SONARIAC'
           jira_release_name: ${{ github.event.inputs.version_to_release }}
           new_version_name: ${{ github.event.inputs.next_version }}

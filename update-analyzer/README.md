@@ -9,7 +9,7 @@ prefix of the provided `ticket` number (`SONAR-` or `SC-`).
 
 ## Prerequisites
 
-The `github-token` provided to the action must have the following permissions for the target repository (e.g.,
+The `secret_name` provided to the action must have the following permissions for the target repository (e.g.,
 `SonarSource/sonar-enterprise`):
 
 * `contents: write`
@@ -20,28 +20,29 @@ found [here](https://github.com/SonarSource/re-terraform-aws-vault/pull/6693).
 
 ## Inputs
 
-| Input             | Description                                                                                 | Required | Default  |
-|-------------------|---------------------------------------------------------------------------------------------|----------|----------|
-| `version`         | The new version to set for the analyzer (e.g., `1.12.0.12345`).                             | `true`   |          |
-| `ticket`          | The Jira ticket number. Must start with `SONAR-` (for SonarQube) or `SC-` (for SonarCloud). | `true`   |          |
-| `plugin-language` | The language key of the plugin to update (e.g., `architecture`, `java`).                    | `true`   |          |
-| `github-token`    | A GitHub token with permissions to create pull requests in the target repository.           | `true`   |          |
-| `base_branch`     | The base branch for the pull request.                                                       | `false`  | `master` |
-| `draft`           | A boolean value (`true`/`false`) to control if the pull request is created as a draft.      | `false`  | `false`  |
-| `reviewers`       | A comma-separated list of GitHub usernames to request a review from (e.g., `user1,user2`).  | `false`  |          |
-| `pr_body`         | The body of the pull request.                                                               | `false`  |          |
+| Input              | Description                                                                                                                                                                                                                                                           | Required | Default  |
+|--------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|----------|
+| `version`          | The new version to set for the analyzer (e.g., `1.12.0.12345`).                                                                                                                                                                                                       | `true`   |          |
+| `ticket`           | The Jira ticket number. Must start with `SONAR-` (for SonarQube) or `SC-` (for SonarCloud).                                                                                                                                                                           | `true`   |          |
+| `plugin_language`  | The language key of the plugin to update. It will always be used as a part of the PR title and commit message. It can be used to match the artifact in the build script (i.e. it should be the `X` in `sonar-X-plugin`), unless `plugin_artifacts` input is provided. | `true`   |          |
+| `secret_name`      | Name of the secret for GitHub token to fetch from the vault that has permissions to create pull requests in the target Github repository.                                                                                                                             | `true`   |          |
+| `plugin_artifacts` | Comma-separated list of plugin artifact names (any `X` in `sonar-X-plugin`) that will be used instead of `plugin_language` when provided.                                                                                                                             | `false`  |          |
+| `base_branch`      | The base branch for the pull request.                                                                                                                                                                                                                                 | `false`  | `master` |
+| `draft`            | A boolean value (`true`/`false`) to control if the pull request is created as a draft.                                                                                                                                                                                | `false`  | `false`  |
+| `reviewers`        | A comma-separated list of GitHub usernames to request a review from (e.g., `user1,user2`).                                                                                                                                                                            | `false`  |          |
+| `pr_body`          | The body of the pull request.                                                                                                                                                                                                                                         | `false`  |          |
 
 ## Outputs
 
 | Output   | Description                          |
 |----------|--------------------------------------|
-| `pr-url` | The URL of the created pull request. |
+| `pr_url` | The URL of the created pull request. |
 
 ## Example Usage
 
 Here is an example of how to use this action in a workflow. This workflow can be triggered manually (
 `workflow_dispatch`) and uses a secret to provide the required token. The second job demonstrates how to use the
-`pr-url` output.
+`pr_url` output.
 
 ```yaml
 # .github/workflows/update-my-analyzer.yml
@@ -64,23 +65,16 @@ jobs:
     name: Update PHP Analyzer in SonarQube
     runs-on: ubuntu-latest
     outputs:
-      pull_request_url: ${{ steps.update_step.outputs.pr-url }}
+      pull_request_url: ${{ steps.update_step.outputs.pr_url }}
     steps:
-      - name: get secrets
-        id: secrets
-        uses: SonarSource/vault-action-wrapper@d1c1ab4ca5ad07fd9cdfe1eff038a39673dfca64  # v2.4.2-1
-        with:
-          secrets: |
-            development/github/token/SonarSource-sonar-php-release-automation token | GITHUB_TOKEN;
-
       - name: Update analyzer and create PR
         id: update_step
         uses: SonarSource/release-github-actions/update-analyzer@master
         with:
           version: ${{ inputs.version }}
           ticket: ${{ inputs.ticket }}
-          plugin-language: 'php'
-          github-token: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
+          plugin_language: 'php'
+          secret_name: 'sonar-php-release-automation'
           draft: true
 
   report-pr-url:
@@ -92,4 +86,18 @@ jobs:
       - name: Echo the PR URL
         run: |
           echo "Pull request created at: ${{ needs.update-analyzer.outputs.pull_request_url }}"
+```
+
+### Using `plugin_artifacts` for Multiple Plugins
+
+You can also update multiple artifacts in a single PR by using the `plugin_artifacts` input instead of `plugin_language`:
+
+```yaml
+- name: Update multiple analyzers and create PR
+  uses: SonarSource/release-github-actions/update-analyzer@master
+  with:
+    version: ${{ inputs.version }}
+    ticket: ${{ inputs.ticket }}
+    plugin_artifacts: 'java,kotlin,scala'
+    secret_name: 'jvm-release-automation'
 ```

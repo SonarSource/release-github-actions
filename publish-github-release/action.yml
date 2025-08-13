@@ -25,12 +25,6 @@ inputs:
   jira_project_key:
     description: 'The Jira project key (e.g., "SONARPHP") to fetch notes from.'
     required: false
-  jira_user:
-    description: 'Jira user for authentication.'
-    required: false
-  jira_token:
-    description: 'Jira API token for authentication.'
-    required: false
   issue_types:
     description: 'Optional comma-separated list of Jira issue types to include in the release notes, in order.'
     required: false
@@ -70,10 +64,18 @@ runs:
           echo "Error: You must provide either the 'release_notes' or the 'jira_release_name' input."
           exit 1
         fi
-        if [[ -n "${{ inputs.jira_release_name }}" && ( -z "${{ inputs.jira_project_key }}" || -z "${{ inputs.jira_user }}" || -z "${{ inputs.jira_token }}" ) ]]; then
-          echo "Error: When using 'jira_release_name', you must also provide 'jira_project_key', 'jira_user', and 'jira_token'."
+        if [[ -n "${{ inputs.jira_release_name }}" && -z "${{ inputs.jira_project_key }}" ]]; then
+          echo "Error: When using 'jira_release_name', you must also provide 'jira_project_key'."
           exit 1
         fi
+
+    - name: Get Jira Credentials from Vault
+      id: secrets
+      uses: SonarSource/vault-action-wrapper@v3
+      with:
+        secrets: |
+          development/kv/data/jira user | JIRA_USER;
+          development/kv/data/jira token | JIRA_TOKEN;
 
     - name: Prepare Release Notes
       id: prepare_notes
@@ -112,8 +114,8 @@ runs:
           exit 0
         fi
       env:
-        JIRA_USER: ${{ inputs.jira_user }}
-        JIRA_TOKEN: ${{ inputs.jira_token }}
+        JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
+        JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
 
     - name: Create Release with GitHub CLI
       id: create_release

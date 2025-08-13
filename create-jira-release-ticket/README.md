@@ -17,8 +17,6 @@ The following inputs can be configured for the action:
 
 | Input                  | Description                                                                                                       | Required | Default |
 |------------------------|-------------------------------------------------------------------------------------------------------------------|----------|---------|
-| `jira_user`            | The Jira user (email) for authentication.                                                                         | `true`   |         |
-| `jira_token`           | The Jira API token for authentication.                                                                            | `true`   |         |
 | `project_key`          | The project key (e.g., `SONARIAC`).                                                                               | `true`   |         |
 | `project_name`         | The display name of the project (e.g., `SonarIaC`). Will be used as the prefix of the resulting release ticket.   | `true`   |         |
 | `version`              | The new version string being released (e.g., `1.2.3`).                                                            | `true`   |         |
@@ -84,20 +82,10 @@ jobs:
       id-token: write
 
     steps:
-      - name: Get Jira Credentials from Vault
-        id: secrets
-        uses: SonarSource/vault-action-wrapper@v3
-        with:
-          secrets: |
-            development/kv/data/jira user | JIRA_USER;
-            development/kv/data/jira token | JIRA_TOKEN;
-
       - name: Create Jira Release Ticket
         id: create_ticket
         uses: SonarSource/release-github-actions/.github/actions/create-jira-release-ticket@master
         with:
-          jira_user: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
-          jira_token: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
           project_key: ${{ env.PROJECT_KEY }}
           project_name: ${{ env.PROJECT_NAME }}
           version: ${{ github.event.inputs.version }}

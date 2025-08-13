@@ -45,8 +45,6 @@ The following inputs can be configured for the action:
 | `release_notes`        | The full markdown content for the release notes. If provided, this is used directly, ignoring Jira inputs.       | `false`  | `''`                  |
 | `jira_release_name`    | The name of the Jira release version. If provided and `release_notes` is empty, notes will be fetched from Jira. | `false`  | `''`                  |
 | `jira_project_key`     | The Jira project key (e.g., "SONARPHP") to fetch notes from. Required if using `jira_release_name`.              | `false`  |                       |
-| `jira_user`            | Jira user (email) for authentication. Required if using `jira_release_name`.                                     | `false`  |                       |
-| `jira_token`           | Jira API token for authentication. Required if using `jira_release_name`.                                        | `false`  |                       |
 | `issue_types`          | Optional comma-separated list of Jira issue types to include in the release notes, in order of appearance.       | `false`  | `''`                  |
 | `use_sandbox`          | Set to `false` to use the Jira production server instead of the sandbox.                                         | `false`  | `true`                |
 | `release_workflow`     | The filename of the release workflow to trigger in the caller repository.                                        | `false`  | `release.yml`         |
@@ -88,14 +86,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Get Jira Credentials from Vault
-        id: secrets
-        uses: SonarSource/vault-action-wrapper@v3
-        with:
-          secrets: |
-            development/kv/data/jira user | JIRA_USER;
-            development/kv/data/jira token | JIRA_TOKEN;
-
       - name: Publish GitHub Release
         id: publish
         uses: SonarSource/release-github-actions/update-release-ticket-status@master
@@ -103,8 +93,6 @@ jobs:
           version: ${{ github.event.inputs.version }}
           jira_project_key: 'YOUR_PROJ_KEY'
           jira_release_name: ${{ github.event.inputs.jira_release_name }}
-          jira_user: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
-          jira_token: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
           draft: false
           use_sandbox: false
 

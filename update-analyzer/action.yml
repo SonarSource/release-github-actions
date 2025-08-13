@@ -9,12 +9,15 @@ inputs:
   ticket:
     description: 'The Jira ticket number (e.g., SONAR-12345 or SC-12345). This determines the target product.'
     required: true
-  plugin-language:
+  plugin_language:
     description: 'The language key of the plugin to update (e.g., architecture, java, csharp).'
     required: true
-  github-token:
-    description: 'A GitHub token with permissions to create pull requests in the target repository.'
+  secret_name:
+    description: 'Name of the secret to fetch from the vault that has access to the target repository.'
     required: true
+  plugin_artifacts:
+    description: 'Comma-separated list of plugin artifact names to update instead of plugin_language.'
+    required: false
   base_branch:
     description: 'The base branch for the product pull request.'
     required: false
@@ -31,13 +34,20 @@ inputs:
     required: false
 
 outputs:
-  pr-url:
+  pr_url:
     description: 'The URL of the created pull request.'
     value: ${{ steps.create_pr.outputs.pull-request-url }}
 
 runs:
   using: 'composite'
   steps:
+    - name: Get GitHub token from Vault
+      id: secrets
+      uses: SonarSource/vault-action-wrapper@v3
+      with:
+        secrets: |
+          development/github/token/SonarSource-${{ inputs.secret_name}} token | GITHUB_TOKEN;
+
     - name: Set up environment
       id: setup_env
       shell: bash
@@ -61,15 +71,27 @@ runs:
         sparse-checkout: ${{ env.BUILD_GRADLE_FILE }}
         sparse-checkout-cone-mode: false
         fetch-depth: 0
-        token: ${{ inputs.github-token }}
+        token: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
 
     - name: Update analyzer version in build file
       shell: bash
       run: |
         set -euo pipefail
-        echo "Updating analyzer version in ${{ env.BUILD_GRADLE_FILE }} for plugin ${{ inputs.plugin-language }}"
+        # Prepare the list of plugins to update
+        if [[ -n "${{ inputs.plugin_artifacts }}" ]]; then
+          echo "Using plugin_artifacts: ${{ inputs.plugin_artifacts }}"
+          IFS=',' read -ra PLUGINS <<< "${{ inputs.plugin_artifacts }}"
+        else
+          echo "Using plugin_language: ${{ inputs.plugin_language }}"
+          PLUGINS=("${{ inputs.plugin_language }}")
+        fi
         
-        sed -i "s/\(:sonar-${{ inputs.plugin-language }}.*-plugin:\)[0-9.]*/\1${{ inputs.version }}/g" ${{ env.BUILD_GRADLE_FILE }}
+        # Update each plugin
+        for plugin in "${PLUGINS[@]}"; do
+          plugin=$(echo "$plugin" | xargs)
+          echo "Updating analyzer version in ${{ env.BUILD_GRADLE_FILE }} for plugin $plugin"
+          sed -i "s/\(:sonar-$plugin.*-plugin:\)[0-9.]*/\1${{ inputs.version }}/g" ${{ env.BUILD_GRADLE_FILE }}
+        done
         
         echo "Showing diff:"
         git --no-pager diff ${{ env.BUILD_GRADLE_FILE }}
@@ -79,11 +101,11 @@ runs:
       uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
       with:
         author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
-        commit-message: '${{ inputs.ticket }} Update `${{ inputs.plugin-language }}` plugins to version ${{ inputs.version }}'
-        title: '${{ inputs.ticket }} Update `${{ inputs.plugin-language }}` to version ${{ inputs.version }}'
+        commit-message: '${{ inputs.ticket }} Update `${{ inputs.plugin_language }}` plugins to version ${{ inputs.version }}'
+        title: '${{ inputs.ticket }} Update `${{ inputs.plugin_language }}` to version ${{ inputs.version }}'
         body: ${{ inputs.pr_body }}
         base: ${{ inputs.base_branch }}
-        branch: '${{ inputs.plugin-language }}/update-analyzer-${{ inputs.version }}'
-        token: ${{ inputs.github-token }}
+        branch: '${{ inputs.plugin_language }}/update-analyzer-${{ inputs.version }}'
+        token: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
         draft: ${{ inputs.draft }}
         reviewers: ${{ inputs.reviewers }}
