@@ -79,7 +79,7 @@ runs:
       shell: bash
       run: pip install -r ${{ github.action_path }}/requirements.txt
 
-    - uses: SonarSource/ci-github-actions/get-build-number@v1
+    - uses: SonarSource/ci-github-actions/get-build-number@266c301e7023444613f2e413d66800ddc0896f39
       if: ${{ !inputs.version }}
 
     - name: Run Python Script to Create Ticket
@@ -109,7 +109,7 @@ runs:
 
     - name: Start Progress on Release Ticket
       if: ${{ inputs.start_progress == 'true' }}
-      uses: SonarSource/release-github-actions/update-release-ticket-status@main
+      uses: SonarSource/release-github-actions/update-release-ticket-status@dd803247a7ae28f1233453db06a6b80b323400aa
       with:
         ticket_key: ${{ steps.run_python_script.outputs.ticket_key }}
         status: "Start Progress"
