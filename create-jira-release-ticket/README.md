@@ -38,6 +38,17 @@ The following inputs can be configured for the action:
 | `ticket_url`        | The URL of the created Jira ticket.              |
 | `release_url`       | The URL of the Jira release page.                |
 
+## Environment Variables
+
+The action also sets the following environment variables that can be used in subsequent workflow steps:
+
+| Variable              | Description                                      |
+|-----------------------|--------------------------------------------------|
+| `RELEASE_TICKET_KEY`  | The key of the created Jira ticket (e.g., `REL-1234`). |
+| `JIRA_RELEASE_NAME`   | The name of the Jira release used by the action. |
+| `RELEASE_TICKET_URL`  | The URL of the created Jira ticket.              |
+| `JIRA_RELEASE_URL`    | The URL of the Jira release page.                |
+
 ## Example Usage
 
 Here is an example of how to use this action in a workflow. This job will be triggered manually and will create a Jira
