@@ -28,6 +28,7 @@ The following inputs can be configured for the action:
 | `rule_props_changed`   | Whether rule properties have changed (`Yes` or `No`).                                                             | `false`  | `No`    |
 | `jira_release_name`    | The specific Jira release version to use. If omitted and there is only one unreleased version it will release it. | `false`  | `''`    |
 | `sonarlint_changelog`  | The SonarLint changelog content.                                                                                  | `false`  | `''`    |
+| `skip_release_notes`   | Skip fetching the release notes link completely.                                                                  | `false`  | `false` |
 
 ## Outputs
 

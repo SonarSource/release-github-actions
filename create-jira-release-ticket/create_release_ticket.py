@@ -199,26 +199,36 @@ def main():
                         help="Whether rule properties have changed.")
     parser.add_argument("--jira-release-name", default="", help="The specific Jira release version to use.")
     parser.add_argument("--sonarlint-changelog", default="", help="The SonarLint changelog content.")
+    parser.add_argument("--skip-release-notes", action='store_true',
+                        help="Skip fetching the release notes link.")
 
     args = parser.parse_args()
 
     jira, jira_server_url = get_jira_instance(args.use_sandbox)
 
-    release_notes_info = get_jira_release_notes_info(jira, args.project_key, jira_server_url, args.jira_release_name)
-    ticket = create_release_ticket(jira, args, release_notes_info.url)
+    if args.skip_release_notes:
+        eprint("Skipping release notes link as requested.")
+        release_notes_url = ""
+        release_name = ""
+    else:
+        release_notes_info = get_jira_release_notes_info(jira, args.project_key, jira_server_url, args.jira_release_name)
+        release_notes_url = release_notes_info.url
+        release_name = release_notes_info.name
+    
+    ticket = create_release_ticket(jira, args, release_notes_url)
 
     eprint("\n" + "=" * 50)
     eprint("🎉 Successfully created release ticket!")
     eprint(f"   Ticket Key: {ticket.key}")
-    eprint(f"   Release Name: {release_notes_info.name}")
+    eprint(f"   Release Name: {release_name}")
     eprint(f"   Ticket URL: {ticket.permalink()}")
-    eprint(f"   Release URL: {release_notes_info.url}")
+    eprint(f"   Release URL: {release_notes_url}")
     eprint("=" * 50)
 
     print(f"ticket_key={ticket.key}")
-    print(f"jira_release_name={release_notes_info.name}")
+    print(f"jira_release_name={release_name}")
     print(f"ticket_url={ticket.permalink()}")
-    print(f"release_url={release_notes_info.url}")
+    print(f"release_url={release_notes_url}")
 
 
 if __name__ == "__main__":

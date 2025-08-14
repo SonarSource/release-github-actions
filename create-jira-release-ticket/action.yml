@@ -41,6 +41,10 @@ inputs:
     description: 'The SonarLint changelog content.'
     required: false
     default: ''
+  skip_release_notes:
+    description: 'Skip fetching the release notes link'
+    required: false
+    default: 'false'
 
 outputs:
   ticket_key:
@@ -85,6 +89,11 @@ runs:
           SANDBOX_FLAG="--use-sandbox"
         fi
 
+        SKIP_RELEASE_NOTES_FLAG=""
+        if [[ "${{ inputs.skip_release_notes }}" == "true" ]]; then
+          SKIP_RELEASE_NOTES_FLAG="--skip-release-notes"
+        fi
+
         python ${{ github.action_path }}/create_release_ticket.py \
           --project-key="${{ inputs.project_key }}" \
           --project-name="${{ inputs.project_name }}" \
@@ -96,7 +105,8 @@ runs:
           --documentation-status="${{ inputs.documentation_status }}" \
           --rule-props-changed="${{ inputs.rule_props_changed }}" \
           --jira-release-name="${{ inputs.jira_release_name }}" \
-          --sonarlint-changelog="${{ inputs.sonarlint_changelog }}" >> $GITHUB_OUTPUT
+          --sonarlint-changelog="${{ inputs.sonarlint_changelog }}" \
+          ${SKIP_RELEASE_NOTES_FLAG} >> $GITHUB_OUTPUT
       env:
         JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
