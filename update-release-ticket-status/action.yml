@@ -9,6 +9,10 @@ inputs:
   status:
     description: 'The target status for the ticket. Must be a valid transition.'
     required: true
+  expected_status:
+    description: 'The expected status for the ticket before transitioning. If the ticket is already in this status, it will not be transitioned.'
+    required: false
+    default: ''
   assignee:
     description: 'The email of the user to assign the ticket to.'
     required: false
@@ -52,9 +56,15 @@ runs:
           ASSIGNEE_FLAG="--assignee=${{ inputs.assignee }}"
         fi
 
+        EXPECTED_STATUS_FLAG=""
+        if [[ -n "${{ inputs.expected_status }}" ]]; then
+          EXPECTED_STATUS_FLAG="--expected-status=${{ inputs.expected_status }}"
+        fi
+
         python ${{ github.action_path }}/update_release_ticket.py \
           --ticket-key="${{ inputs.ticket_key }}" \
           --status="${{ inputs.status }}" \
+          ${EXPECTED_STATUS_FLAG} \
           ${ASSIGNEE_FLAG} \
           ${SANDBOX_FLAG}
       env:
