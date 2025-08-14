@@ -54,7 +54,7 @@ jobs:
         uses: ./create-jira-version
         with:
           jira_project_key: "TEST"
-          jira_version_name: "test-version-${{ github.run_number }}"
+          jira_version_name: "1.2.3"
           use_jira_sandbox: "true"
 
       - name: Verify action inputs are processed

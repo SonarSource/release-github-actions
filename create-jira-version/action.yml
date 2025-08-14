@@ -64,5 +64,5 @@ runs:
           python ${{ github.action_path }}/create_jira_version.py \
           --project-key="${{ inputs.jira_project_key }}" \
           --version-name="${{ inputs.jira_version_name || steps.determine_version_name.outputs.VERSION_NAME }}" \
-          ${{ (inputs.use_jira_sandbox == 'true' || env.USE_JIRA_VERSION == 'true') && echo '--use-sandbox' || echo '' }} \
+          ${{ (inputs.use_jira_sandbox == 'true' || env.USE_JIRA_VERSION == 'true') && '--use-sandbox' || '' }} \
           >> $GITHUB_OUTPUT
