@@ -29,7 +29,7 @@ have the project role `Administrators` for the target project to manage releases
 | `project_key`       | The project key in Jira (e.g., `SONARIAC`).                                                         | `true`   |         |
 | `jira_release_name` | The exact name of the Jira version you want to release (e.g., `1.2.3`).                             | `true`   |         |
 | `new_version_name`  | The name for the next version. If omitted, the action will auto-increment from `jira_release_name`. | `false`  | `''`    |
-| `use_sandbox`       | Set to `false` to use the production Jira server. Recommended to test with `true` first.            | `false`  | `true`  |
+| `use_sandbox`       | Set to `true` to use the sandbox Jira server. Recommended for testing.                              | `false`  | `false` |
 
 ## Outputs
 
@@ -71,7 +71,7 @@ jobs:
           project_key: 'SONARIAC'
           jira_release_name: ${{ github.event.inputs.version_to_release }}
           new_version_name: ${{ github.event.inputs.next_version }}
-          use_sandbox: true
+          use_sandbox: false
 
       - name: Echo Output
         run: |

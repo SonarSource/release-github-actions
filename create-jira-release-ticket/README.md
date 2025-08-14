@@ -15,20 +15,20 @@ portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platfo
 
 The following inputs can be configured for the action:
 
-| Input                  | Description                                                                                                       | Required | Default |
-|------------------------|-------------------------------------------------------------------------------------------------------------------|----------|---------|
-| `project_key`          | The project key (e.g., `SONARIAC`).                                                                               | `true`   |         |
-| `project_name`         | The display name of the project (e.g., `SonarIaC`). Will be used as the prefix of the resulting release ticket.   | `true`   |         |
-| `short_description`    | A brief description of the release.                                                                               | `true`   |         |
-| `sq_compatibility`     | The SonarQube compatibility version (e.g., `2025.3`).                                                             | `true`   |         |
-| `version`              | The version being released (e.g., `1.2.3`), or leave empty to use the build number.                              | `false`  |         |
-| `targeted_product`     | The targeted product version (e.g., `11.0`).                                                                      | `false`  |         |
-| `use_sandbox`          | Set to `false` to use the Jira production server.                                                                 | `false`  | `true`  |
-| `documentation_status` | Status of the documentation.                                                                                      | `false`  | `N/A`   |
-| `rule_props_changed`   | Whether rule properties have changed (`Yes` or `No`).                                                             | `false`  | `No`    |
-| `jira_release_name`    | The specific Jira release version to use. If not provided, will auto-detect the single unreleased version.       | `false`  |         |
-| `sonarlint_changelog`  | The SonarLint changelog content.                                                                                  | `false`  |         |
-| `start_progress`       | Whether to start progress on the release ticket after creation.                                                   | `false`  | `false` |
+| Input                  | Description                                                                                                     | Required | Default |
+|------------------------|-----------------------------------------------------------------------------------------------------------------|----------|---------|
+| `project_key`          | The project key (e.g., `SONARIAC`).                                                                             | `true`   |         |
+| `project_name`         | The display name of the project (e.g., `SonarIaC`). Will be used as the prefix of the resulting release ticket. | `true`   |         |
+| `short_description`    | A brief description of the release.                                                                             | `true`   |         |
+| `sq_compatibility`     | The SonarQube compatibility version (e.g., `2025.3`).                                                           | `true`   |         |
+| `version`              | The version being released (e.g., `1.2.3`), or leave empty to use the build number.                             | `false`  |         |
+| `targeted_product`     | The targeted product version (e.g., `11.0`).                                                                    | `false`  |         |
+| `use_sandbox`          | Set to `true` to use the Jira sandbox server.                                                                   | `false`  | `false` |
+| `documentation_status` | Status of the documentation.                                                                                    | `false`  | `N/A`   |
+| `rule_props_changed`   | Whether rule properties have changed (`Yes` or `No`).                                                           | `false`  | `No`    |
+| `jira_release_name`    | The specific Jira release version to use. If not provided, will auto-detect the single unreleased version.      | `false`  |         |
+| `sonarlint_changelog`  | The SonarLint changelog content.                                                                                | `false`  |         |
+| `start_progress`       | Whether to start progress on the release ticket after creation.                                                 | `false`  | `false` |
 
 ## Outputs
 

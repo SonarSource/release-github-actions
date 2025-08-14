@@ -16,7 +16,7 @@ inputs:
   use_sandbox:
     description: "Use the sandbox Jira server instead of production."
     required: false
-    default: 'true'
+    default: 'false'
 
 outputs:
   new_version_name:

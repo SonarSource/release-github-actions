@@ -24,7 +24,7 @@ inputs:
   use_sandbox:
     description: "Use the sandbox server instead of the production Jira."
     required: false
-    default: 'true'
+    default: 'false'
   documentation_status:
     description: 'Status of the documentation'
     required: false
