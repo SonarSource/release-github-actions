@@ -9,9 +9,6 @@ inputs:
   project_name:
     description: 'The display name of the project (e.g., SonarIaC)'
     required: true
-  version:
-    description: 'The version being released (e.g., 11.44.2), or leave empty to use the build number.'
-    required: false
   short_description:
     description: 'A short description for the release'
     required: true
@@ -21,6 +18,9 @@ inputs:
   sq_compatibility:
     description: 'SonarQube compatibility version (e.g., 2025.3)'
     required: true
+  version:
+    description: 'The version being released (e.g., 11.44.2), or leave empty to use the build number.'
+    required: false
   use_sandbox:
     description: "Use the sandbox server instead of the production Jira."
     required: false
@@ -80,7 +80,7 @@ runs:
       run: pip install -r ${{ github.action_path }}/requirements.txt
 
     - uses: SonarSource/ci-github-actions/get-build-number@v1
-      if: ${{ inputs.version == '' }}
+      if: ${{ !inputs.version }}
 
     - name: Run Python Script to Create Ticket
       id: run_python_script
@@ -97,7 +97,7 @@ runs:
         python ${{ github.action_path }}/create_release_ticket.py \
           --project-key="${{ inputs.project_key }}" \
           --project-name="${{ inputs.project_name }}" \
-          --version="${{ inputs.version != '' && inputs.version || env.BUILD_NUMBER }}" \
+          --version="${{ inputs.version || env.BUILD_NUMBER }}" \
           --short-description="${{ inputs.short_description }}" \
           --targeted-product="${{ inputs.targeted_product }}" \
           --sq-compatibility="${{ inputs.sq_compatibility }}" \
