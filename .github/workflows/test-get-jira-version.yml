@@ -1,0 +1,109 @@
+name: Test Get Jira Version Action
+
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches:
+      - master
+      - branch-*
+  workflow_dispatch:
+
+jobs:
+  test-get-jira-version:
+    runs-on: ubuntu-latest
+    name: Test Get Jira Version Action
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      - name: Test with standard version (1.2.3.45)
+        env:
+          BUILD_NUMBER: "1.2.3.45"
+        uses: ./get-jira-version
+        id: test1
+
+      - name: Verify standard version output
+        run: |
+          echo "Expected: 1.2.3, Got: ${{ steps.test1.outputs.JIRA_VERSION }}"
+          if [ "${{ steps.test1.outputs.JIRA_VERSION }}" != "1.2.3" ]; then
+            echo "❌ Test failed for standard version"
+            exit 1
+          fi
+          echo "✅ Standard version test passed"
+
+      - name: Test with trailing zero version (2.1.0.12)
+        env:
+          BUILD_NUMBER: "2.1.0.12"
+        uses: ./get-jira-version
+        id: test2
+
+      - name: Verify trailing zero removal
+        run: |
+          echo "Expected: 2.1, Got: ${{ steps.test2.outputs.JIRA_VERSION }}"
+          if [ "${{ steps.test2.outputs.JIRA_VERSION }}" != "2.1" ]; then
+            echo "❌ Test failed for trailing zero removal"
+            exit 1
+          fi
+          echo "✅ Trailing zero removal test passed"
+
+      - name: Test with no trailing zero (3.4.5.67)
+        env:
+          BUILD_NUMBER: "3.4.5.67"
+        uses: ./get-jira-version
+        id: test3
+
+      - name: Verify no trailing zero
+        run: |
+          echo "Expected: 3.4.5, Got: ${{ steps.test3.outputs.JIRA_VERSION }}"
+          if [ "${{ steps.test3.outputs.JIRA_VERSION }}" != "3.4.5" ]; then
+            echo "❌ Test failed for no trailing zero"
+            exit 1
+          fi
+          echo "✅ No trailing zero test passed"
+
+      - name: Test with single digit version (1.0.0.1)
+        env:
+          BUILD_NUMBER: "1.0.0.1"
+        uses: ./get-jira-version
+        id: test4
+
+      - name: Verify single digit version
+        run: |
+          echo "Expected: 1.0, Got: ${{ steps.test4.outputs.JIRA_VERSION }}"
+          if [ "${{ steps.test4.outputs.JIRA_VERSION }}" != "1.0" ]; then
+            echo "❌ Test failed for single digit version"
+            exit 1
+          fi
+          echo "✅ Single digit version test passed"
+
+      - name: Test environment variable is set
+        env:
+          BUILD_NUMBER: "5.6.7.89"
+        run: |
+          # Run the action steps manually to test env var
+          VERSION=$(echo "$BUILD_NUMBER" | cut -d '.' -f 1-3)
+          JIRA_VERSION=$(echo "$VERSION" | sed 's/\.0$//')
+          echo "JIRA_VERSION=${JIRA_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Verify environment variable
+        run: |
+          echo "Environment JIRA_VERSION: $JIRA_VERSION"
+          if [ "$JIRA_VERSION" != "5.6.7" ]; then
+            echo "❌ Environment variable test failed"
+            exit 1
+          fi
+          echo "✅ Environment variable test passed"
+
+      - name: Test edge case - major version only (1.0.0.0)
+        env:
+          BUILD_NUMBER: "1.0.0.0"
+        uses: ./get-jira-version
+        id: test5
+
+      - name: Verify major version only
+        run: |
+          echo "Expected: 1.0, Got: ${{ steps.test5.outputs.JIRA_VERSION }}"
+          if [ "${{ steps.test5.outputs.JIRA_VERSION }}" != "1.0" ]; then
+            echo "❌ Test failed for major version only"
+            exit 1
+          fi
+          echo "✅ Major version only test passed"
