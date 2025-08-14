@@ -9,9 +9,6 @@ inputs:
   project_name:
     description: 'The display name of the project (e.g., SonarIaC)'
     required: true
-  version:
-    description: 'The version being released (e.g., 11.44.2)'
-    required: true
   short_description:
     description: 'A short description for the release'
     required: true
@@ -21,6 +18,9 @@ inputs:
   sq_compatibility:
     description: 'SonarQube compatibility version (e.g., 2025.3)'
     required: true
+  version:
+    description: 'The version being released (e.g., 11.44.2), or leave empty to use the build number.'
+    required: false
   use_sandbox:
     description: "Use the sandbox server instead of the production Jira."
     required: false
@@ -41,6 +41,9 @@ inputs:
     description: 'The SonarLint changelog content.'
     required: false
     default: ''
+  start_progress:
+    description: 'Whether to start progress on the release ticket.'
+    default: 'false'
 
 outputs:
   ticket_key:
@@ -76,9 +79,15 @@ runs:
       shell: bash
       run: pip install -r ${{ github.action_path }}/requirements.txt
 
+    - uses: SonarSource/ci-github-actions/get-build-number@266c301e7023444613f2e413d66800ddc0896f39
+      if: ${{ !inputs.version }}
+
     - name: Run Python Script to Create Ticket
       id: run_python_script
       shell: bash
+      env:
+        JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
+        JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
       run: |
         SANDBOX_FLAG=""
         if [[ "${{ inputs.use_sandbox }}" == "true" ]]; then
@@ -88,7 +97,7 @@ runs:
         python ${{ github.action_path }}/create_release_ticket.py \
           --project-key="${{ inputs.project_key }}" \
           --project-name="${{ inputs.project_name }}" \
-          --version="${{ inputs.version }}" \
+          --version="${{ inputs.version || env.BUILD_NUMBER }}" \
           --short-description="${{ inputs.short_description }}" \
           --targeted-product="${{ inputs.targeted_product }}" \
           --sq-compatibility="${{ inputs.sq_compatibility }}" \
@@ -97,9 +106,13 @@ runs:
           --rule-props-changed="${{ inputs.rule_props_changed }}" \
           --jira-release-name="${{ inputs.jira_release_name }}" \
           --sonarlint-changelog="${{ inputs.sonarlint_changelog }}" >> $GITHUB_OUTPUT
-      env:
-        JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
-        JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
+
+    - name: Start Progress on Release Ticket
+      if: ${{ inputs.start_progress == 'true' }}
+      uses: SonarSource/release-github-actions/update-release-ticket-status@dd803247a7ae28f1233453db06a6b80b323400aa
+      with:
+        ticket_key: ${{ steps.run_python_script.outputs.ticket_key }}
+        status: "Start Progress"
 
     - name: Set Env Variables
       shell: bash
