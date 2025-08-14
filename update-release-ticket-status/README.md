@@ -16,7 +16,7 @@ portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platfo
 | `ticket_key`  | The key of the Jira ticket to update (e.g., `REL-1234`).                        | `true`   |         |
 | `status`      | The target status. Possible values: `Start Progress`, `Technical Release Done`. | `true`   |         |
 | `assignee`    | The email of the user to assign the ticket to.                                  | `false`  | `''`    |
-| `use_sandbox` | Set to `false` to use the Jira production server.                               | `false`  | `true`  |
+| `use_sandbox` | Set to `true` to use the Jira sandbox server.                                   | `false`  | `false` |
 
 ## Example Usage
 

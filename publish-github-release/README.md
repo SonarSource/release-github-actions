@@ -46,7 +46,7 @@ The following inputs can be configured for the action:
 | `jira_release_name`    | The name of the Jira release version. If provided and `release_notes` is empty, notes will be fetched from Jira. | `false`  | `''`                  |
 | `jira_project_key`     | The Jira project key (e.g., "SONARPHP") to fetch notes from. Required if using `jira_release_name`.              | `false`  |                       |
 | `issue_types`          | Optional comma-separated list of Jira issue types to include in the release notes, in order of appearance.       | `false`  | `''`                  |
-| `use_sandbox`          | Set to `false` to use the Jira production server instead of the sandbox.                                         | `false`  | `true`                |
+| `use_sandbox`          | Set to `true` to use the Jira sandbox server instead of production.                                              | `false`  | `false`               |
 | `release_workflow`     | The filename of the release workflow to trigger in the caller repository.                                        | `false`  | `release.yml`         |
 | `release_workflow_ref` | The branch or ref to trigger the release workflow from.                                                          | `false`  | `master`              |
 
@@ -94,7 +94,7 @@ jobs:
           jira_project_key: 'YOUR_PROJ_KEY'
           jira_release_name: ${{ github.event.inputs.jira_release_name }}
           draft: false
-          use_sandbox: false
+          use_sandbox: true
 
       - name: Print Release URL
         run: echo "Successfully published release at ${{ steps.publish.outputs.release_url }}"

@@ -21,7 +21,7 @@ portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platfo
 | `sqs_project_key`    | The Jira project key to search for the linked SQS integration ticket.                                          | `false`  | `SONAR` |
 | `sc_project_key`     | The Jira project key to search for the linked SC integration ticket.                                           | `false`  | `SC`    |
 | `sqs_fix_versions`   | A comma-separated list of fix versions to set on the SQS integration ticket (e.g., `"sqs-2025.4, sqcb-25.7"`). | `false`  |         |
-| `use_sandbox`        | Set to `false` to use the Jira production server.                                                              | `false`  | `true`  |
+| `use_sandbox`        | Set to `true` to use the Jira sandbox server.                                                                  | `false`  | `false` |
 
 ## Outputs
 
