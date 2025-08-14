@@ -100,3 +100,11 @@ runs:
       env:
         JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
+
+    - name: Set Env Variables
+      shell: bash
+      run: |
+        echo "JIRA_RELEASE_NAME=${{ steps.run_python_script.outputs.jira_release_name }}" >> $GITHUB_ENV
+        echo "JIRA_RELEASE_URL=${{ steps.run_python_script.outputs.release_url }}" >> $GITHUB_ENV
+        echo "RELEASE_TICKET_KEY=${{ steps.run_python_script.outputs.ticket_key }}" >> $GITHUB_ENV
+        echo "RELEASE_TICKET_URL=${{ steps.run_python_script.outputs.ticket_url }}" >> $GITHUB_ENV
