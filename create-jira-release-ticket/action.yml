@@ -63,12 +63,12 @@ runs:
       shell: bash
       run: pip install -r ${{ github.action_path }}/requirements.txt
 
-    - uses: SonarSource/release-github-actions/get-release-version@add_get-release-version_action
+    - uses: SonarSource/release-github-actions/get-release-version@switch_to_get_release_verison
       if: ${{ !inputs.version }}
 
     - name: Get Jira Release Notes URL
       if: ${{ !inputs.jira-release-url && !env.JIRA_RELEASE_URL }}
-      uses: SonarSource/release-github-actions/get-jira-release-notes@add_get-release-version_action
+      uses: SonarSource/release-github-actions/get-jira-release-notes@switch_to_get_release_verison
       with:
         jira-project-key: ${{ inputs.jira-project-key }}
         use-jira-sandbox: ${{ inputs.use-jira-sandbox }}
