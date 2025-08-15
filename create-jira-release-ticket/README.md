@@ -1,93 +1,180 @@
 # Create Jira Release Ticket Action
 
-This GitHub Action automates the creation of an "Ask for release" ticket in Jira. It is designed to be used in release
-workflows to standardize the process of requesting a new software release.
+This GitHub Action creates an "Ask for release" ticket in Jira, streamlining the release process by automatically creating standardized release tickets with all required information.
 
-The action is self-contained and uses a Python script to interact with the Jira API.
+## Description
 
-## Prerequisites
+The action creates a release ticket in Jira by:
+1. Connecting to Jira using authentication credentials from Vault
+2. Validating required project key and release URL (from inputs or environment variables)
+3. Creating an "Ask for release" ticket with custom fields populated
+4. Optionally starting progress on the created ticket
+5. Setting environment variables for use in subsequent workflow steps
 
-The action requires that the repository has the `development/kv/data/jira` token configured in vault.
-This can be done using the SPEED self-service
-portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platform/pages/3553787989/Manage+Vault+Policy+-+SPEED)).
+## Dependencies
+
+This action depends on:
+- [SonarSource/vault-action-wrapper](https://github.com/SonarSource/vault-action-wrapper) for retrieving Jira credentials
+- [SonarSource/ci-github-actions/get-build-number](https://github.com/SonarSource/ci-github-actions) when version is not provided
+- [SonarSource/release-github-actions/update-release-ticket-status](https://github.com/SonarSource/release-github-actions) when start-progress is enabled
 
 ## Inputs
 
-The following inputs can be configured for the action:
+| Input                  | Description                                                                                                               | Required | Default |
+|------------------------|---------------------------------------------------------------------------------------------------------------------------|----------|---------|
+| `jira-project-key`     | The key of the Jira project (e.g., SONARIAC). Can also be set via `JIRA_PROJECT_KEY` environment variable                 | No*      | -       |
+| `project-name`         | The display name of the project (e.g., SonarIaC). Used as the prefix for the release ticket summary                       | Yes      | -       |
+| `short-description`    | A short description for the release                                                                                       | Yes      | -       |
+| `sq-compatibility`     | SonarQube compatibility version (e.g., 2025.3)                                                                            | Yes      | -       |
+| `version`              | The version being released (e.g., 11.44.2), or leave empty to use the build number                                        | No       | -       |
+| `targeted-product`     | The targeted product version (e.g., 11.0)                                                                                 | No       | -       |
+| `use-jira-sandbox`     | Use the sandbox server instead of the production Jira. Can also be controlled via `USE_JIRA_SANDBOX` environment variable | No       | `false` |
+| `documentation-status` | Status of the documentation                                                                                               | No       | `N/A`   |
+| `rule-props-changed`   | Whether rule properties have changed (`Yes` or `No`)                                                                      | No       | `No`    |
+| `jira-release-url`     | The URL to the Jira release notes page. Can also be set via `JIRA_RELEASE_URL` environment variable                       | No*      | -       |
+| `sonarlint-changelog`  | The SonarLint changelog content                                                                                           | No       | -       |
+| `start-progress`       | Whether to start progress on the release ticket after creation                                                            | No       | `false` |
 
-| Input                  | Description                                                                                                     | Required | Default |
-|------------------------|-----------------------------------------------------------------------------------------------------------------|----------|---------|
-| `project_key`          | The project key (e.g., `SONARIAC`).                                                                             | `true`   |         |
-| `project_name`         | The display name of the project (e.g., `SonarIaC`). Will be used as the prefix of the resulting release ticket. | `true`   |         |
-| `short_description`    | A brief description of the release.                                                                             | `true`   |         |
-| `sq_compatibility`     | The SonarQube compatibility version (e.g., `2025.3`).                                                           | `true`   |         |
-| `version`              | The version being released (e.g., `1.2.3`), or leave empty to use the build number.                             | `false`  |         |
-| `targeted_product`     | The targeted product version (e.g., `11.0`).                                                                    | `false`  |         |
-| `use_sandbox`          | Set to `true` to use the Jira sandbox server.                                                                   | `false`  | `false` |
-| `documentation_status` | Status of the documentation.                                                                                    | `false`  | `N/A`   |
-| `rule_props_changed`   | Whether rule properties have changed (`Yes` or `No`).                                                           | `false`  | `No`    |
-| `jira_release_name`    | The specific Jira release version to use. If not provided, will auto-detect the single unreleased version.      | `false`  |         |
-| `sonarlint_changelog`  | The SonarLint changelog content.                                                                                | `false`  |         |
-| `start_progress`       | Whether to start progress on the release ticket after creation.                                                 | `false`  | `false` |
+*Either the input or corresponding environment variable must be provided.
 
 ## Outputs
 
-| Output              | Description                                      |
-|---------------------|--------------------------------------------------|
-| `ticket_key`        | The key of the Jira ticket (e.g., `REL-1234`).   |
-| `jira_release_name` | The name of the Jira release used by the action. |
-| `ticket_url`        | The URL of the created Jira ticket.              |
-| `release_url`       | The URL of the Jira release page.                |
+| Output               | Description                        |
+|----------------------|------------------------------------|
+| `release-ticket-key` | The key of the created Jira ticket |
+| `release-ticket-url` | The URL of the created Jira ticket |
 
 ## Environment Variables
 
-The action also sets the following environment variables that can be used in subsequent workflow steps:
+| Variable             | Description                        |
+|----------------------|------------------------------------|
+| `RELEASE_TICKET_KEY` | The key of the created Jira ticket |
+| `RELEASE_TICKET_URL` | The URL of the created Jira ticket |
 
-| Variable              | Description                                      |
-|-----------------------|--------------------------------------------------|
-| `RELEASE_TICKET_KEY`  | The key of the created Jira ticket (e.g., `REL-1234`). |
-| `JIRA_RELEASE_NAME`   | The name of the Jira release used by the action. |
-| `RELEASE_TICKET_URL`  | The URL of the created Jira ticket.              |
-| `JIRA_RELEASE_URL`    | The URL of the Jira release page.                |
+## Usage
 
-## Example Usage
-
-Here is an example of how to use this action in a workflow. This job will be triggered manually and will create a Jira
-release ticket using the provided inputs and secrets from HashiCorp Vault.
+### Basic usage with explicit values
 
 ```yaml
-on:
-  workflow_dispatch:
-    inputs:
-      version:
-        required: true
-      short_description:
-        required: true
-      sq_compatibility:
-        required: true
+- name: Create Jira Release Ticket
+  id: create-ticket
+  uses: SonarSource/release-github-actions/create-jira-release-ticket@master
+  with:
+    jira-project-key: 'SONARIAC'
+    project-name: 'SonarIaC'
+    version: '11.44.2'
+    short-description: 'Bug fixes and performance improvements'
+    sq-compatibility: '2025.3'
+    jira-release-url: 'https://sonarsource.atlassian.net/projects/SONARIAC/versions/12345'
 
-jobs:
-  create_release_ticket:
-    name: Create release ticket
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - name: Create Jira Release Ticket
-        id: create_ticket
-        uses: SonarSource/release-github-actions/.github/actions/create-jira-release-ticket@master
-        with:
-          project_key: 'SONARIAC'
-          project_name: 'SonarIaC'
-          version: ${{ github.event.inputs.version }}
-          short_description: ${{ github.event.inputs.short_description }}
-          sq_compatibility: ${{ github.event.inputs.sq_compatibility }}
-
-      - name: Echo Ticket Details
-        run: |
-          echo "Ticket Key: ${{ steps.create_ticket.outputs.ticket_key }}"
-          echo "Ticket URL: ${{ steps.create_ticket.outputs.ticket_url }}"
-          echo "Release Name: ${{ steps.create_ticket.outputs.jira_release_name }}"
-          echo "Release URL: ${{ steps.create_ticket.outputs.release_url }}"
+- name: Use created ticket
+  run: |
+    echo "Created ticket: ${{ steps.create-ticket.outputs.release-ticket-key }}"
+    echo "Ticket URL: ${{ steps.create-ticket.outputs.release-ticket-url }}"
 ```
+
+### Using environment variables
+
+```yaml
+- name: Create Jira Release Ticket
+  uses: SonarSource/release-github-actions/create-jira-release-ticket@master
+  env:
+    JIRA_PROJECT_KEY: 'SONARIAC'
+    JIRA_RELEASE_URL: 'https://sonarsource.atlassian.net/projects/SONARIAC/versions/12345'
+  with:
+    project-name: 'SonarIaC'
+    short-description: 'Major release with new features'
+    sq-compatibility: '2025.3'
+    targeted-product: '11.0'
+    rule-props-changed: 'Yes'
+```
+
+### Using sandbox environment
+
+```yaml
+- name: Create Jira Release Ticket in Sandbox
+  uses: SonarSource/release-github-actions/create-jira-release-ticket@master
+  with:
+    jira-project-key: 'TESTPROJECT'
+    project-name: 'Test Project'
+    version: '1.0.0-beta'
+    short-description: 'Beta release for testing'
+    sq-compatibility: '2025.1'
+    jira-release-url: 'https://sonarsource-sandbox-608.atlassian.net/projects/TESTPROJECT/versions/123'
+    use-jira-sandbox: 'true'
+```
+
+### With automatic progress start
+
+```yaml
+- name: Create and Start Release Ticket
+  uses: SonarSource/release-github-actions/create-jira-release-ticket@master
+  with:
+    jira-project-key: 'SONARIAC'
+    project-name: 'SonarIaC'
+    short-description: 'Quarterly release'
+    sq-compatibility: '2025.3'
+    jira-release-url: 'https://sonarsource.atlassian.net/projects/SONARIAC/versions/12345'
+    start-progress: 'true'
+    documentation-status: 'Ready'
+    sonarlint-changelog: 'Updated rules and analyzers'
+```
+
+### Using environment variables in subsequent steps
+
+```yaml
+- name: Create Jira Release Ticket
+  uses: SonarSource/release-github-actions/create-jira-release-ticket@master
+  with:
+    jira-project-key: 'SONARIAC'
+    project-name: 'SonarIaC'
+    short-description: 'Release with environment variable usage'
+    sq-compatibility: '2025.3'
+    jira-release-url: 'https://sonarsource.atlassian.net/projects/SONARIAC/versions/12345'
+
+- name: Post to Slack
+  run: |
+    curl -X POST -H 'Content-type: application/json' \
+      --data '{"text":"Release ticket created: '"$RELEASE_TICKET_KEY"' - '"$RELEASE_TICKET_URL"'"}' \
+      ${{ secrets.SLACK_WEBHOOK_URL }}
+
+- name: Update GitHub Release
+  run: |
+    gh release create v${{ inputs.version }} \
+      --title "Release ${{ inputs.version }}" \
+      --notes "Jira ticket: $RELEASE_TICKET_URL"
+```
+
+## Implementation Details
+
+The action uses a Python script that:
+- Authenticates with Jira using credentials from HashiCorp Vault
+- Supports both production and sandbox Jira environments via URL selection
+- Validates required parameters (project key and release URL) from inputs or environment variables
+- Creates "Ask for release" tickets with comprehensive custom field mapping
+- Optionally starts progress on the created ticket
+- Sets environment variables for downstream workflow steps
+
+## Field Mapping
+
+The action populates the following Jira custom fields:
+
+| Field                   | Custom Field ID   | Source Input           |
+|-------------------------|-------------------|------------------------|
+| Short Description       | customfield_10146 | `short-description`    |
+| SonarQube Compatibility | customfield_10148 | `sq-compatibility`     |
+| Targeted Product        | customfield_10163 | `targeted-product`     |
+| Link to Release Notes   | customfield_10145 | `jira-release-url`     |
+| Documentation Status    | customfield_10147 | `documentation-status` |
+| Rule Properties Changed | customfield_11263 | `rule-props-changed`   |
+| SonarLint Changelog     | customfield_11264 | `sonarlint-changelog`  |
+
+## Notes
+
+- This action requires access to SonarSource's HashiCorp Vault for Jira credentials
+- Either `jira-project-key` input or `JIRA_PROJECT_KEY` environment variable must be provided
+- Either `jira-release-url` input or `JIRA_RELEASE_URL` environment variable must be provided
+- Input parameters take precedence over environment variables when both are provided
+- The action supports both production and sandbox Jira environments
+- When `version` is not provided, the action automatically uses the build number from the CI environment
+- The `start-progress` option automatically transitions the ticket to "Start Progress" status after creation

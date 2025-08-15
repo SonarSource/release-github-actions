@@ -18,17 +18,17 @@ This action depends on:
 
 ## Inputs
 
-| Input | Description | Required | Default |
-|-------|-------------|----------|---------|
-| `jira_project_key` | The key of the Jira project (e.g., SONARIAC) | Yes | - |
-| `jira_version_name` | The name of the Jira version to create (e.g., 1.2.3) | No | Auto-determined |
-| `use_jira_sandbox` | Use the sandbox Jira server instead of production. Can also be controlled via `USE_JIRA_SANDBOX` environment variable | No | `false` |
+| Input               | Description                                                                                                           | Required | Default         |
+|---------------------|-----------------------------------------------------------------------------------------------------------------------|----------|-----------------|
+| `jira_project_key`  | The key of the Jira project (e.g., SONARIAC)                                                                          | Yes      | -               |
+| `jira_version_name` | The name of the Jira version to create (e.g., 1.2.3)                                                                  | No       | Auto-determined |
+| `use_jira_sandbox`  | Use the sandbox Jira server instead of production. Can also be controlled via `USE_JIRA_SANDBOX` environment variable | No       | `false`         |
 
 ## Outputs
 
-| Output | Description |
-|--------|-------------|
-| `jira_version_id` | The ID of the created Jira version |
+| Output              | Description                          |
+|---------------------|--------------------------------------|
+| `jira_version_id`   | The ID of the created Jira version   |
 | `jira_version_name` | The name of the created Jira version |
 
 ## Usage
