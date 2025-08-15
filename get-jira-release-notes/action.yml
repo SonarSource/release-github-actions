@@ -46,6 +46,10 @@ runs:
       shell: bash
       run: pip install -r ${{ github.action_path }}/requirements.txt
 
+    - name: Get JIRA_VERSION if not provided
+      if: ${{ !inputs.jira-version-name && !env.JIRA_VERSION }}
+      uses: ./get-jira-version
+
     - name: Get Jira release notes and URL
       id: get_notes
       shell: bash
@@ -55,21 +59,11 @@ runs:
         JIRA_PROD_URL: "https://sonarsource.atlassian.net/"
         JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
       run: |
-        # Determine project key and version name from inputs or environment variables
-        PROJECT_KEY="${{ inputs.jira-project-key }}"
-        VERSION_NAME="${{ inputs.jira-version-name }}"
+        PROJECT_KEY="${{ inputs.jira-project-key || env.JIRA_PROJECT_KEY }}"
+        VERSION_NAME="${{ inputs.jira-version-name || env.JIRA_VERSION }}"
         
-        if [[ -z "$PROJECT_KEY" ]]; then
-          PROJECT_KEY="$JIRA_PROJECT_KEY"
-        fi
-        
-        if [[ -z "$VERSION_NAME" ]]; then
-          VERSION_NAME="$JIRA_VERSION"
-        fi
-        
-        # Validate that both are set
         if [[ -z "$PROJECT_KEY" || -z "$VERSION_NAME" ]]; then
-          echo "Error: Both jira-project-key (or JIRA_PROJECT_KEY) and jira-version-name (or JIRA_VERSION) must be provided"
+          echo "::error::Both jira-project-key and jira-version-name must be provided"
           exit 1
         fi
         
