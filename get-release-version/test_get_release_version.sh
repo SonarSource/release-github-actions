@@ -49,14 +49,14 @@ print_test_start() {
 
 print_test_pass() {
     echo -e "${GREEN}✅ PASS: $1${NC}"
-    ((TESTS_PASSED++))
+    TESTS_PASSED=$((TESTS_PASSED + 1))
 }
 
 print_test_fail() {
     echo -e "${RED}❌ FAIL: $1${NC}"
     echo -e "${RED}   Expected: $2${NC}"
     echo -e "${RED}   Got: $3${NC}"
-    ((TESTS_FAILED++))
+    TESTS_FAILED=$((TESTS_FAILED + 1))
 }
 
 # Test function to simulate the action's logic
@@ -84,6 +84,7 @@ test_get_release_version() {
     local release_version=""
     
     # Execute the main logic from the action
+    set +e  # Temporarily disable exit on error for this test
     if release_version=$(gh api "/repos/${GITHUB_REPOSITORY}/commits/master/status" --jq ".statuses[] | select(.context == \"repox-master\") | .description | split(\"'\")[1]" 2>/dev/null); then
         if [ -z "$release_version" ]; then
             echo "❌ Could not extract release version from repox-master status"
@@ -97,6 +98,7 @@ test_get_release_version() {
         echo "❌ Failed to call GitHub API"
         exit_code=1
     fi
+    set -e  # Re-enable exit on error
     
     # Verify results
     if [ "$expected_result" = "success" ]; then
@@ -122,22 +124,26 @@ test_get_release_version() {
     rm -f "$GITHUB_OUTPUT" "$GITHUB_ENV"
 }
 
-# Run tests
-echo "=== Running Get Release Version Action Tests ==="
-echo
+# Run tests if script is executed directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    echo "=== Running Get Release Version Action Tests ==="
+    echo
 
-test_get_release_version "Successful version extraction" "success" "mock_gh_success"
-test_get_release_version "Empty response handling" "failure" "mock_gh_empty_response"
+    set +e  # Allow individual test failures without stopping execution
+    test_get_release_version "Successful version extraction" "success" "mock_gh_success"
+    test_get_release_version "Empty response handling" "failure" "mock_gh_empty_response"
+    set -e
 
-echo
-echo "=== Test Results ==="
-echo -e "${GREEN}Tests Passed: $TESTS_PASSED${NC}"
-echo -e "${RED}Tests Failed: $TESTS_FAILED${NC}"
+    echo
+    echo "=== Test Results ==="
+    echo -e "${GREEN}Tests Passed: $TESTS_PASSED${NC}"
+    echo -e "${RED}Tests Failed: $TESTS_FAILED${NC}"
 
-if [ $TESTS_FAILED -eq 0 ]; then
-    echo -e "${GREEN}🎉 All tests passed!${NC}"
-    exit 0
-else
-    echo -e "${RED}💥 Some tests failed!${NC}"
-    exit 1
+    if [ $TESTS_FAILED -eq 0 ]; then
+        echo -e "${GREEN}🎉 All tests passed!${NC}"
+        exit 0
+    else
+        echo -e "${RED}💥 Some tests failed!${NC}"
+        exit 1
+    fi
 fi
