@@ -1,6 +1,7 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
 
+# shellcheck disable=SC2289
 """
 Test script for get-release-version GitHub Action
 """
@@ -19,6 +20,7 @@ TESTS_FAILED=0
 
 # Mock gh command function
 mock_gh_success() {
+    # shellcheck disable=SC2317
     if [[ "$*" == *"commits/master/status"* ]]; then
         echo "1.2.3"
     else
@@ -28,6 +30,7 @@ mock_gh_success() {
 }
 
 mock_gh_empty_response() {
+    # shellcheck disable=SC2317
     if [[ "$*" == *"commits/master/status"* ]]; then
         echo ""
     else
