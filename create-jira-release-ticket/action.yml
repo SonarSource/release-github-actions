@@ -3,9 +3,6 @@ description: 'Creates a Jira release ticket.'
 author: 'SonarSource'
 
 inputs:
-  jira-project-key:
-    description: 'The key of the project (e.g., SONARIAC). Required if JIRA_PROJECT_KEY env var is not set.'
-    required: false
   project-name:
     description: 'The display name of the project (e.g., SonarIaC)'
     required: true
@@ -15,34 +12,28 @@ inputs:
   sq-compatibility:
     description: 'SonarQube compatibility version (e.g., 2025.3)'
     required: true
+  jira-project-key:
+    description: 'The key of the project (e.g., SONARIAC). Required if JIRA_PROJECT_KEY env var is not set.'
   targeted-product:
     description: 'The targeted product version (e.g., 11.0)'
-    required: false
   version:
     description: 'The version being released (e.g., 11.44.2), or leave empty to use the build number.'
-    required: false
   use-jira-sandbox:
     description: "Use the sandbox server instead of the production Jira."
-    required: false
     default: 'false'
   documentation-status:
     description: 'Status of the documentation'
-    required: false
     default: 'N/A'
   rule-props-changed:
     description: 'Whether rule properties have changed'
-    required: false
     default: 'No'
   jira-release-url:
     description: 'The URL to the Jira release notes page. Required if JIRA_RELEASE_URL env var is not set.'
-    required: false
   sonarlint-changelog:
     description: 'The SonarLint changelog content.'
-    required: false
     default: ''
   start-progress:
     description: 'Whether to start progress on the release ticket.'
-    default: 'false'
 
 outputs:
   release-ticket-key:
@@ -75,6 +66,13 @@ runs:
     - uses: SonarSource/ci-github-actions/get-build-number@266c301e7023444613f2e413d66800ddc0896f39
       if: ${{ !inputs.version }}
 
+    - name: Get Jira Release Notes URL
+      if: ${{ !inputs.jira-release-url && !env.JIRA_RELEASE_URL }}
+      uses: SonarSource/release-github-actions/get-jira-release-notes@master
+      with:
+        jira-project-key: ${{ inputs.jira-project-key }}
+        use-jira-sandbox: ${{ inputs.use-jira-sandbox }}
+
     - name: Run Python Script to Create Ticket
       id: run_python_script
       shell: bash
@@ -84,27 +82,10 @@ runs:
         JIRA_PROD_URL: "https://sonarsource.atlassian.net/"
         JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
       run: |
-        # Determine project key from input or environment variable
-        PROJECT_KEY="${{ inputs.jira-project-key }}"
+        PROJECT_KEY="${{ inputs.jira-project-key || env.JIRA_PROJECT_KEY }}"
+        
         if [[ -z "$PROJECT_KEY" ]]; then
-          PROJECT_KEY="${JIRA_PROJECT_KEY:-}"
-        fi
-
-        # Fail if no project key is provided
-        if [[ -z "$PROJECT_KEY" ]]; then
-          echo "Error: No Jira project key provided. Please set either the 'jira-project-key' input or the 'JIRA_PROJECT_KEY' environment variable."
-          exit 1
-        fi
-
-        # Determine release URL from input or environment variable
-        RELEASE_URL="${{ inputs.jira-release-url }}"
-        if [[ -z "$RELEASE_URL" ]]; then
-          RELEASE_URL="${JIRA_RELEASE_URL:-}"
-        fi
-
-        # Fail if no release URL is provided
-        if [[ -z "$RELEASE_URL" ]]; then
-          echo "Error: No Jira release URL provided. Please set either the 'jira-release-url' input or the 'JIRA_RELEASE_URL' environment variable."
+          echo "::error::Both jira-project-key input and JIRA_PROJECT_KEY environment variable are missing. One must be provided."
           exit 1
         fi
 
@@ -118,7 +99,7 @@ runs:
           --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
           --documentation-status="${{ inputs.documentation-status }}" \
           --rule-props-changed="${{ inputs.rule-props-changed }}" \
-          --jira-release-url="$RELEASE_URL" \
+          --jira-release-url="${{ inputs.jira-release-url || env.JIRA_RELEASE_URL }}" \
           --sonarlint-changelog="${{ inputs.sonarlint-changelog }}" >> $GITHUB_OUTPUT
 
     - name: Start Progress on Release Ticket

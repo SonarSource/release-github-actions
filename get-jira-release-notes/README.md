@@ -16,15 +16,18 @@ The action retrieves Jira release information by:
 
 This action depends on:
 - [SonarSource/vault-action-wrapper](https://github.com/SonarSource/vault-action-wrapper) for retrieving Jira credentials
+- [SonarSource/release-github-actions/get-jira-version](https://github.com/SonarSource/release-github-actions) when neither jira-version-name nor JIRA_VERSION are provided
 
 ## Inputs
 
-| Input               | Description                                                                                                           | Required | Default                                                     |
-|---------------------|-----------------------------------------------------------------------------------------------------------------------|----------|-------------------------------------------------------------|
-| `jira-project-key`  | The key of the Jira project (e.g., SONARIAC). Can also be set via `JIRA_PROJECT_KEY` environment variable             | No       |                                                             |
-| `jira-version-name` | The name of the Jira version/fixVersion (e.g., 1.2.3). Can also be set via `JIRA_VERSION` environment variable        | No       |                                                             |
-| `use-jira-sandbox`  | Use the sandbox Jira server instead of production. Can also be controlled via `USE_JIRA_SANDBOX` environment variable | No       | `false`                                                     |
-| `issue-types`       | Comma-separated list of issue types to include in the release notes, in order                                         | No       | `New Feature,False Positive,False Negative,Bug,Improvement` |
+| Input               | Description                                                                                                                                                                                                                 | Required | Default                                                     |
+|---------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|-------------------------------------------------------------|
+| `jira-project-key`  | The key of the Jira project (e.g., SONARIAC). Can also be set via `JIRA_PROJECT_KEY` environment variable                                                                                                                   | No*      | -                                                           |
+| `jira-version-name` | The name of the Jira version/fixVersion (e.g., 1.2.3). Can also be set via `JIRA_VERSION` environment variable. If neither is provided, the action will attempt to automatically fetch the version using `get-jira-version` | No       | -                                                           |
+| `use-jira-sandbox`  | Use the sandbox Jira server instead of production. Can also be controlled via `USE_JIRA_SANDBOX` environment variable                                                                                                       | No       | `false`                                                     |
+| `issue-types`       | Comma-separated list of issue types to include in the release notes, in order                                                                                                                                               | No       | `New Feature,False Positive,False Negative,Bug,Improvement` |
+
+*Either the input or corresponding environment variable must be provided for jira-project-key.
 
 ## Outputs
 
@@ -93,6 +96,15 @@ This action depends on:
     JIRA_VERSION: '1.2.3'
 ```
 
+### With automatic version fetching
+
+```yaml
+- name: Get Jira Release Notes with Auto-Fetched Version
+  uses: SonarSource/release-github-actions/get-jira-release-notes@master
+  with:
+    jira-project-key: 'SONARIAC'
+```
+
 ### Using sandbox environment
 
 ```yaml
@@ -131,7 +143,8 @@ The action uses a Python script that:
 ## Notes
 
 - This action requires access to SonarSource's HashiCorp Vault for Jira credentials
-- Either both inputs (`jira-project-key` and `jira-version-name`) or both environment variables (`JIRA_PROJECT_KEY` and `JIRA_VERSION`) must be provided
+- Either `jira-project-key` input or `JIRA_PROJECT_KEY` environment variable must be provided
+- If neither `jira-version-name` input nor `JIRA_VERSION` environment variable is provided, the action will attempt to automatically fetch the version using the `get-jira-version` action
 - Inputs take priority over environment variables when both are set
 - The action will fail if the specified project or version doesn't exist in Jira
 - Issue types that don't match the specified categories will not appear in the release notes
