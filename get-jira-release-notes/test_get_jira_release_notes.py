@@ -211,6 +211,7 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
         expected = 'https://jira.com/projects/TEST/versions/10001/tab/release-report-all-issues'
         self.assertEqual(url, expected)
 
+    # noinspection PyUnusedLocal
     @patch('sys.argv', [
         'get_jira_release_notes.py',
         '--project-key', 'TEST',
@@ -225,8 +226,8 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
     @patch('get_jira_release_notes.generate_release_notes_url')
     @patch('sys.stderr', new_callable=StringIO)
     @patch('builtins.print')
-    def test_main_success(self, mock_print, mock_generate_url, mock_format_notes,
-                         mock_get_issues, mock_get_project_name, mock_get_version_id, mock_get_jira):
+    def test_main_success(self, mock_print, mock_stderr, mock_generate_url, mock_format_notes,
+                          mock_get_issues, mock_get_project_name, mock_get_version_id, mock_get_jira):
         """Test successful main function execution."""
         # Setup mocks
         mock_jira = Mock()
