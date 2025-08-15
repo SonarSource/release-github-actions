@@ -1,4 +1,4 @@
-name: Test Create Jira Version Action
+name: Test Release Jira Version Action
 
 on:
   pull_request:
