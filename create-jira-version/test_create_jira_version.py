@@ -24,19 +24,17 @@ class TestCreateJiraVersion(unittest.TestCase):
         """Set up test fixtures before each test method."""
         self.mock_env = {
             'JIRA_USER': 'test_user',
-            'JIRA_TOKEN': 'test_token',
-            'JIRA_PROD_URL': 'https://prod.jira.com',
-            'JIRA_SANDBOX_URL': 'https://sandbox.jira.com'
+            'JIRA_TOKEN': 'test_token'
         }
 
     @patch.dict(os.environ, {})
     def test_get_jira_instance_missing_credentials(self):
         """Test that get_jira_instance exits when credentials are missing."""
         with self.assertRaises(SystemExit) as cm:
-            get_jira_instance()
+            get_jira_instance('https://test.jira.com')
         self.assertEqual(cm.exception.code, 1)
 
-    @patch.dict(os.environ, {'JIRA_USER': 'test', 'JIRA_TOKEN': 'token', 'JIRA_PROD_URL': 'https://prod.com'})
+    @patch.dict(os.environ, {'JIRA_USER': 'test', 'JIRA_TOKEN': 'token'})
     @patch('create_jira_version.JIRA')
     def test_get_jira_instance_success(self, mock_jira_class):
         """Test successful JIRA instance creation."""
@@ -44,36 +42,23 @@ class TestCreateJiraVersion(unittest.TestCase):
         mock_jira.server_info.return_value = {}
         mock_jira_class.return_value = mock_jira
 
-        result = get_jira_instance()
+        result = get_jira_instance('https://prod.com')
 
         self.assertEqual(result, mock_jira)
         mock_jira_class.assert_called_once_with('https://prod.com', basic_auth=('test', 'token'))
         mock_jira.server_info.assert_called_once()
 
-    @patch.dict(os.environ, {'JIRA_USER': 'test', 'JIRA_TOKEN': 'token', 'JIRA_SANDBOX_URL': 'https://sandbox.com'})
-    @patch('create_jira_version.JIRA')
-    def test_get_jira_instance_sandbox(self, mock_jira_class):
-        """Test JIRA instance creation with sandbox URL."""
-        mock_jira = Mock()
-        mock_jira.server_info.return_value = {}
-        mock_jira_class.return_value = mock_jira
-
-        result = get_jira_instance(use_sandbox=True)
-
-        self.assertEqual(result, mock_jira)
-        mock_jira_class.assert_called_once_with('https://sandbox.com', basic_auth=('test', 'token'))
-
-    @patch.dict(os.environ, {'JIRA_USER': 'test', 'JIRA_TOKEN': 'token', 'JIRA_PROD_URL': 'https://prod.com'})
+    @patch.dict(os.environ, {'JIRA_USER': 'test', 'JIRA_TOKEN': 'token'})
     @patch('create_jira_version.JIRA')
     def test_get_jira_instance_auth_failure(self, mock_jira_class):
         """Test JIRA instance creation with authentication failure."""
         mock_jira_class.side_effect = JIRAError(status_code=401, text="Unauthorized")
 
         with self.assertRaises(SystemExit) as cm:
-            get_jira_instance()
+            get_jira_instance('https://prod.com')
         self.assertEqual(cm.exception.code, 1)
 
-    @patch('sys.argv', ['create_jira_version.py', '--project-key', 'TEST', '--version-name', '1.0.0'])
+    @patch('sys.argv', ['create_jira_version.py', '--project-key', 'TEST', '--version-name', '1.0.0', '--jira-url', 'https://test.jira.com'])
     @patch('create_jira_version.get_jira_instance')
     @patch('sys.stdout', new_callable=StringIO)
     @patch('sys.stderr', new_callable=StringIO)
@@ -89,6 +74,9 @@ class TestCreateJiraVersion(unittest.TestCase):
 
         main()
 
+        # Verify get_jira_instance was called with correct URL
+        mock_get_jira.assert_called_once_with('https://test.jira.com')
+
         # Verify the version was created with correct parameters
         mock_jira.create_version.assert_called_once_with(name='1.0.0', project='TEST')
 
@@ -101,7 +89,7 @@ class TestCreateJiraVersion(unittest.TestCase):
         self.assertIn("Try to create new version '1.0.0'", stderr_output)
         self.assertIn("✅ Successfully created new version '1.0.0'", stderr_output)
 
-    @patch('sys.argv', ['create_jira_version.py', '--project-key', 'TEST', '--version-name', '1.0.0'])
+    @patch('sys.argv', ['create_jira_version.py', '--project-key', 'TEST', '--version-name', '1.0.0', '--jira-url', 'https://test.jira.com'])
     @patch('create_jira_version.get_jira_instance')
     @patch('sys.stdout', new_callable=StringIO)
     @patch('sys.stderr', new_callable=StringIO)
@@ -142,7 +130,7 @@ class TestCreateJiraVersion(unittest.TestCase):
         stderr_output = mock_stderr.getvalue()
         self.assertIn("Warning: Version '1.0.0' already exists. Skipping creation.", stderr_output)
 
-    @patch('sys.argv', ['create_jira_version.py', '--project-key', 'TEST', '--version-name', '1.0.0'])
+    @patch('sys.argv', ['create_jira_version.py', '--project-key', 'TEST', '--version-name', '1.0.0', '--jira-url', 'https://test.jira.com'])
     @patch('create_jira_version.get_jira_instance')
     @patch('sys.stderr', new_callable=StringIO)
     def test_main_version_exists_but_not_found(self, mock_stderr, mock_get_jira):
@@ -172,7 +160,7 @@ class TestCreateJiraVersion(unittest.TestCase):
         stderr_output = mock_stderr.getvalue()
         self.assertIn("Error: Could not find existing version '1.0.0' in project.", stderr_output)
 
-    @patch('sys.argv', ['create_jira_version.py', '--project-key', 'TEST', '--version-name', '1.0.0'])
+    @patch('sys.argv', ['create_jira_version.py', '--project-key', 'TEST', '--version-name', '1.0.0', '--jira-url', 'https://test.jira.com'])
     @patch('create_jira_version.get_jira_instance')
     @patch('sys.stderr', new_callable=StringIO)
     def test_main_other_jira_error(self, mock_stderr, mock_get_jira):
@@ -194,22 +182,6 @@ class TestCreateJiraVersion(unittest.TestCase):
 
         stderr_output = mock_stderr.getvalue()
         self.assertIn("Error: Failed to create new version. Status: 500, Text: Internal server error", stderr_output)
-
-    @patch('sys.argv', ['create_jira_version.py', '--project-key', 'TEST', '--version-name', '1.0.0', '--use-sandbox'])
-    @patch('create_jira_version.get_jira_instance')
-    def test_main_with_sandbox_flag(self, mock_get_jira):
-        """Test that sandbox flag is passed correctly."""
-        mock_jira = Mock()
-        mock_version = Mock()
-        mock_version.id = '12345'
-        mock_version.name = '1.0.0'
-        mock_jira.create_version.return_value = mock_version
-        mock_get_jira.return_value = mock_jira
-
-        main()
-
-        # Verify get_jira_instance was called with use_sandbox=True
-        mock_get_jira.assert_called_once_with(True)
 
 
 if __name__ == '__main__':
