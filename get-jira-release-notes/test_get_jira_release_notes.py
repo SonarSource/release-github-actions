@@ -249,10 +249,12 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
 
         # Verify expected output format
         print_calls = mock_print.call_args_list
-        self.assertEqual(len(print_calls), 3)
-        self.assertEqual(print_calls[0][0][0], "jira-release-url=https://test.jira.com/projects/TEST/versions/10001/tab/release-report-all-issues")
-        self.assertEqual(print_calls[1][0][0], "release-notes<<EOF")
-        self.assertEqual(print_calls[2][0][0], "EOF")
+        self.assertEqual(len(print_calls), 5)
+        # Skip the eprint call (index 0) and check the actual stdout print calls
+        self.assertEqual(print_calls[1][0][0], "jira-release-url=https://test.jira.com/projects/TEST/versions/10001/tab/release-report-all-issues")
+        self.assertEqual(print_calls[2][0][0], "release-notes<<EOF")
+        self.assertEqual(print_calls[3][0][0], "# Release notes - Test Project - 1.0.0\n\nNo issues found.")
+        self.assertEqual(print_calls[4][0][0], "EOF")
 
     @patch('sys.argv', [
         'get_jira_release_notes.py',
