@@ -58,5 +58,5 @@ runs:
         python ${{ github.action_path }}/release_jira_version.py \
         --project-key="${{ inputs.jira_project_key }}" \
         --version-name="${{ inputs.jira_version_name || steps.determine_version_name.outputs.VERSION_NAME }}" \
-        --jira-url="${{ (inputs.use_jira_sandbox == 'true' || env.USE_JIRA_SANDBOX == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
+        --jira-url="${{ ((inputs.use_jira_sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
         >> $GITHUB_OUTPUT
