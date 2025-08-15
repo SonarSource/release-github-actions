@@ -95,12 +95,9 @@ This action depends on:
 - name: Create Jira Release Ticket in Sandbox
   uses: SonarSource/release-github-actions/create-jira-release-ticket@master
   with:
-    jira-project-key: 'TESTPROJECT'
     project-name: 'Test Project'
-    version: '1.0.0-beta'
     short-description: 'Beta release for testing'
-    sq-compatibility: '2025.1'
-    jira-release-url: 'https://sonarsource-sandbox-608.atlassian.net/projects/TESTPROJECT/versions/123'
+    `sq-compatibility`
     use-jira-sandbox: 'true'
 ```
 
