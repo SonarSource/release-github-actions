@@ -22,7 +22,7 @@ This action depends on:
 |-------|-------------|----------|---------|
 | `jira_project_key` | The key of the Jira project (e.g., SONARIAC) | Yes | - |
 | `jira_version_name` | The name of the Jira version to create (e.g., 1.2.3) | No | Auto-determined |
-| `use_jira_sandbox` | Use the sandbox Jira server instead of production | No | `false` |
+| `use_jira_sandbox` | Use the sandbox Jira server instead of production. Can also be controlled via `USE_JIRA_SANDBOX` environment variable | No | `false` |
 
 ## Outputs
 

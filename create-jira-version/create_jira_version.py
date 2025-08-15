@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-This script automates releasing a version in Jira and creating the next one.
+This script automates creating a version in Jira.
 """
 
 import argparse
@@ -48,7 +48,7 @@ def get_jira_instance(use_sandbox=False):
         sys.exit(1)
 
 def main():
-    """Main function to orchestrate the release and creation process."""
+    """Main function to orchestrate the creation process."""
     parser = argparse.ArgumentParser(
         description="Releases a Jira version and creates the next one.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
