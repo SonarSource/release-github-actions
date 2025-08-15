@@ -3,61 +3,45 @@ description: 'Creates a Jira release ticket.'
 author: 'SonarSource'
 
 inputs:
-  project_key:
-    description: 'The key of the project (e.g., SONARIAC)'
-    required: true
-  project_name:
+  project-name:
     description: 'The display name of the project (e.g., SonarIaC)'
     required: true
-  short_description:
+  short-description:
     description: 'A short description for the release'
     required: true
-  targeted_product:
-    description: 'The targeted product version (e.g., 11.0)'
-    required: false
-  sq_compatibility:
+  sq-compatibility:
     description: 'SonarQube compatibility version (e.g., 2025.3)'
     required: true
+  jira-project-key:
+    description: 'The key of the project (e.g., SONARIAC). Required if JIRA_PROJECT_KEY env var is not set.'
+  targeted-product:
+    description: 'The targeted product version (e.g., 11.0)'
   version:
     description: 'The version being released (e.g., 11.44.2), or leave empty to use the build number.'
-    required: false
-  use_sandbox:
+  use-jira-sandbox:
     description: "Use the sandbox server instead of the production Jira."
-    required: false
     default: 'false'
-  documentation_status:
+  documentation-status:
     description: 'Status of the documentation'
-    required: false
     default: 'N/A'
-  rule_props_changed:
+  rule-props-changed:
     description: 'Whether rule properties have changed'
-    required: false
     default: 'No'
-  jira_release_name:
-    description: 'The specific Jira release version to use.'
-    required: false
-    default: ''
-  sonarlint_changelog:
+  jira-release-url:
+    description: 'The URL to the Jira release notes page. Required if JIRA_RELEASE_URL env var is not set.'
+  sonarlint-changelog:
     description: 'The SonarLint changelog content.'
-    required: false
     default: ''
-  start_progress:
+  start-progress:
     description: 'Whether to start progress on the release ticket.'
-    default: 'false'
 
 outputs:
-  ticket_key:
+  release-ticket-key:
     description: 'The key of the created Jira ticket (e.g., REL-123)'
     value: ${{ steps.run_python_script.outputs.ticket_key }}
-  jira_release_name:
-    description: 'The name of the Jira release found or used by the script.'
-    value: ${{ steps.run_python_script.outputs.jira_release_name }}
-  ticket_url:
+  release-ticket-url:
     description: 'The URL of the created Jira ticket.'
     value: ${{ steps.run_python_script.outputs.ticket_url }}
-  release_url:
-    description: 'The URL of the Jira release page.'
-    value: ${{ steps.run_python_script.outputs.release_url }}
 
 runs:
   using: "composite"
@@ -82,33 +66,44 @@ runs:
     - uses: SonarSource/ci-github-actions/get-build-number@266c301e7023444613f2e413d66800ddc0896f39
       if: ${{ !inputs.version }}
 
+    - name: Get Jira Release Notes URL
+      if: ${{ !inputs.jira-release-url && !env.JIRA_RELEASE_URL }}
+      uses: SonarSource/release-github-actions/get-jira-release-notes@master
+      with:
+        jira-project-key: ${{ inputs.jira-project-key }}
+        use-jira-sandbox: ${{ inputs.use-jira-sandbox }}
+
     - name: Run Python Script to Create Ticket
       id: run_python_script
       shell: bash
       env:
         JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
+        JIRA_PROD_URL: "https://sonarsource.atlassian.net/"
+        JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
       run: |
-        SANDBOX_FLAG=""
-        if [[ "${{ inputs.use_sandbox }}" == "true" ]]; then
-          SANDBOX_FLAG="--use-sandbox"
+        PROJECT_KEY="${{ inputs.jira-project-key || env.JIRA_PROJECT_KEY }}"
+        
+        if [[ -z "$PROJECT_KEY" ]]; then
+          echo "::error::Both jira-project-key input and JIRA_PROJECT_KEY environment variable are missing. One must be provided."
+          exit 1
         fi
 
         python ${{ github.action_path }}/create_release_ticket.py \
-          --project-key="${{ inputs.project_key }}" \
-          --project-name="${{ inputs.project_name }}" \
+          --project-key="$PROJECT_KEY" \
+          --project-name="${{ inputs.project-name }}" \
           --version="${{ inputs.version || env.BUILD_NUMBER }}" \
-          --short-description="${{ inputs.short_description }}" \
-          --targeted-product="${{ inputs.targeted_product }}" \
-          --sq-compatibility="${{ inputs.sq_compatibility }}" \
-          ${SANDBOX_FLAG} \
-          --documentation-status="${{ inputs.documentation_status }}" \
-          --rule-props-changed="${{ inputs.rule_props_changed }}" \
-          --jira-release-name="${{ inputs.jira_release_name }}" \
-          --sonarlint-changelog="${{ inputs.sonarlint_changelog }}" >> $GITHUB_OUTPUT
+          --short-description="${{ inputs.short-description }}" \
+          --targeted-product="${{ inputs.targeted-product }}" \
+          --sq-compatibility="${{ inputs.sq-compatibility }}" \
+          --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
+          --documentation-status="${{ inputs.documentation-status }}" \
+          --rule-props-changed="${{ inputs.rule-props-changed }}" \
+          --jira-release-url="${{ inputs.jira-release-url || env.JIRA_RELEASE_URL }}" \
+          --sonarlint-changelog="${{ inputs.sonarlint-changelog }}" >> $GITHUB_OUTPUT
 
     - name: Start Progress on Release Ticket
-      if: ${{ inputs.start_progress == 'true' }}
+      if: ${{ inputs.start-progress == 'true' }}
       uses: SonarSource/release-github-actions/update-release-ticket-status@dd803247a7ae28f1233453db06a6b80b323400aa
       with:
         ticket_key: ${{ steps.run_python_script.outputs.ticket_key }}
@@ -117,7 +112,5 @@ runs:
     - name: Set Env Variables
       shell: bash
       run: |
-        echo "JIRA_RELEASE_NAME=${{ steps.run_python_script.outputs.jira_release_name }}" >> $GITHUB_ENV
-        echo "JIRA_RELEASE_URL=${{ steps.run_python_script.outputs.release_url }}" >> $GITHUB_ENV
         echo "RELEASE_TICKET_KEY=${{ steps.run_python_script.outputs.ticket_key }}" >> $GITHUB_ENV
         echo "RELEASE_TICKET_URL=${{ steps.run_python_script.outputs.ticket_url }}" >> $GITHUB_ENV
