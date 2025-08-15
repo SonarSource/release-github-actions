@@ -1,23 +1,23 @@
 name: Get Jira Version
 
-description: Get jira version from the build number.
+description: Get jira version from the release version.
 
 outputs:
   JIRA_VERSION:
-    description: 'The Jira version derived from the build number.'
+    description: 'The Jira version derived from the release version.'
     value: ${{ steps.get_version.outputs.JIRA_VERSION }}
 
 runs:
     using: "composite"
     steps:
-      - uses: SonarSource/ci-github-actions/get-build-number@7b10475b2a95613850ef1b20a5a7704af69cffd2 # v1.0.1
-        if: ${{ !env.BUILD_NUMBER }}
-      - name: Get jira version from build number
+      - uses: SonarSource/release-github-actions/get-release-version@add_get-release-version_action
+        if: ${{ !env.RELEASE_VERSION }}
+      - name: Get jira version from release version
         id: get_version
         shell: bash
         run: |
           # Extract everything up to the third dot (major.minor.patch)
-          VERSION=$(echo "$BUILD_NUMBER" | cut -d '.' -f 1-3)
+          VERSION=$(echo "$RELEASE_VERSION" | cut -d '.' -f 1-3)
           
           # Remove trailing '.0' if it exists (to match Jira version format)
           JIRA_VERSION=$(echo "$VERSION" | sed 's/\.0$//')

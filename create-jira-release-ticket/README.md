@@ -15,7 +15,7 @@ The action creates a release ticket in Jira by:
 
 This action depends on:
 - [SonarSource/vault-action-wrapper](https://github.com/SonarSource/vault-action-wrapper) for retrieving Jira credentials
-- [SonarSource/ci-github-actions/get-build-number](https://github.com/SonarSource/ci-github-actions) when version is not provided
+- [SonarSource/release-github-actions/get-release-version](https://github.com/SonarSource/release-github-actions) when version is not provided
 - [SonarSource/release-github-actions/update-release-ticket-status](https://github.com/SonarSource/release-github-actions) when start-progress is enabled
 - [SonarSource/release-github-actions/get-jira-release-notes](https://github.com/SonarSource/release-github-actions) when neither jira-release-url nor JIRA_RELEASE_URL are provided
 
@@ -27,7 +27,7 @@ This action depends on:
 | `short-description`    | A short description for the release                                                                                                                                                                             | Yes      | -       |
 | `sq-compatibility`     | SonarQube compatibility version (e.g., 2025.3)                                                                                                                                                                  | Yes      | -       |
 | `jira-project-key`     | The key of the Jira project (e.g., SONARIAC). Can also be set via `JIRA_PROJECT_KEY` environment variable                                                                                                       | No*      | -       |
-| `version`              | The version being released (e.g., 11.44.2), or leave empty to use the build number                                                                                                                              | No       | -       |
+| `version`              | The version being released (e.g., 11.44.2), or leave empty to use the release version                                                                                                                           | No       | -       |
 | `targeted-product`     | The targeted product version (e.g., 11.0)                                                                                                                                                                       | No       | -       |
 | `use-jira-sandbox`     | Use the sandbox server instead of the production Jira. Can also be controlled via `USE_JIRA_SANDBOX` environment variable                                                                                       | No       | `false` |
 | `documentation-status` | Status of the documentation                                                                                                                                                                                     | No       | `N/A`   |
@@ -170,5 +170,5 @@ The action populates the following Jira custom fields:
 - If neither `jira-release-url` input nor `JIRA_RELEASE_URL` environment variable is provided, the action will automatically fetch the release URL using the `get-jira-release-notes` action
 - Input parameters take precedence over environment variables when both are provided
 - The action supports both production and sandbox Jira environments
-- When `version` is not provided, the action automatically uses the build number from the CI environment
+- When `version` is not provided, the action automatically uses the release version from the CI environment
 - The `start-progress` option automatically transitions the ticket to "Start Progress" status after creation
