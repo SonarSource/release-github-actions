@@ -1,10 +1,7 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
 
-# shellcheck disable=SC2289
-"""
-Test script for get-release-version GitHub Action
-"""
+# Test script for get-release-version GitHub Action
 
 set -euo pipefail
 
