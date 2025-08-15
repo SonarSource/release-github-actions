@@ -1,0 +1,81 @@
+name: 'Get Jira Release Notes'
+description: 'Fetches Jira release notes and generates the release notes URL for a given project and version.'
+author: 'SonarSource'
+
+inputs:
+  jira-project-key:
+    description: 'The key of the Jira project (e.g., SONARIAC). Can also be set via JIRA_PROJECT_KEY environment variable.'
+    required: false
+  jira-version-name:
+    description: 'The name of the Jira version/fixVersion (e.g., 1.2.3). Can also be set via JIRA_VERSION environment variable.'
+    required: false
+  use-jira-sandbox:
+    description: "Use the sandbox Jira server instead of production."
+    required: false
+    default: 'false'
+  issue-types:
+    description: 'Optional comma-separated list of issue types to include, in order.'
+    required: false
+    default: 'New Feature,False Positive,False Negative,Bug,Improvement'
+
+outputs:
+  release-notes:
+    description: 'The formatted release notes as Markdown.'
+    value: ${{ steps.get_notes.outputs.release-notes }}
+  jira-release-url:
+    description: 'The URL to the Jira release notes page.'
+    value: ${{ steps.get_notes.outputs.jira-release-url }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get Jira Credentials from Vault
+      id: secrets
+      uses: SonarSource/vault-action-wrapper@v3
+      with:
+        secrets: |
+          development/kv/data/jira user | JIRA_USER;
+          development/kv/data/jira token | JIRA_TOKEN;
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.8'
+
+    - name: Install dependencies
+      shell: bash
+      run: pip install -r ${{ github.action_path }}/requirements.txt
+
+    - name: Get Jira release notes and URL
+      id: get_notes
+      shell: bash
+      env:
+        JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
+        JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
+        JIRA_PROD_URL: "https://sonarsource.atlassian.net/"
+        JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
+      run: |
+        # Determine project key and version name from inputs or environment variables
+        PROJECT_KEY="${{ inputs.jira-project-key }}"
+        VERSION_NAME="${{ inputs.jira-version-name }}"
+        
+        if [[ -z "$PROJECT_KEY" ]]; then
+          PROJECT_KEY="$JIRA_PROJECT_KEY"
+        fi
+        
+        if [[ -z "$VERSION_NAME" ]]; then
+          VERSION_NAME="$JIRA_VERSION"
+        fi
+        
+        # Validate that both are set
+        if [[ -z "$PROJECT_KEY" || -z "$VERSION_NAME" ]]; then
+          echo "Error: Both jira-project-key (or JIRA_PROJECT_KEY) and jira-version-name (or JIRA_VERSION) must be provided"
+          exit 1
+        fi
+        
+        python ${{ github.action_path }}/get_jira_release_notes.py \
+          --project-key="$PROJECT_KEY" \
+          --version-name="$VERSION_NAME" \
+          --issue-types="${{ inputs.issue-types }}" \
+          --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
+          | tee -a $GITHUB_OUTPUT | sed 's/^jira-release-url=/JIRA_RELEASE_URL=/' | sed 's/^release-notes<</RELEASE_NOTES<</' >> $GITHUB_ENV
