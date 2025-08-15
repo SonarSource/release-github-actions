@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
       - name: Test with standard version (1.2.3.45)
         env:
-          BUILD_NUMBER: "1.2.3.45"
+          RELEASE_VERSION: "1.2.3.45"
         uses: ./get-jira-version
         id: test1
 
@@ -32,7 +32,7 @@ jobs:
 
       - name: Test with trailing zero version (2.1.0.12)
         env:
-          BUILD_NUMBER: "2.1.0.12"
+          RELEASE_VERSION: "2.1.0.12"
         uses: ./get-jira-version
         id: test2
 
@@ -47,7 +47,7 @@ jobs:
 
       - name: Test with no trailing zero (3.4.5.67)
         env:
-          BUILD_NUMBER: "3.4.5.67"
+          RELEASE_VERSION: "3.4.5.67"
         uses: ./get-jira-version
         id: test3
 
@@ -62,7 +62,7 @@ jobs:
 
       - name: Test with single digit version (1.0.0.1)
         env:
-          BUILD_NUMBER: "1.0.0.1"
+          RELEASE_VERSION: "1.0.0.1"
         uses: ./get-jira-version
         id: test4
 
@@ -77,10 +77,10 @@ jobs:
 
       - name: Test environment variable is set
         env:
-          BUILD_NUMBER: "5.6.7.89"
+          RELEASE_VERSION: "5.6.7.89"
         run: |
           # Run the action steps manually to test env var
-          VERSION=$(echo "$BUILD_NUMBER" | cut -d '.' -f 1-3)
+          VERSION=$(echo "$RELEASE_VERSION" | cut -d '.' -f 1-3)
           JIRA_VERSION=$(echo "$VERSION" | sed 's/\.0$//')
           echo "JIRA_VERSION=${JIRA_VERSION}" >> "$GITHUB_ENV"
 
@@ -95,7 +95,7 @@ jobs:
 
       - name: Test edge case - major version only (1.0.0.0)
         env:
-          BUILD_NUMBER: "1.0.0.0"
+          RELEASE_VERSION: "1.0.0.0"
         uses: ./get-jira-version
         id: test5
 

@@ -17,11 +17,11 @@ This action depends on:
 
 ## Inputs
 
-| Input | Description                                                                                                                                   | Required | Default |
-|-------|-----------------------------------------------------------------------------------------------------------------------------------------------|----------|---------|
-| `jira_project_key` | The key of the Jira project (e.g., SONARIAC)                                                                                                  | Yes | - |
-| `jira_version_name` | The name of the Jira version to release (e.g., 1.2.3). If not provided, the script will determine the next version based on the build number. | No | Auto-determined |
-| `use_jira_sandbox` | Use the sandbox Jira server instead of production. Can also be controlled via `USE_JIRA_SANDBOX` environment variable.                        | No | `false` |
+| Input               | Description                                                                                                                                      | Required | Default         |
+|---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|----------|-----------------|
+| `jira_project_key`  | The key of the Jira project (e.g., SONARIAC)                                                                                                     | Yes      | -               |
+| `jira_version_name` | The name of the Jira version to release (e.g., 1.2.3). If not provided, the script will determine the next version based on the release version. | No       | Auto-determined |
+| `use_jira_sandbox`  | Use the sandbox Jira server instead of production. Can also be controlled via `USE_JIRA_SANDBOX` environment variable.                           | No       | `false`         |
 
 ## Outputs
 
@@ -46,7 +46,7 @@ No outputs are defined for this action, as it primarily performs operations with
   uses: SonarSource/release-github-actions/release-jira-version@master
   with:
     jira_project_key: 'SONARIAC'
-    # jira_version_name is omitted - will auto-determine from the build number
+    # jira_version_name is omitted - will auto-determine from the release version
 ```
 
 ### Using sandbox environment (with input)
