@@ -125,6 +125,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         call_args = mock_jira.create_issue.call_args[1]['fields']
         self.assertNotIn('customfield_10163', call_args)  # TARGETED_PRODUCT should not be set
 
+    # noinspection DuplicatedCode,PyUnusedLocal
     @patch('create_release_ticket.eprint')
     def test_create_release_ticket_jira_error(self, mock_eprint):
         """Test handling JIRA error during ticket creation."""
@@ -192,6 +193,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         self.assertIn('Using release URL: https://jira.com/release/notes', stderr_output)
         self.assertIn('🎉 Successfully created release ticket!', stderr_output)
 
+    # noinspection PyUnusedLocal
     @patch('sys.argv', [
         'create_release_ticket.py',
         '--project-key', 'TEST',
