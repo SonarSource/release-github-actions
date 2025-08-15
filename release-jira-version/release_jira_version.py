@@ -17,21 +17,17 @@ def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 # noinspection DuplicatedCode
-def get_jira_instance(use_sandbox=False):
+def get_jira_instance(jira_url):
     """
     Initializes and returns a JIRA client instance.
     Authentication is handled via environment variables.
     """
     jira_user = os.environ.get('JIRA_USER')
     jira_token = os.environ.get('JIRA_TOKEN')
-    jira_prod_url = os.environ.get('JIRA_PROD_URL')
-    jira_sandbox_url = os.environ.get('JIRA_SANDBOX_URL')
 
     if not jira_user or not jira_token:
         eprint("Error: JIRA_USER and JIRA_TOKEN environment variables must be set.")
         sys.exit(1)
-
-    jira_url = jira_sandbox_url if use_sandbox else jira_prod_url
 
     eprint(f"Connecting to JIRA server at: {jira_url}")
     try:
@@ -56,10 +52,10 @@ def main():
     )
     parser.add_argument("--project-key", required=True, help="The key of the Jira project (e.g., SONARIAC).")
     parser.add_argument("--version-name", required=True, help="The name for the next version.")
-    parser.add_argument('--use-sandbox', action='store_true', help="Use the sandbox Jira server.")
+    parser.add_argument('--jira-url', required=True, help="URL of the Jira instance to use.")
     args = parser.parse_args()
 
-    jira = get_jira_instance(args.use_sandbox)
+    jira = get_jira_instance(args.jira_url)
 
     eprint(f"Searching for version '{args.version_name}' in project '{args.project_key}'")
 
