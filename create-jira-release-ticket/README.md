@@ -107,14 +107,10 @@ This action depends on:
 - name: Create and Start Release Ticket
   uses: SonarSource/release-github-actions/create-jira-release-ticket@master
   with:
-    jira-project-key: 'SONARIAC'
     project-name: 'SonarIaC'
     short-description: 'Quarterly release'
     sq-compatibility: '2025.3'
-    jira-release-url: 'https://sonarsource.atlassian.net/projects/SONARIAC/versions/12345'
     start-progress: 'true'
-    documentation-status: 'Ready'
-    sonarlint-changelog: 'Updated rules and analyzers'
 ```
 
 ### Using environment variables in subsequent steps
