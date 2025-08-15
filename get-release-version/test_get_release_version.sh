@@ -18,8 +18,11 @@ TESTS_FAILED=0
 # Mock gh command function
 mock_gh_success() {
     # shellcheck disable=SC2317
-    if [[ "$*" == *"commits/master/status"* ]]; then
+    if [[ "$*" == *"commits/master/status"* && "$*" == *"--jq"* ]]; then
+        # Simulate the jq filter result for successful case
         echo "1.2.3"
+    elif [[ "$*" == *"commits/master/status"* ]]; then
+        echo '{"statuses":[{"context":"repox-master","description":"Build completed for version '\''1.2.3'\''","state":"success"}]}'
     else
         echo "Unexpected gh command: $*" >&2
         return 1
@@ -28,8 +31,11 @@ mock_gh_success() {
 
 mock_gh_empty_response() {
     # shellcheck disable=SC2317
-    if [[ "$*" == *"commits/master/status"* ]]; then
+    if [[ "$*" == *"commits/master/status"* && "$*" == *"--jq"* ]]; then
+        # Simulate the jq filter result for empty case (no matching status)
         echo ""
+    elif [[ "$*" == *"commits/master/status"* ]]; then
+        echo '{"statuses":[]}'
     else
         echo "Unexpected gh command: $*" >&2
         return 1
