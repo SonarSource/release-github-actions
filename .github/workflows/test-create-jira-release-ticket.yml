@@ -11,7 +11,7 @@ on:
 
 jobs:
   unit-tests:
-    name: Run Create Jira Release Ticket Action Unit Tests
+    name: Run Unit Tests
     runs-on: ubuntu-latest
 
     steps:
