@@ -81,19 +81,6 @@ The action will fail with a non-zero exit code if:
 - The version cannot be extracted from the status description
 - The extracted version is empty
 
-## Testing
-
-A test script is provided (`test_get_release_version.sh`) that:
-- Mocks the `gh` CLI command
-- Tests successful version extraction
-- Tests error handling for empty responses
-- Validates that output files are properly written
-
-To run the tests:
-```bash
-./test_get_release_version.sh
-```
-
 ## Notes
 
 - This action assumes that the `repox-master` status contains the version in a specific format within single quotes
