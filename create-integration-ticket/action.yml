@@ -1,0 +1,92 @@
+name: 'Create Integration Ticket'
+description: 'Creates a Jira integration ticket with a custom summary and links it to another ticket.'
+author: 'SonarSource'
+
+inputs:
+  ticket-summary:
+    description: 'The summary/title for the integration ticket'
+    required: false
+  analyzer-name:
+    description: 'The name of the analyzer (used to generate ticket summary if ticket-summary is not provided)'
+    required: false
+  release-version:
+    description: 'The release version (used to generate ticket summary if ticket-summary is not provided)'
+    required: false
+  jira-project-key:
+    description: 'The key of the project where the ticket will be created (e.g., SQS)'
+    required: true
+  linked-ticket-key:
+    description: 'The key of the ticket to link to (e.g., REL-123)'
+    required: true
+  ticket-description:
+    description: 'The description for the integration ticket'
+    default: ''
+  use-jira-sandbox:
+    description: "Use the sandbox server instead of the production Jira."
+    default: 'false'
+  link-type:
+    description: 'The type of link to create (e.g., "relates to", "depends on")'
+    default: 'relates to'
+
+outputs:
+  ticket_key:
+    description: 'The key of the created Jira ticket (e.g., SQS-123)'
+    value: ${{ steps.run_python_script.outputs.ticket_key }}
+  ticket_url:
+    description: 'The URL of the created Jira ticket.'
+    value: ${{ steps.run_python_script.outputs.ticket_url }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Get Jira Credentials from Vault
+      id: secrets
+      uses: SonarSource/vault-action-wrapper@v3
+      with:
+        secrets: |
+          development/kv/data/jira user | JIRA_USER;
+          development/kv/data/jira token | JIRA_TOKEN;
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r ${{ github.action_path }}/requirements.txt
+
+    - name: Validate inputs and generate ticket summary
+      id: validate_inputs
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.ticket-summary }}" ]; then
+          if [ -z "${{ inputs.analyzer-name }}" ] || [ -z "${{ inputs.release-version }}" ]; then
+            echo "Error: Either ticket-summary must be provided, or both analyzer-name and release-version must be provided."
+            exit 1
+          fi
+          GENERATED_SUMMARY="Update ${{ inputs.analyzer-name }} to ${{ inputs.release-version }}"
+          echo "Generated ticket summary: $GENERATED_SUMMARY"
+          echo "ticket_summary=$GENERATED_SUMMARY" >> $GITHUB_OUTPUT
+        else
+          echo "ticket_summary=${{ inputs.ticket-summary }}" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Run Python script
+      id: run_python_script
+      shell: bash
+      env:
+        JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
+        JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
+        JIRA_PROD_URL: "https://sonarsource.atlassian.net/"
+        JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
+      run: |
+        python ${{ github.action_path }}/create_integration_ticket.py \
+          --ticket-summary "${{ steps.validate_inputs.outputs.ticket_summary }}" \
+          --jira-project-key "${{ inputs.jira-project-key }}" \
+          --linked-ticket-key "${{ inputs.linked-ticket-key }}" \
+          --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
+          --ticket-description "${{ inputs.ticket-description }}" \
+          --link-type "${{ inputs.link-type }}" >> $GITHUB_OUTPUT
