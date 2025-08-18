@@ -19,7 +19,7 @@ This action requires the `statuses: read` permission for the GitHub token to acc
 | Input                  | Description                                                                          | Required | Default               |
 |------------------------|--------------------------------------------------------------------------------------|----------|-----------------------|
 | `github-token`         | The GitHub token for API calls                                                       | No       | `${{ github.token }}` |
-| `branch`               | The branch from which to check the releasability status                             | No       | `master`              |
+| `branch`               | The branch from which to check the releasability status                              | No       | `master`              |
 | `with-optional-checks` | Whether to also check that the description does not contain "failed optional checks" | No       | `true`                |
 
 ## Outputs
