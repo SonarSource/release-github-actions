@@ -1,5 +1,5 @@
 name: 'Check releasability status'
-description: 'Checks the Releasability Status on the master branch'
+description: 'Checks the Releasability Status on the specified branch'
 author: 'SonarSource'
 
 inputs:
@@ -7,6 +7,10 @@ inputs:
     description: 'The GitHub token for API calls.'
     required: true
     default: ${{ github.token }}
+  branch:
+    description: 'The branch from which to check the releasability status.'
+    required: false
+    default: 'master'
   with-optional-checks:
     description: 'Whether to also check that the description does not contain "failed optional checks".'
     required: false
@@ -20,13 +24,13 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
-        echo "Checking Releasability status on master branch..."
+        echo "Checking Releasability status on ${{ inputs.branch }} branch..."
         
-        # Get the status for the master branch
-        STATUS_RESPONSE=$(gh api "/repos/${{ github.repository }}/commits/master/status" 2>/dev/null)
+        # Get the status for the specified branch
+        STATUS_RESPONSE=$(gh api "/repos/${{ github.repository }}/commits/${{ inputs.branch }}/status" 2>/dev/null)
         
         if [ $? -ne 0 ]; then
-          echo "❌ Failed to get status information for master branch"
+          echo "❌ Failed to get status information for ${{ inputs.branch }} branch"
           exit 1
         fi
         
@@ -35,7 +39,7 @@ runs:
         RELEASABILITY_DESCRIPTION=$(echo "$STATUS_RESPONSE" | jq -r '.statuses[] | select(.context == "Releasability") | .description')
         
         if [ -z "$RELEASABILITY_STATE" ] || [ "$RELEASABILITY_STATE" = "null" ]; then
-          echo "❌ Could not find Releasability status on master branch"
+          echo "❌ Could not find Releasability status on ${{ inputs.branch }} branch"
           exit 1
         fi
         
