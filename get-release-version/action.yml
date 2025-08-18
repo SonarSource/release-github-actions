@@ -1,5 +1,5 @@
 name: 'Get Release Version'
-description: 'Gets the release version from the repox-master status and sets it as output and environment variable.'
+description: 'Gets the release version from the repox status and sets it as output and environment variable.'
 author: 'SonarSource'
 
 inputs:
@@ -7,10 +7,14 @@ inputs:
     description: 'The GitHub token for API calls.'
     required: true
     default: ${{ github.token }}
+  branch:
+    description: 'The branch from which to get the version.'
+    required: false
+    default: 'master'
 
 outputs:
   release-version:
-    description: 'The extracted release version from repox-master status.'
+    description: 'The extracted release version from repox status.'
     value: ${{ steps.get_release_version.outputs.release-version }}
 
 runs:
@@ -23,10 +27,10 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
         # Execute the gh CLI command to get the release version
-        RELEASE_VERSION=$(gh api "/repos/${{ github.repository }}/commits/master/status" --jq ".statuses[] | select(.context == \"repox-master\") | .description | split(\"'\")[1]")
+        RELEASE_VERSION=$(gh api "/repos/${{ github.repository }}/commits/${{ inputs.branch }}/status" --jq ".statuses[] | select(.context | startswith(\"repox\")) | .description | split(\"'\")[1]")
         
         if [ -z "$RELEASE_VERSION" ]; then
-          echo "❌ Could not extract release version from repox-master status"
+          echo "❌ Could not extract release version from repox status"
           exit 1
         fi
         
