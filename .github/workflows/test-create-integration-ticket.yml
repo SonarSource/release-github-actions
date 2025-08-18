@@ -25,11 +25,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd create_integration_ticket
+          cd create-integration-ticket
           pip install -r requirements.txt
           pip install pytest pytest-cov
 
       - name: Run unit tests
         run: |
-          cd create_integration_ticket
+          cd create-integration-ticket
           python -m pytest test_create_integration_ticket.py -v --cov=create_integration_ticket --cov-report=term-missing
