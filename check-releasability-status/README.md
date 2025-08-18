@@ -14,12 +14,6 @@ The action validates the releasability by:
 
 This action requires the `statuses: read` permission for the GitHub token to access repository commit statuses via the GitHub API.
 
-## Dependencies
-
-This action depends on:
-- `gh` CLI tool (GitHub CLI) for API access
-- `jq` for JSON parsing (used within the gh command)
-
 ## Inputs
 
 | Input                  | Description                                                                          | Required | Default               |
