@@ -68,7 +68,7 @@ runs:
 
     - name: Get Jira Release Notes URL
       if: ${{ !inputs.jira-release-url && !env.JIRA_RELEASE_URL }}
-      uses: SonarSource/release-github-actions/get-jira-release-notes@6452648457a9c19d90b859faf36465af99454bc6
+      uses: SonarSource/release-github-actions/get-jira-release-notes@900bb9703b588f01de33df1680e0ed2749e87c64
       with:
         jira-project-key: ${{ inputs.jira-project-key }}
         use-jira-sandbox: ${{ inputs.use-jira-sandbox }}

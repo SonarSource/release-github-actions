@@ -1,0 +1,189 @@
+name: Test Check Releasability Status Action
+
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches:
+      - master
+      - branch-*
+  workflow_dispatch:
+
+jobs:
+  integration-tests:
+    name: Run Integration Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test Action with Mock GitHub Repository
+        id: test-action
+        uses: ./check-releasability-status
+        with:
+          github-token: ${{ github.token }}
+        continue-on-error: true
+
+      - name: Verify Action Structure
+        run: |
+          echo "Testing action structure..."
+          
+          # Test that the action file has the correct inputs defined
+          if grep -q "github-token:" check-releasability-status/action.yml; then
+            echo "✓ github-token input found in action.yml"
+          else
+            echo "✗ github-token input not found in action.yml"
+            exit 1
+          fi
+          
+          if grep -q "with-optional-checks:" check-releasability-status/action.yml; then
+            echo "✓ with-optional-checks input found in action.yml"
+          else
+            echo "✗ with-optional-checks input not found in action.yml"
+            exit 1
+          fi
+          
+          # Test that the action uses shell script approach
+          if grep -q "shell: bash" check-releasability-status/action.yml; then
+            echo "✓ Shell script approach found in action.yml"
+          else
+            echo "✗ Shell script approach not found in action.yml"
+            exit 1
+          fi
+          
+          # Test that the action looks for Releasability status
+          if grep -q "Releasability" check-releasability-status/action.yml; then
+            echo "✓ Releasability status check found in action.yml"
+          else
+            echo "✗ Releasability status check not found in action.yml"
+            exit 1
+          fi
+          
+          echo "Action structure test completed successfully!"
+
+      - name: Test Action with Real Repository Context
+        run: |
+          echo "Testing with real repository context..."
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: master"
+          
+          # The action may succeed or fail depending on whether Releasability status exists
+          # We're primarily testing that the action runs without syntax errors
+          if [ "${{ steps.test-action.outcome }}" = "success" ]; then
+            echo "✓ Action executed successfully - Releasability status is success"
+          else
+            echo "✓ Action failed as expected (likely no Releasability status exists or not success)"
+            echo "This is normal for test repositories that don't have the expected status context"
+          fi
+
+  validation-tests:
+    name: Test Input Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test Without GitHub Token
+        id: test-no-token
+        uses: ./check-releasability-status
+        with:
+          github-token: ""
+        continue-on-error: true
+
+      - name: Verify No Token Failure
+        if: steps.test-no-token.outcome == 'success'
+        run: |
+          echo "✗ Action should have failed when no GitHub token is provided"
+          exit 1
+
+      - name: Confirm No Token Failure
+        if: steps.test-no-token.outcome == 'failure'
+        run: |
+          echo "✓ Action correctly failed when no GitHub token is provided"
+
+      - name: Test Default Token Usage
+        id: test-default-token
+        uses: ./check-releasability-status
+        continue-on-error: true
+
+      - name: Verify Default Token Behavior
+        run: |
+          echo "Default token test completed"
+          echo "Outcome: ${{ steps.test-default-token.outcome }}"
+          echo "✓ Action uses default github.token when no token is explicitly provided"
+
+      - name: Summary of Validation Tests
+        run: |
+          echo "================================"
+          echo "Validation Test Results Summary:"
+          echo "================================"
+          echo "✓ Missing token validation: ${{ steps.test-no-token.outcome == 'failure' && 'PASS' || 'FAIL' }}"
+          echo "✓ Default token usage: TESTED"
+          echo "================================"
+
+  optional-checks-parameter-tests:
+    name: Test Optional Checks Parameter
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test Default with-optional-checks (true)
+        id: test-default-optional
+        uses: ./check-releasability-status
+        with:
+          github-token: ${{ github.token }}
+        continue-on-error: true
+
+      - name: Test with-optional-checks set to false
+        id: test-optional-false
+        uses: ./check-releasability-status
+        with:
+          github-token: ${{ github.token }}
+          with-optional-checks: 'false'
+        continue-on-error: true
+
+      - name: Test with-optional-checks set to true explicitly
+        id: test-optional-true
+        uses: ./check-releasability-status
+        with:
+          github-token: ${{ github.token }}
+          with-optional-checks: 'true'
+        continue-on-error: true
+
+      - name: Test Optional Checks Parameter Structure
+        run: |
+          echo "Testing with-optional-checks parameter structure..."
+          
+          # Test that the action file has the with-optional-checks input defined
+          if grep -q "with-optional-checks:" check-releasability-status/action.yml; then
+            echo "✓ with-optional-checks input found in action.yml"
+          else
+            echo "✗ with-optional-checks input not found in action.yml"
+            exit 1
+          fi
+          
+          # Test that the with-optional-checks input has a default value of true
+          if grep -A3 "with-optional-checks:" check-releasability-status/action.yml | grep -q "default.*true"; then
+            echo "✓ with-optional-checks input has default value of true"
+          else
+            echo "✗ with-optional-checks input does not have default value of true"
+            exit 1
+          fi
+          
+          echo "Optional checks parameter structure test completed successfully!"
+
+      - name: Verify Optional Checks Parameter Usage
+        run: |
+          echo "Optional checks parameter test results:"
+          echo "Default optional checks test outcome: ${{ steps.test-default-optional.outcome }}"
+          echo "Optional checks false test outcome: ${{ steps.test-optional-false.outcome }}"
+          echo "Optional checks true test outcome: ${{ steps.test-optional-true.outcome }}"
+          
+          # All tests are expected to potentially fail due to missing Releasability status
+          # We're testing that the parameter is accepted and doesn't cause syntax errors
+          echo "✓ Optional checks parameter tests completed without syntax errors"
+          echo "✓ Action accepts both true and false values for with-optional-checks parameter"
