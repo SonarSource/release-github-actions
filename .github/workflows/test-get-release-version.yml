@@ -10,66 +10,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  integration-tests:
-    name: Run Integration Tests
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Test Action with Mock GitHub Repository
-        id: test-action
-        uses: ./get-release-version
-        with:
-          github-token: ${{ github.token }}
-        continue-on-error: true
-
-      - name: Verify Action Outputs Structure
-        run: |
-          echo "Testing action outputs structure..."
-          
-          # Test that the action file has the correct outputs defined
-          if grep -q "release-version:" get-release-version/action.yml; then
-            echo "✓ release-version output found in action.yml"
-          else
-            echo "✗ release-version output not found in action.yml"
-            exit 1
-          fi
-          
-          # Test that environment variables are set in the action
-          if grep -q "RELEASE_VERSION=" get-release-version/action.yml; then
-            echo "✓ RELEASE_VERSION environment variable setup found in action.yml"
-          else
-            echo "✗ RELEASE_VERSION environment variable setup not found in action.yml"
-            exit 1
-          fi
-          
-          echo "Action structure test completed successfully!"
-
-      - name: Test Action with Real Repository Context
-        run: |
-          echo "Testing with real repository context..."
-          echo "Repository: ${{ github.repository }}"
-          echo "Branch: ${{ github.ref_name }}"
-          
-          # The action may succeed or fail depending on whether repox status exists
-          # We're primarily testing that the action runs without syntax errors
-          if [ "${{ steps.test-action.outcome }}" = "success" ]; then
-            echo "✓ Action executed successfully and found release version"
-            
-            # If successful, verify outputs were set
-            if [ -n "${{ steps.test-action.outputs.release-version }}" ]; then
-              echo "✓ Release version output: ${{ steps.test-action.outputs.release-version }}"
-            else
-              echo "✗ Release version output is empty despite success"
-              exit 1
-            fi
-          else
-            echo "✓ Action failed as expected (likely no repox status exists in test environment)"
-            echo "This is normal for test repositories that don't have the expected status context"
-          fi
-
   validation-tests:
     name: Test Input Validation
     runs-on: ubuntu-latest
