@@ -54,24 +54,24 @@ def get_jira_instance(jira_url):
         sys.exit(1)
 
 
-def validate_linked_ticket(jira_client, linked_ticket_key):
+def validate_release_ticket(jira_client, release_ticket_key):
     """
-    Validates that the linked ticket exists and is accessible.
+    Validates that the release ticket exists and is accessible.
     """
-    eprint(f"Validating linked ticket: {linked_ticket_key}")
+    eprint(f"Validating release ticket: {release_ticket_key}")
     try:
-        linked_ticket = jira_client.issue(linked_ticket_key)
-        eprint(f"Successfully found linked ticket: {linked_ticket.key} - {linked_ticket.fields.summary}")
-        return linked_ticket
+        release_ticket = jira_client.issue(release_ticket_key)
+        eprint(f"Successfully found release ticket: {release_ticket.key} - {release_ticket.fields.summary}")
+        return release_ticket
     except JIRAError as e:
         if e.status_code == 404:
-            eprint(f"Error: Ticket '{linked_ticket_key}' not found.")
+            eprint(f"Error: Ticket '{release_ticket_key}' not found.")
         else:
-            eprint(f"Error: Failed to access ticket '{linked_ticket_key}'. Status: {e.status_code}")
+            eprint(f"Error: Failed to access ticket '{release_ticket_key}'. Status: {e.status_code}")
             eprint(f"Response text: {e.text}")
         sys.exit(1)
     except Exception as e:
-        eprint(f"An unexpected error occurred while validating linked ticket: {e}")
+        eprint(f"An unexpected error occurred while validating release ticket: {e}")
         sys.exit(1)
 
 
@@ -79,17 +79,17 @@ def create_integration_ticket(jira_client, args):
     """
     Creates the integration ticket in Jira.
     """
-    eprint(f"\nPreparing to create integration ticket in project '{args.jira_project_key}'...")
+    eprint(f"\nPreparing to create integration ticket in project '{args.target_jira_project}'...")
 
-    # Get the default issue type for the project (usually Task or Story)
+    # Get the default issue type for the project
     try:
-        project = jira_client.project(args.jira_project_key)
-        issue_types = jira_client.createmeta(projectKeys=project.id)['projects'][0]['issuetypes']
+        createmeta_data = jira_client.createmeta(projectKeys=args.target_jira_project, expand='projects.issuetypes')
+        issue_types = createmeta_data['projects'][0]['issuetypes']
 
-        # Try to find a suitable issue type (prefer Task, then Story, then first available)
+        # Try to find a suitable issue type (prefer improvement, then first available)
         issue_type = None
         for it in issue_types:
-            if it['name'].lower() in ['task', 'story']:
+            if it['name'].lower() in ['improvement', 'task']:
                 issue_type = it['name']
                 break
 
@@ -97,18 +97,18 @@ def create_integration_ticket(jira_client, args):
             issue_type = issue_types[0]['name']
 
         if not issue_type:
-            eprint(f"Error: No available issue types found for project '{args.jira_project_key}'")
+            eprint(f"Error: No available issue types found for project '{args.target_jira_project}'")
             sys.exit(1)
 
         eprint(f"Using issue type: {issue_type}")
 
     except JIRAError as e:
-        eprint(f"Error: Failed to access project '{args.jira_project_key}'. Status: {e.status_code}")
+        eprint(f"Error: Failed to access project '{args.target_jira_project}'. Status: {e.status_code}")
         eprint(f"Response text: {e.text}")
         sys.exit(1)
 
     ticket_details = {
-        'project': args.jira_project_key,
+        'project': args.target_jira_project,
         'issuetype': {'name': issue_type},
         'summary': args.ticket_summary,
     }
@@ -127,20 +127,20 @@ def create_integration_ticket(jira_client, args):
         sys.exit(1)
 
 
-def link_tickets(jira_client, integration_ticket, linked_ticket, link_type):
+def link_tickets(jira_client, integration_ticket, release_ticket, link_type):
     """
-    Creates a link between the integration ticket and the specified linked ticket.
+    Creates a link between the integration ticket and the specified release ticket.
     """
-    eprint(f"\nLinking tickets: {integration_ticket.key} -> {linked_ticket.key}")
+    eprint(f"\nLinking tickets: {integration_ticket.key} -> {release_ticket.key}")
     eprint(f"Link type: {link_type}")
 
     try:
         jira_client.create_issue_link(
             type=link_type,
             inwardIssue=integration_ticket.key,
-            outwardIssue=linked_ticket.key
+            outwardIssue=release_ticket.key
         )
-        eprint(f"Successfully linked {integration_ticket.key} to {linked_ticket.key}")
+        eprint(f"Successfully linked {integration_ticket.key} to {release_ticket.key}")
     except JIRAError as e:
         eprint(f"Error: Failed to link tickets. Status: {e.status_code}")
         eprint(f"Response text: {e.text}")
@@ -160,15 +160,11 @@ def main():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
-    parser.add_argument("--ticket-summary", required=False,
+    parser.add_argument("--ticket-summary", required=True,
                        help="The summary/title for the integration ticket.")
-    parser.add_argument("--project-name", required=False,
-                       help="The name of the project (used to generate ticket summary if ticket-summary is not provided).")
-    parser.add_argument("--release-version", required=False,
-                       help="The release version (used to generate ticket summary if ticket-summary is not provided).")
-    parser.add_argument("--linked-ticket-key", required=True,
+    parser.add_argument("--release-ticket-key", required=True,
                        help="The key of the ticket to link to (e.g., REL-123).")
-    parser.add_argument("--jira-project-key", required=True,
+    parser.add_argument("--target-jira-project", required=True,
                        help="The key of the project where the ticket will be created (e.g., SQS).")
     parser.add_argument("--jira-url", required=True,
                         help="The Jira server URL to connect to.")
@@ -179,32 +175,24 @@ def main():
 
     args = parser.parse_args()
 
-    # Validate and construct ticket summary
-    if not args.ticket_summary:
-        if not args.project_name or not args.release_version:
-            eprint("Error: Either --ticket-summary must be provided, or both --project-name and --release-version must be provided.")
-            sys.exit(1)
-        args.ticket_summary = f"Integration for {args.project_name} {args.release_version}"
-        eprint(f"Generated ticket summary: {args.ticket_summary}")
-
     # Initialize Jira client
     jira = get_jira_instance(args.jira_url)
 
-    # Validate the linked ticket exists
-    linked_ticket = validate_linked_ticket(jira, args.linked_ticket_key)
+    # Validate the release ticket exists
+    release_ticket = validate_release_ticket(jira, args.release_ticket_key)
 
     # Create the integration ticket
     integration_ticket = create_integration_ticket(jira, args)
 
     # Link the tickets
-    link_tickets(jira, integration_ticket, linked_ticket, args.link_type)
+    link_tickets(jira, integration_ticket, release_ticket, args.link_type)
 
     # Output results
     eprint("\n" + "=" * 50)
     eprint("🎉 Successfully created integration ticket!")
     eprint(f"   Ticket Key: {integration_ticket.key}")
     eprint(f"   Ticket URL: {integration_ticket.permalink()}")
-    eprint(f"   Linked to: {linked_ticket.key}")
+    eprint(f"   Linked to: {release_ticket.key}")
     eprint("=" * 50)
 
     # Output for GitHub Actions (captured by stdout)

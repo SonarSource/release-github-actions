@@ -3,27 +3,23 @@ description: 'Creates a Jira integration ticket with a custom summary and links 
 author: 'SonarSource'
 
 inputs:
-  ticket-summary:
-    description: 'The summary/title for the integration ticket'
-    required: false
-  analyzer-name:
-    description: 'The name of the analyzer (used to generate ticket summary if ticket-summary is not provided)'
-    required: false
-  release-version:
-    description: 'The release version (used to generate ticket summary if ticket-summary is not provided)'
-    required: false
-  jira-project-key:
+  target-jira-project:
     description: 'The key of the project where the ticket will be created (e.g., SQS)'
     required: true
-  linked-ticket-key:
-    description: 'The key of the ticket to link to (e.g., REL-123)'
+  release-ticket-key:
+    description: 'The key of the release ticket to link to (e.g., REL-123)'
     required: true
+  ticket-summary:
+    description: 'The summary/title for the integration ticket'
+  plugin-name:
+    description: 'The name of the plugin (used to generate ticket summary if ticket-summary is not provided)'
+  release-version:
+    description: 'The release version (used to generate ticket summary if ticket-summary is not provided)'
   ticket-description:
     description: 'The description for the integration ticket'
     default: ''
   use-jira-sandbox:
     description: "Use the sandbox server instead of the production Jira."
-    default: 'false'
   link-type:
     description: 'The type of link to create (e.g., "relates to", "depends on")'
     default: 'relates to'
@@ -41,14 +37,14 @@ runs:
   steps:
     - name: Get Jira Credentials from Vault
       id: secrets
-      uses: SonarSource/vault-action-wrapper@v3
+      uses: SonarSource/vault-action-wrapper@320bd31b03e5dacaac6be51bbbb15adf7caccc32 # v3.1
       with:
         secrets: |
           development/kv/data/jira user | JIRA_USER;
           development/kv/data/jira token | JIRA_TOKEN;
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
       with:
         python-version: '3.x'
 
@@ -58,16 +54,19 @@ runs:
         python -m pip install --upgrade pip
         pip install -r ${{ github.action_path }}/requirements.txt
 
+    - uses: ./get-release-version
+      if: ${{ !inputs.ticket-summary && !inputs.release-version && !env.RELEASE_VERSION }}
+
     - name: Validate inputs and generate ticket summary
       id: validate_inputs
       shell: bash
       run: |
         if [ -z "${{ inputs.ticket-summary }}" ]; then
-          if [ -z "${{ inputs.analyzer-name }}" ] || [ -z "${{ inputs.release-version }}" ]; then
-            echo "Error: Either ticket-summary must be provided, or both analyzer-name and release-version must be provided."
+          if [ -z "${{ inputs.plugin-name }}" ] || [ -z "${{ inputs.release-version || env.RELEASE_VERSION }}" ]; then
+            echo "Error: Either ticket-summary must be provided, or both plugin-name and release-version must be provided."
             exit 1
           fi
-          GENERATED_SUMMARY="Update ${{ inputs.analyzer-name }} to ${{ inputs.release-version }}"
+          GENERATED_SUMMARY="Update ${{ inputs.plugin-name }} to ${{ inputs.release-version || env.RELEASE_VERSION }}"
           echo "Generated ticket summary: $GENERATED_SUMMARY"
           echo "ticket_summary=$GENERATED_SUMMARY" >> $GITHUB_OUTPUT
         else
@@ -85,8 +84,8 @@ runs:
       run: |
         python ${{ github.action_path }}/create_integration_ticket.py \
           --ticket-summary "${{ steps.validate_inputs.outputs.ticket_summary }}" \
-          --jira-project-key "${{ inputs.jira-project-key }}" \
-          --linked-ticket-key "${{ inputs.linked-ticket-key }}" \
+          --target-jira-project "${{ inputs.target-jira-project }}" \
+          --release-ticket-key "${{ inputs.release-ticket-key }}" \
           --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
           --ticket-description "${{ inputs.ticket-description }}" \
           --link-type "${{ inputs.link-type }}" >> $GITHUB_OUTPUT

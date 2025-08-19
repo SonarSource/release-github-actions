@@ -15,7 +15,7 @@ from io import StringIO
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from create_integration_ticket import (
-    get_jira_instance, validate_linked_ticket, create_integration_ticket,
+    get_jira_instance, validate_release_ticket, create_integration_ticket,
     link_tickets, main
 )
 from jira.exceptions import JIRAError
@@ -89,44 +89,44 @@ class TestCreateIntegrationTicket(unittest.TestCase):
             get_jira_instance('https://sonarsource.atlassian.net/')
         self.assertEqual(cm.exception.code, 1)
 
-    def test_validate_linked_ticket_success(self):
-        """Test successful linked ticket validation."""
+    def test_validate_release_ticket_success(self):
+        """Test successful release ticket validation."""
         mock_jira = Mock()
         mock_ticket = Mock()
         mock_ticket.key = 'REL-123'
         mock_ticket.fields.summary = 'Test Release Ticket'
         mock_jira.issue.return_value = mock_ticket
 
-        result = validate_linked_ticket(mock_jira, 'REL-123')
+        result = validate_release_ticket(mock_jira, 'REL-123')
 
         self.assertEqual(result, mock_ticket)
         mock_jira.issue.assert_called_once_with('REL-123')
 
-    def test_validate_linked_ticket_not_found(self):
-        """Test linked ticket validation when ticket is not found."""
+    def test_validate_release_ticket_not_found(self):
+        """Test release ticket validation when ticket is not found."""
         mock_jira = Mock()
         mock_jira.issue.side_effect = JIRAError(status_code=404, text="Not Found")
 
         with self.assertRaises(SystemExit) as cm:
-            validate_linked_ticket(mock_jira, 'REL-999')
+            validate_release_ticket(mock_jira, 'REL-999')
         self.assertEqual(cm.exception.code, 1)
 
-    def test_validate_linked_ticket_other_error(self):
-        """Test linked ticket validation with other JIRA error."""
+    def test_validate_release_ticket_other_error(self):
+        """Test release ticket validation with other JIRA error."""
         mock_jira = Mock()
         mock_jira.issue.side_effect = JIRAError(status_code=403, text="Forbidden")
 
         with self.assertRaises(SystemExit) as cm:
-            validate_linked_ticket(mock_jira, 'REL-123')
+            validate_release_ticket(mock_jira, 'REL-123')
         self.assertEqual(cm.exception.code, 1)
 
-    def test_validate_linked_ticket_unexpected_error(self):
-        """Test linked ticket validation with unexpected error."""
+    def test_validate_release_ticket_unexpected_error(self):
+        """Test release ticket validation with unexpected error."""
         mock_jira = Mock()
         mock_jira.issue.side_effect = Exception("Unexpected error")
 
         with self.assertRaises(SystemExit) as cm:
-            validate_linked_ticket(mock_jira, 'REL-123')
+            validate_release_ticket(mock_jira, 'REL-123')
         self.assertEqual(cm.exception.code, 1)
 
     def test_create_integration_ticket_with_task_type(self):
@@ -152,7 +152,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
 
         # Mock args
         args = Mock()
-        args.jira_project_key = 'INT'
+        args.target_jira_project = 'INT'
         args.ticket_summary = 'Integration ticket for release'
         args.ticket_description = 'Test description'
 
@@ -168,18 +168,18 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         self.assertEqual(call_args['summary'], 'Integration ticket for release')
         self.assertEqual(call_args['description'], 'Test description')
 
-    def test_create_integration_ticket_with_story_type(self):
-        """Test creating integration ticket with Story issue type when Task is not available."""
+    def test_create_integration_ticket_with_improvement_type(self):
+        """Test creating integration ticket with Improvement issue type when Task is not available."""
         mock_jira = Mock()
         mock_project = Mock()
         mock_jira.project.return_value = mock_project
 
-        # Mock issue types with only Story available (no Task)
+        # Mock issue types with only Improvement available (no Bug)
         mock_jira.createmeta.return_value = {
             'projects': [{
                 'issuetypes': [
                     {'name': 'Bug'},
-                    {'name': 'Story'}
+                    {'name': 'Improvement'},
                 ]
             }]
         }
@@ -190,7 +190,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
 
         # Mock args without description
         args = Mock()
-        args.jira_project_key = 'INT'
+        args.target_jira_project = 'INT'
         args.ticket_summary = 'Integration ticket for release'
         args.ticket_description = ''
 
@@ -198,9 +198,9 @@ class TestCreateIntegrationTicket(unittest.TestCase):
 
         self.assertEqual(result, mock_ticket)
 
-        # Verify the issue creation call - should use Story and not include description
+        # Verify the issue creation call - should use Improvement and not include description
         call_args = mock_jira.create_issue.call_args[1]['fields']
-        self.assertEqual(call_args['issuetype'], {'name': 'Story'})
+        self.assertEqual(call_args['issuetype'], {'name': 'Improvement'})
         self.assertNotIn('description', call_args)
 
     def test_create_integration_ticket_with_first_available_type(self):
@@ -224,7 +224,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         mock_jira.create_issue.return_value = mock_ticket
 
         args = Mock()
-        args.jira_project_key = 'INT'
+        args.target_jira_project = 'INT'
         args.ticket_summary = 'Integration ticket for release'
         args.ticket_description = ''
 
@@ -248,7 +248,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         }
 
         args = Mock()
-        args.jira_project_key = 'INT'
+        args.target_jira_project = 'INT'
 
         with self.assertRaises(SystemExit) as cm:
             create_integration_ticket(mock_jira, args)
@@ -257,10 +257,10 @@ class TestCreateIntegrationTicket(unittest.TestCase):
     def test_create_integration_ticket_project_access_error(self):
         """Test creating integration ticket when project access fails."""
         mock_jira = Mock()
-        mock_jira.project.side_effect = JIRAError(status_code=403, text="Forbidden")
+        mock_jira.createmeta.side_effect = JIRAError(status_code=403, text="Forbidden")
 
         args = Mock()
-        args.jira_project_key = 'INT'
+        args.target_jira_project = 'INT'
 
         with self.assertRaises(SystemExit) as cm:
             create_integration_ticket(mock_jira, args)
@@ -283,7 +283,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         mock_jira.create_issue.side_effect = JIRAError(status_code=400, response=mock_response)
 
         args = Mock()
-        args.jira_project_key = 'INT'
+        args.target_jira_project = 'INT'
         args.ticket_summary = 'Test ticket'
         args.ticket_description = ''
 
@@ -296,10 +296,10 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         mock_jira = Mock()
         mock_integration_ticket = Mock()
         mock_integration_ticket.key = 'INT-123'
-        mock_linked_ticket = Mock()
-        mock_linked_ticket.key = 'REL-456'
+        mock_release_ticket = Mock()
+        mock_release_ticket.key = 'REL-456'
 
-        link_tickets(mock_jira, mock_integration_ticket, mock_linked_ticket, 'relates to')
+        link_tickets(mock_jira, mock_integration_ticket, mock_release_ticket, 'relates to')
 
         mock_jira.create_issue_link.assert_called_once_with(
             type='relates to',
@@ -314,11 +314,11 @@ class TestCreateIntegrationTicket(unittest.TestCase):
 
         mock_integration_ticket = Mock()
         mock_integration_ticket.key = 'INT-123'
-        mock_linked_ticket = Mock()
-        mock_linked_ticket.key = 'REL-456'
+        mock_release_ticket = Mock()
+        mock_release_ticket.key = 'REL-456'
 
         # Should not raise SystemExit - linking failure is not fatal
-        link_tickets(mock_jira, mock_integration_ticket, mock_linked_ticket, 'relates to')
+        link_tickets(mock_jira, mock_integration_ticket, mock_release_ticket, 'relates to')
 
     def test_link_tickets_unexpected_error(self):
         """Test ticket linking with unexpected error (should not exit)."""
@@ -327,37 +327,37 @@ class TestCreateIntegrationTicket(unittest.TestCase):
 
         mock_integration_ticket = Mock()
         mock_integration_ticket.key = 'INT-123'
-        mock_linked_ticket = Mock()
-        mock_linked_ticket.key = 'REL-456'
+        mock_release_ticket = Mock()
+        mock_release_ticket.key = 'REL-456'
 
         # Should not raise SystemExit - linking failure is not fatal
-        link_tickets(mock_jira, mock_integration_ticket, mock_linked_ticket, 'relates to')
+        link_tickets(mock_jira, mock_integration_ticket, mock_release_ticket, 'relates to')
 
     @patch('sys.argv', [
         'create_integration_ticket.py',
         '--ticket-summary', 'Integration for TestProject 1.0.0',
-        '--linked-ticket-key', 'REL-123',
-        '--jira-project-key', 'INT',
+        '--release-ticket-key', 'REL-123',
+        '--target-jira-project', 'INT',
         '--jira-url', 'https://sonarsource.atlassian.net/',
         '--ticket-description', 'Test integration ticket',
         '--link-type', 'relates to'
     ])
     @patch('create_integration_ticket.get_jira_instance')
-    @patch('create_integration_ticket.validate_linked_ticket')
+    @patch('create_integration_ticket.validate_release_ticket')
     @patch('create_integration_ticket.create_integration_ticket')
     @patch('create_integration_ticket.link_tickets')
     @patch('sys.stderr', new_callable=StringIO)
     def test_main_successful_execution(self, mock_stderr, mock_link_tickets,
-                                     mock_create_ticket, mock_validate_ticket, mock_get_jira):
+                                     mock_create_ticket, mock_validate_release_ticket, mock_get_jira):
         """Test successful execution through main function."""
         # Mock JIRA instance
         mock_jira = Mock()
         mock_get_jira.return_value = mock_jira
 
-        # Mock linked ticket validation
-        mock_linked_ticket = Mock()
-        mock_linked_ticket.key = 'REL-123'
-        mock_validate_ticket.return_value = mock_linked_ticket
+        # Mock release ticket validation
+        mock_release_ticket = Mock()
+        mock_release_ticket.key = 'REL-123'
+        mock_validate_release_ticket.return_value = mock_release_ticket
 
         # Mock integration ticket creation
         mock_integration_ticket = Mock()
@@ -370,8 +370,8 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         # Verify get_jira_instance was called with correct URL
         mock_get_jira.assert_called_once_with('https://sonarsource.atlassian.net/')
 
-        # Verify validate_linked_ticket was called
-        mock_validate_ticket.assert_called_once_with(mock_jira, 'REL-123')
+        # Verify validate_release_ticket was called
+        mock_validate_release_ticket.assert_called_once_with(mock_jira, 'REL-123')
 
         # Verify create_integration_ticket was called
         mock_create_ticket.assert_called_once()
@@ -379,15 +379,15 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         self.assertEqual(call_args[0], mock_jira)  # jira client
         args = call_args[1]  # args object
         self.assertEqual(args.ticket_summary, 'Integration for TestProject 1.0.0')
-        self.assertEqual(args.linked_ticket_key, 'REL-123')
-        self.assertEqual(args.jira_project_key, 'INT')
+        self.assertEqual(args.release_ticket_key, 'REL-123')
+        self.assertEqual(args.target_jira_project, 'INT')
         self.assertEqual(args.jira_url, 'https://sonarsource.atlassian.net/')
         self.assertEqual(args.ticket_description, 'Test integration ticket')
         self.assertEqual(args.link_type, 'relates to')
 
         # Verify link_tickets was called
         mock_link_tickets.assert_called_once_with(
-            mock_jira, mock_integration_ticket, mock_linked_ticket, 'relates to'
+            mock_jira, mock_integration_ticket, mock_release_ticket, 'relates to'
         )
 
         # Verify output contains success message
@@ -400,12 +400,12 @@ class TestCreateIntegrationTicket(unittest.TestCase):
     @patch('sys.argv', [
         'create_integration_ticket.py',
         '--ticket-summary', 'Minimal integration ticket',
-        '--linked-ticket-key', 'REL-456',
-        '--jira-project-key', 'TEST',
+        '--release-ticket-key', 'REL-456',
+        '--target-jira-project', 'TEST',
         '--jira-url', 'https://sonarsource-sandbox-608.atlassian.net/'
     ])
     @patch('create_integration_ticket.get_jira_instance')
-    @patch('create_integration_ticket.validate_linked_ticket')
+    @patch('create_integration_ticket.validate_release_ticket')
     @patch('create_integration_ticket.create_integration_ticket')
     @patch('create_integration_ticket.link_tickets')
     @patch('sys.stderr', new_callable=StringIO)
@@ -416,10 +416,10 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         mock_jira = Mock()
         mock_get_jira.return_value = mock_jira
 
-        # Mock linked ticket validation
-        mock_linked_ticket = Mock()
-        mock_linked_ticket.key = 'REL-456'
-        mock_validate_ticket.return_value = mock_linked_ticket
+        # Mock release ticket validation
+        mock_release_ticket = Mock()
+        mock_release_ticket.key = 'REL-456'
+        mock_validate_ticket.return_value = mock_release_ticket
 
         # Mock integration ticket creation
         mock_integration_ticket = Mock()
@@ -436,13 +436,13 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         call_args = mock_create_ticket.call_args[0]
         args = call_args[1]  # args object
         self.assertEqual(args.ticket_summary, 'Minimal integration ticket')
-        self.assertEqual(args.linked_ticket_key, 'REL-456')
-        self.assertEqual(args.jira_project_key, 'TEST')
+        self.assertEqual(args.release_ticket_key, 'REL-456')
+        self.assertEqual(args.target_jira_project, 'TEST')
         self.assertEqual(args.jira_url, 'https://sonarsource-sandbox-608.atlassian.net/')
         self.assertEqual(args.ticket_description, '')  # default empty
         self.assertEqual(args.link_type, 'relates to')  # default
 
         # Verify link_tickets was called with default link type
         mock_link_tickets.assert_called_once_with(
-            mock_jira, mock_integration_ticket, mock_linked_ticket, 'relates to'
+            mock_jira, mock_integration_ticket, mock_release_ticket, 'relates to'
         )
