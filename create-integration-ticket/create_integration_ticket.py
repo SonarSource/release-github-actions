@@ -113,10 +113,6 @@ def create_integration_ticket(jira_client, args):
         'summary': args.ticket_summary,
     }
 
-    # Add description if provided
-    if args.ticket_description:
-        ticket_details['description'] = args.ticket_description
-
     try:
         new_ticket = jira_client.create_issue(fields=ticket_details)
         eprint(f"Successfully created ticket: {new_ticket.key}")
