@@ -154,7 +154,6 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         args = Mock()
         args.target_jira_project = 'INT'
         args.ticket_summary = 'Integration ticket for release'
-        args.ticket_description = 'Test description'
 
         result = create_integration_ticket(mock_jira, args)
 
@@ -166,7 +165,6 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         self.assertEqual(call_args['project'], 'INT')
         self.assertEqual(call_args['issuetype'], {'name': 'Task'})
         self.assertEqual(call_args['summary'], 'Integration ticket for release')
-        self.assertEqual(call_args['description'], 'Test description')
 
     def test_create_integration_ticket_with_improvement_type(self):
         """Test creating integration ticket with Improvement issue type when Task is not available."""
@@ -188,20 +186,17 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         mock_ticket.key = 'INT-124'
         mock_jira.create_issue.return_value = mock_ticket
 
-        # Mock args without description
         args = Mock()
         args.target_jira_project = 'INT'
         args.ticket_summary = 'Integration ticket for release'
-        args.ticket_description = ''
 
         result = create_integration_ticket(mock_jira, args)
 
         self.assertEqual(result, mock_ticket)
 
-        # Verify the issue creation call - should use Improvement and not include description
+        # Verify the issue creation call - should use Improvement
         call_args = mock_jira.create_issue.call_args[1]['fields']
         self.assertEqual(call_args['issuetype'], {'name': 'Improvement'})
-        self.assertNotIn('description', call_args)
 
     def test_create_integration_ticket_with_first_available_type(self):
         """Test creating integration ticket with first available issue type."""
@@ -226,7 +221,6 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         args = Mock()
         args.target_jira_project = 'INT'
         args.ticket_summary = 'Integration ticket for release'
-        args.ticket_description = ''
 
         result = create_integration_ticket(mock_jira, args)
 
@@ -285,7 +279,6 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         args = Mock()
         args.target_jira_project = 'INT'
         args.ticket_summary = 'Test ticket'
-        args.ticket_description = ''
 
         with self.assertRaises(SystemExit) as cm:
             create_integration_ticket(mock_jira, args)
@@ -339,7 +332,6 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         '--release-ticket-key', 'REL-123',
         '--target-jira-project', 'INT',
         '--jira-url', 'https://sonarsource.atlassian.net/',
-        '--ticket-description', 'Test integration ticket',
         '--link-type', 'relates to'
     ])
     @patch('create_integration_ticket.get_jira_instance')
@@ -382,7 +374,6 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         self.assertEqual(args.release_ticket_key, 'REL-123')
         self.assertEqual(args.target_jira_project, 'INT')
         self.assertEqual(args.jira_url, 'https://sonarsource.atlassian.net/')
-        self.assertEqual(args.ticket_description, 'Test integration ticket')
         self.assertEqual(args.link_type, 'relates to')
 
         # Verify link_tickets was called
@@ -439,7 +430,6 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         self.assertEqual(args.release_ticket_key, 'REL-456')
         self.assertEqual(args.target_jira_project, 'TEST')
         self.assertEqual(args.jira_url, 'https://sonarsource-sandbox-608.atlassian.net/')
-        self.assertEqual(args.ticket_description, '')  # default empty
         self.assertEqual(args.link_type, 'relates to')  # default
 
         # Verify link_tickets was called with default link type

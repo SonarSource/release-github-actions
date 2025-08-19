@@ -7,7 +7,7 @@ This GitHub Action creates a Jira integration ticket with a custom summary and l
 The action creates an integration ticket in Jira by:
 1. Connecting to Jira using authentication credentials
 2. Validating that the release ticket exists and is accessible
-3. Creating a new integration ticket with the provided summary and description
+3. Creating a new integration ticket with the provided summary
 4. Linking the new ticket to the existing ticket with the specified link type
 5. Returning the ticket key and URL for use in subsequent workflow steps
 
@@ -19,25 +19,24 @@ This action requires:
 
 ## Inputs
 
-| Input                | Description                                                                                                                               | Required | Default      |
-|----------------------|-------------------------------------------------------------------------------------------------------------------------------------------|----------|--------------|
-| `release-ticket-key` | The key of the ticket to link to (e.g., REL-123)                                                                                          | Yes      | -            |
-| `target-jira-project`   | The key of the project where the ticket will be created (e.g., SQS)                                                                       | Yes      | -            |
-| `ticket-summary`     | The summary/title for the integration ticket                                                                                              | No       | -            |
-| `analyzer-name`      | The name of the analyzer (used to generate ticket summary if ticket-summary is not provided)                                              | No       | -            |
-| `release-version`    | The release version (used to generate ticket summary if ticket-summary is not provided). If not set version will be retreived from build. | No       | -            |
-| `ticket-description` | The description for the integration ticket                                                                                                | No       | -            |
-| `use-jira-sandbox`   | Use the sandbox Jira server instead of production. Can also be controlled via `USE_JIRA_SANDBOX` environment variable                     | No       | -            |
-| `link-type`          | The type of link to create (e.g., "relates to", "depends on")                                                                             | No       | `relates to` |
+| Input                 | Description                                                                                                                               | Required | Default      |
+|-----------------------|-------------------------------------------------------------------------------------------------------------------------------------------|----------|--------------|
+| `release-ticket-key`  | The key of the ticket to link to (e.g., REL-123)                                                                                          | Yes      | -            |
+| `target-jira-project` | The key of the project where the ticket will be created (e.g., SQS)                                                                       | Yes      | -            |
+| `ticket-summary`      | The summary/title for the integration ticket                                                                                              | No       | -            |
+| `plugin-name`         | The name of the plugin (used to generate ticket summary if ticket-summary is not provided)                                                | No       | -            |
+| `release-version`     | The release version (used to generate ticket summary if ticket-summary is not provided). If not set version will be retreived from build. | No       | -            |
+| `use-jira-sandbox`    | Use the sandbox Jira server instead of production. Can also be controlled via `USE_JIRA_SANDBOX` environment variable                     | No       | -            |
+| `link-type`           | The type of link to create (e.g., "relates to", "depends on")                                                                             | No       | `relates to` |
 
-**Note:** Either `ticket-summary` must be provided, or both `analyzer-name` and `release-version` must be provided. If `ticket-summary` is not provided, it will be automatically generated as "Update {analyzer-name} to {release-version}".
+**Note:** Either `ticket-summary` must be provided, or both `plugin-name` and `release-version` must be provided. If `ticket-summary` is not provided, it will be automatically generated as "Update {plugin-name} to {release-version}".
 
 ## Outputs
 
 | Output       | Description                               |
 |--------------|-------------------------------------------|
-| `ticket_key` | The key of the created Jira ticket       |
-| `ticket_url` | The URL of the created Jira ticket       |
+| `ticket-key` | The key of the created Jira ticket       |
+| `ticket-url` | The URL of the created Jira ticket       |
 
 ## Usage
 
@@ -50,21 +49,19 @@ This action requires:
     ticket-summary: "Update SonarPython analyzer to 5.8.0.24785"
     release-ticket-key: "REL-456"
     target-jira-project: "SQS"
-    ticket-description: "This ticket tracks the integration of SonarPython analyzer version 5.8.0.24785 into the SQS project."
     link-type: "depends on"
 ```
 
-### Example 2: Using analyzer-name and release-version (generates summary automatically)
+### Example 2: Using plugin-name and release-version (generates summary automatically)
 ```yaml
 - name: Create Integration Ticket
   id: create-ticket
   uses: ./create-integration-ticket
   with:
-    analyzer-name: "SonarPython"
+    plugin-name: "SonarPython"
     release-version: "5.8.0.24785"
     release-ticket-key: "REL-456"
     target-jira-project: "SQS"
-    ticket-description: "This ticket tracks the integration of SonarPython analyzer version 5.8.0.24785 into the SQS project."
     link-type: "depends on"
 ```
 
@@ -89,7 +86,6 @@ This action requires:
 ## Error Handling
 
 The action will fail if:
-- JIRA_USER or JIRA_TOKEN environment variables are not set
 - Authentication to Jira fails
 - The specified project doesn't exist or isn't accessible
 - The release ticket doesn't exist or isn't accessible

@@ -15,9 +15,6 @@ inputs:
     description: 'The name of the plugin (used to generate ticket summary if ticket-summary is not provided)'
   release-version:
     description: 'The release version (used to generate ticket summary if ticket-summary is not provided)'
-  ticket-description:
-    description: 'The description for the integration ticket'
-    default: ''
   use-jira-sandbox:
     description: "Use the sandbox server instead of the production Jira."
   link-type:
@@ -25,10 +22,10 @@ inputs:
     default: 'relates to'
 
 outputs:
-  ticket_key:
+  ticket-key:
     description: 'The key of the created Jira ticket (e.g., SQS-123)'
     value: ${{ steps.run_python_script.outputs.ticket_key }}
-  ticket_url:
+  ticket-url:
     description: 'The URL of the created Jira ticket.'
     value: ${{ steps.run_python_script.outputs.ticket_url }}
 
@@ -87,5 +84,4 @@ runs:
           --target-jira-project "${{ inputs.target-jira-project }}" \
           --release-ticket-key "${{ inputs.release-ticket-key }}" \
           --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
-          --ticket-description "${{ inputs.ticket-description }}" \
           --link-type "${{ inputs.link-type }}" >> $GITHUB_OUTPUT

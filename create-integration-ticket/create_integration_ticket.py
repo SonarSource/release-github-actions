@@ -168,8 +168,6 @@ def main():
                        help="The key of the project where the ticket will be created (e.g., SQS).")
     parser.add_argument("--jira-url", required=True,
                         help="The Jira server URL to connect to.")
-    parser.add_argument("--ticket-description", default="",
-                       help="The description for the integration ticket.")
     parser.add_argument("--link-type", default="relates to",
                        help="The type of link to create (e.g., 'relates to', 'depends on').")
 
