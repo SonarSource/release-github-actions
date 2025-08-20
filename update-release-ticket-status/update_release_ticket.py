@@ -12,10 +12,6 @@ import sys
 from jira import JIRA
 from jira.exceptions import JIRAError
 
-# Jira server URLs
-JIRA_SANDBOX_URL = "https://sonarsource-sandbox-608.atlassian.net/"
-JIRA_PROD_URL = "https://sonarsource.atlassian.net/"
-
 
 def eprint(*args, **kwargs):
     """
@@ -26,12 +22,12 @@ def eprint(*args, **kwargs):
 
 
 # noinspection DuplicatedCode
-def get_jira_instance(use_sandbox=False):
+def get_jira_instance(jira_url):
     """
     Initializes and returns a JIRA client instance based on environment variables.
 
     Args:
-        use_sandbox (bool): If True, connects to the sandbox Jira server.
+        jira_url (str): The Jira server URL to connect to.
 
     Returns:
         JIRA: An authenticated JIRA client instance.
@@ -42,8 +38,6 @@ def get_jira_instance(use_sandbox=False):
     if not jira_user or not jira_token:
         eprint("Error: JIRA_USER and JIRA_TOKEN environment variables must be set.")
         sys.exit(1)
-
-    jira_url = JIRA_SANDBOX_URL if use_sandbox else JIRA_PROD_URL
 
     eprint(f"Connecting to JIRA server at: {jira_url}")
     eprint(f"Authenticating with user: {jira_user}")
@@ -117,12 +111,12 @@ def main():
                         help="The target status for the ticket.")
     parser.add_argument("--assignee", required=False, default=None,
                         help="The email of the user to assign the ticket to.")
-    parser.add_argument('--use-sandbox', action='store_true',
-                        help="Use the sandbox server instead of the production Jira.")
+    parser.add_argument('--jira-url', required=True,
+                        help="The Jira server URL to connect to.")
 
     args = parser.parse_args()
 
-    jira = get_jira_instance(args.use_sandbox)
+    jira = get_jira_instance(args.jira_url)
     update_ticket_status(jira, args.ticket_key, args.status, args.assignee)
 
     eprint("\n" + "=" * 50)

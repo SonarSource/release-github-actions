@@ -1,0 +1,44 @@
+name: Test Update Release Ticket Status Action
+
+on:
+  workflow_call:
+  pull_request:
+    paths:
+      - 'update-release-ticket-status/**'
+      - '.github/workflows/test-update-release-ticket-status.yml'
+  merge_group:
+    paths:
+      - 'update-release-ticket-status/**'
+      - '.github/workflows/test-update-release-ticket-status.yml'
+  push:
+    branches:
+      - branch-*
+    paths:
+      - 'update-release-ticket-status/**'
+      - '.github/workflows/test-update-release-ticket-status.yml'
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+
+      - name: Install dependencies
+        run: |
+          cd update-release-ticket-status
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Run unit tests
+        run: |
+          cd update-release-ticket-status
+          python -m pytest test_update_release_ticket.py -v --cov=update_release_ticket --cov-report=term-missing
