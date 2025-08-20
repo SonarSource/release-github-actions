@@ -33,10 +33,10 @@ This action requires:
 
 ## Outputs
 
-| Output       | Description                               |
-|--------------|-------------------------------------------|
-| `ticket-key` | The key of the created Jira ticket       |
-| `ticket-url` | The URL of the created Jira ticket       |
+| Output       | Description                        |
+|--------------|------------------------------------|
+| `ticket-key` | The key of the created Jira ticket |
+| `ticket-url` | The URL of the created Jira ticket |
 
 ## Usage
 

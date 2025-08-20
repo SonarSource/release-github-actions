@@ -2,11 +2,22 @@ name: Test Create Integration Ticket Action
 
 on:
   pull_request:
+    paths:
+      - 'create-integration-ticket/**'
+      - '.github/workflows/test-create-integration-ticket.yml'
   merge_group:
+    paths:
+      - 'create-integration-ticket/**'
+      - '.github/workflows/test-create-integration-ticket.yml'
   push:
     branches:
       - master
+  push:
+    branches:
       - branch-*
+    paths:
+      - 'create-integration-ticket/**'
+      - '.github/workflows/test-create-integration-ticket.yml'
   workflow_dispatch:
 
 jobs:

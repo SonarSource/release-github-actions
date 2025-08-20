@@ -2,11 +2,22 @@ name: Test Check Releasability Status Action
 
 on:
   pull_request:
+    paths:
+      - 'check-releasability-status/**'
+      - '.github/workflows/test-check-releasability-status.yml'
   merge_group:
+    paths:
+      - 'check-releasability-status/**'
+      - '.github/workflows/test-check-releasability-status.yml'
   push:
     branches:
       - master
+  push:
+    branches:
       - branch-*
+    paths:
+      - 'check-releasability-status/**'
+      - '.github/workflows/test-check-releasability-status.yml'
   workflow_dispatch:
 
 jobs:

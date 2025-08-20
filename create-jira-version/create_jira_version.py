@@ -11,9 +11,12 @@ import sys
 from jira import JIRA
 from jira.exceptions import JIRAError
 
+
+# noinspection DuplicatedCode
 def eprint(*args, **kwargs):
     """Prints messages to the standard error stream (stderr) for logging."""
     print(*args, file=sys.stderr, **kwargs)
+
 
 # noinspection DuplicatedCode
 def get_jira_instance(jira_url):
@@ -42,6 +45,7 @@ def get_jira_instance(jira_url):
     except Exception as e:
         eprint(f"An unexpected error occurred during JIRA connection: {e}")
         sys.exit(1)
+
 
 def main():
     """Main function to orchestrate the creation process."""
@@ -85,7 +89,6 @@ def main():
         else:
             eprint(f"Error: Failed to create new version. Status: {e.status_code}, Text: {e.text}")
             sys.exit(1)
-
 
 
 if __name__ == "__main__":

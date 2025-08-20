@@ -34,6 +34,7 @@ class TestCreateJiraVersion(unittest.TestCase):
             get_jira_instance('https://test.jira.com')
         self.assertEqual(cm.exception.code, 1)
 
+    # noinspection DuplicatedCode
     @patch.dict(os.environ, {'JIRA_USER': 'test', 'JIRA_TOKEN': 'token'})
     @patch('create_jira_version.JIRA')
     def test_get_jira_instance_success(self, mock_jira_class):

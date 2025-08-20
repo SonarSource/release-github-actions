@@ -2,11 +2,22 @@ name: Test Get Jira Release Notes Action
 
 on:
   pull_request:
+    paths:
+      - 'get-jira-release-notes/**'
+      - '.github/workflows/test-get-jira-release-notes.yml'
   merge_group:
+    paths:
+      - 'get-jira-release-notes/**'
+      - '.github/workflows/test-get-jira-release-notes.yml'
   push:
     branches:
       - master
+  push:
+    branches:
       - branch-*
+    paths:
+      - 'get-jira-release-notes/**'
+      - '.github/workflows/test-get-jira-release-notes.yml'
   workflow_dispatch:
 
 jobs:
@@ -58,7 +69,7 @@ jobs:
         uses: ./get-jira-release-notes
         env:
           JIRA_PROJECT_KEY: 'TEST'
-          JIRA_VERSION: '1.0.0'
+          JIRA_VERSION_NAME: '1.0.0'
         # This should fail due to missing Jira credentials, but validation should pass
 
       - name: Test action with mixed inputs (input overrides env)
@@ -69,7 +80,7 @@ jobs:
           jira-project-key: 'OVERRIDE'  # This should override JIRA_PROJECT_KEY
         env:
           JIRA_PROJECT_KEY: 'TEST'
-          JIRA_VERSION: '1.0.0'
+          JIRA_VERSION_NAME: '1.0.0'
         # This should fail due to missing Jira credentials, but validation should pass
 
       - name: Test environment variable outputs (mock test)

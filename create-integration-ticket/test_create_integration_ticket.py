@@ -166,6 +166,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         self.assertEqual(call_args['issuetype'], {'name': 'Task'})
         self.assertEqual(call_args['summary'], 'Integration ticket for release')
 
+    # noinspection DuplicatedCode
     def test_create_integration_ticket_with_improvement_type(self):
         """Test creating integration ticket with Improvement issue type when Task is not available."""
         mock_jira = Mock()
@@ -198,6 +199,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         call_args = mock_jira.create_issue.call_args[1]['fields']
         self.assertEqual(call_args['issuetype'], {'name': 'Improvement'})
 
+    # noinspection DuplicatedCode
     def test_create_integration_ticket_with_first_available_type(self):
         """Test creating integration ticket with first available issue type."""
         mock_jira = Mock()
@@ -340,7 +342,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
     @patch('create_integration_ticket.link_tickets')
     @patch('sys.stderr', new_callable=StringIO)
     def test_main_successful_execution(self, mock_stderr, mock_link_tickets,
-                                     mock_create_ticket, mock_validate_release_ticket, mock_get_jira):
+                                       mock_create_ticket, mock_validate_release_ticket, mock_get_jira):
         """Test successful execution through main function."""
         # Mock JIRA instance
         mock_jira = Mock()
@@ -401,7 +403,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
     @patch('create_integration_ticket.link_tickets')
     @patch('sys.stderr', new_callable=StringIO)
     def test_main_with_minimal_parameters(self, mock_stderr, mock_link_tickets,
-                                        mock_create_ticket, mock_validate_ticket, mock_get_jira):
+                                          mock_create_ticket, mock_validate_ticket, mock_get_jira):
         """Test main function with minimal required parameters."""
         # Mock JIRA instance
         mock_jira = Mock()

@@ -81,7 +81,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
 
         self.assertEqual(result, mock_ticket)
         mock_jira.create_issue.assert_called_once()
-        
+
         # Verify the issue creation call
         call_args = mock_jira.create_issue.call_args[1]['fields']
         self.assertEqual(call_args['project'], 'REL')
@@ -120,7 +120,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
 
         self.assertEqual(result, mock_ticket)
         mock_jira.create_issue.assert_called_once()
-        
+
         # Verify the issue creation call - should not include targeted_product
         call_args = mock_jira.create_issue.call_args[1]['fields']
         self.assertNotIn('customfield_10163', call_args)  # TARGETED_PRODUCT should not be set
@@ -146,7 +146,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
 
         with self.assertRaises(SystemExit) as cm:
             create_release_ticket(mock_jira, args, 'https://release.url')
-        
+
         self.assertEqual(cm.exception.code, 1)
 
     @patch('sys.argv', [

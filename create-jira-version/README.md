@@ -6,9 +6,10 @@ This GitHub Action creates a new version in a Jira project, with the ability to 
 
 The action creates a new version in the specified Jira project by:
 1. Connecting to Jira using authentication credentials from Vault
-2. Either using a provided version name or automatically determining the next version number
-3. Creating the new version in the specified Jira project
-4. Returning the created version's ID and name
+2. Validating required project key from inputs or environment variables
+3. Either using a provided version name or automatically determining the next version number
+4. Creating the new version in the specified Jira project
+5. Returning the created version's ID and name
 
 ## Dependencies
 
@@ -18,18 +19,20 @@ This action depends on:
 
 ## Inputs
 
-| Input               | Description                                                                                                           | Required | Default         |
-|---------------------|-----------------------------------------------------------------------------------------------------------------------|----------|-----------------|
-| `jira_project_key`  | The key of the Jira project (e.g., SONARIAC)                                                                          | Yes      | -               |
-| `jira_version_name` | The name of the Jira version to create (e.g., 1.2.3)                                                                  | No       | Auto-determined |
-| `use_jira_sandbox`  | Use the sandbox Jira server instead of production. Can also be controlled via `USE_JIRA_SANDBOX` environment variable | No       | `false`         |
+| Input               | Description                                                                                                               | Required | Default         |
+|---------------------|---------------------------------------------------------------------------------------------------------------------------|----------|-----------------|
+| `jira-project-key`  | The key of the Jira project (e.g., SONARIAC). Can also be set via `JIRA_PROJECT_KEY` environment variable                 | No*      | -               |
+| `jira-version-name` | The name of the Jira version to create (e.g., 1.2.3). Can also be set via `JIRA_VERSION_NAME` environment variable        | No       | Auto-determined |
+| `use-jira-sandbox`  | Use the sandbox server instead of the production Jira. Can also be controlled via `USE_JIRA_SANDBOX` environment variable | No       | -               |
+
+*Either the input or corresponding environment variable must be provided for jira-project-key.
 
 ## Outputs
 
 | Output              | Description                          |
 |---------------------|--------------------------------------|
-| `jira_version_id`   | The ID of the created Jira version   |
-| `jira_version_name` | The name of the created Jira version |
+| `jira-version-id`   | The ID of the created Jira version   |
+| `jira-version-name` | The name of the created Jira version |
 
 ## Usage
 
@@ -40,13 +43,13 @@ This action depends on:
   id: create-version
   uses: SonarSource/release-github-actions/create-jira-version@master
   with:
-    jira_project_key: 'SONARIAC'
-    jira_version_name: '1.2.3'
+    jira-project-key: 'SONARIAC'
+    jira-version-name: '1.2.3'
 
 - name: Use created version
   run: |
-    echo "Created version ID: ${{ steps.create-version.outputs.jira_version_id }}"
-    echo "Created version name: ${{ steps.create-version.outputs.jira_version_name }}"
+    echo "Created version ID: ${{ steps.create-version.outputs.jira-version-id }}"
+    echo "Created version name: ${{ steps.create-version.outputs.jira-version-name }}"
 ```
 
 ### Auto-determine next version number
@@ -56,12 +59,23 @@ This action depends on:
   id: create-version
   uses: SonarSource/release-github-actions/create-jira-version@master
   with:
-    jira_project_key: 'SONARIAC'
-    # jira_version_name is omitted - will auto-increment from latest version
+    jira-project-key: 'SONARIAC'
+    # jira-version-name is omitted - will auto-increment from latest version
 
 - name: Use created version
   run: |
-    echo "Created version: ${{ steps.create-version.outputs.jira_version_name }}"
+    echo "Created version: ${{ steps.create-version.outputs.jira-version-name }}"
+```
+
+### Using environment variables
+
+```yaml
+- name: Create Jira Version
+  uses: SonarSource/release-github-actions/create-jira-version@master
+  env:
+    JIRA_PROJECT_KEY: 'SONARIAC'
+  with:
+    jira-version: '1.2.3'
 ```
 
 ### Using sandbox environment
@@ -70,9 +84,9 @@ This action depends on:
 - name: Create Jira Version in Sandbox
   uses: SonarSource/release-github-actions/create-jira-version@master
   with:
-    jira_project_key: 'TESTPROJECT'
-    jira_version_name: '1.0.0-beta'
-    use_jira_sandbox: 'true'
+    jira-project-key: 'TESTPROJECT'
+    jira-version-name: '1.0.0-beta'
+    use-jira-sandbox: 'true'
 ```
 
 ## Example
@@ -87,16 +101,18 @@ If you have existing versions `1.2.1` and `1.2.2` in your Jira project and don't
 
 The action uses a Python script that:
 - Authenticates with Jira using credentials from HashiCorp Vault
-- Supports both production and sandbox Jira environments
+- Validates required project key from inputs or environment variables
+- Supports both production and sandbox Jira environments via URL selection
 - Can auto-determine the next version number by incrementing the latest existing version
 - Creates the new version using the Jira REST API
 - Outputs the created version's metadata for use in subsequent steps
 
-
 ## Notes
 
 - This action requires access to SonarSource's HashiCorp Vault for Jira credentials
-- When `jira_version_name` is not provided, the action automatically determines the next version by incrementing the latest existing version
+- Either `jira-project-key` input or `JIRA_PROJECT_KEY` environment variable must be provided
+- When `jira-version-name` is not provided, the action automatically determines the next version by incrementing the latest existing version
+- Input parameters take precedence over environment variables when both are provided
 - The action supports both production and sandbox Jira environments
 - Version names should follow semantic versioning patterns for best results
-- The action will fail if a version with the same name already exists in the project
+- The action will handle existing versions gracefully and return the existing version details
