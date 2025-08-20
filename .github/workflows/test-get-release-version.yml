@@ -1,6 +1,7 @@
 name: Test Get Release Version Action
 
 on:
+  workflow_call:
   pull_request:
     paths:
       - 'get-release-version/**'
@@ -9,9 +10,6 @@ on:
     paths:
       - 'get-release-version/**'
       - '.github/workflows/test-get-release-version.yml'
-  push:
-    branches:
-      - master
   push:
     branches:
       - branch-*

@@ -1,6 +1,7 @@
 name: Test Create Jira Release Ticket Action
 
 on:
+  workflow_call:
   pull_request:
     paths:
       - 'create-jira-release-ticket/**'
@@ -9,9 +10,6 @@ on:
     paths:
       - 'create-jira-release-ticket/**'
       - '.github/workflows/test-create-jira-release-ticket.yml'
-  push:
-    branches:
-      - master
   push:
     branches:
       - branch-*

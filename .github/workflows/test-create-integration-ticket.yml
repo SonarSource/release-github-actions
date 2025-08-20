@@ -1,6 +1,7 @@
 name: Test Create Integration Ticket Action
 
 on:
+  workflow_call:
   pull_request:
     paths:
       - 'create-integration-ticket/**'
@@ -9,9 +10,6 @@ on:
     paths:
       - 'create-integration-ticket/**'
       - '.github/workflows/test-create-integration-ticket.yml'
-  push:
-    branches:
-      - master
   push:
     branches:
       - branch-*

@@ -9,7 +9,6 @@ inputs:
     description: 'The name of the Jira version/fixVersion (e.g., 1.2.3). Can also be set via JIRA_VERSION_NAME environment variable.'
   use-jira-sandbox:
     description: "Use the sandbox Jira server instead of production."
-    default: 'false'
   issue-types:
     description: 'Optional comma-separated list of issue types to include, in order.'
     default: 'New Feature,False Positive,False Negative,Bug,Improvement'

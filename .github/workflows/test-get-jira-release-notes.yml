@@ -1,6 +1,7 @@
 name: Test Get Jira Release Notes Action
 
 on:
+  workflow_call:
   pull_request:
     paths:
       - 'get-jira-release-notes/**'
@@ -9,9 +10,6 @@ on:
     paths:
       - 'get-jira-release-notes/**'
       - '.github/workflows/test-get-jira-release-notes.yml'
-  push:
-    branches:
-      - master
   push:
     branches:
       - branch-*

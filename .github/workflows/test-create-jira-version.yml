@@ -1,6 +1,7 @@
 name: Test Create Jira Version Action
 
 on:
+  workflow_call:
   pull_request:
     paths:
       - 'create-jira-version/**'
@@ -9,9 +10,6 @@ on:
     paths:
       - 'create-jira-version/**'
       - '.github/workflows/test-create-jira-version.yml'
-  push:
-    branches:
-      - master
   push:
     branches:
       - branch-*
