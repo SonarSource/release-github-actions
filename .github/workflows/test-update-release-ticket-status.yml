@@ -6,10 +6,6 @@ on:
     paths:
       - 'update-release-ticket-status/**'
       - '.github/workflows/test-update-release-ticket-status.yml'
-  merge_group:
-    paths:
-      - 'update-release-ticket-status/**'
-      - '.github/workflows/test-update-release-ticket-status.yml'
   push:
     branches:
       - branch-*
