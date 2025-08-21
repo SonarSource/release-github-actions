@@ -64,7 +64,7 @@ runs:
       env:
         PROVIDED_SONARPEDIA_FILES: ${{ inputs.sonarpedia-files || '' }}
       run: |
-        bash ${github.action_path}/run_rule_api.sh
+        bash ${{ github.action_path }}//run_rule_api.sh
 
     - name: Check Rule Metadata Changes
       id: check-changes
