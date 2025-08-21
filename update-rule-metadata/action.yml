@@ -12,6 +12,17 @@ inputs:
       Comma-separated list of sonarpedia files to be updated.
       By default, it will update all Sonarpedia files in the repository.
 
+outputs:
+  has-changes:
+      description: 'Indicates whether rule metadata changes were detected.'
+      value: ${{ steps.check-changes.outputs.has-changes }}
+  pull-request-url:
+      description: 'URL of the created pull request if changes were detected.'
+      value: ${{ steps.create-pr.outputs.pull-request-url }}
+  summary:
+      description: 'Summary of the rule metadata update.'
+      value: ${{ steps.generate-summary.outputs.summary }}
+
 runs:
   using: "composite"
   steps:
@@ -110,20 +121,3 @@ runs:
         branch: bot/update-rule-metadata
         branch-suffix: timestamp
         labels: skip-qa
-
-    - name: Workflow summary
-      shell: bash
-      run: |
-        workflow_summary=$(echo "${{ steps.generate-summary.outputs.summary }}" | sed 's/<br>/\n/g')
-        
-        echo "## Rule Metadata Update Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo -e "${workflow_summary}" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        
-        if [[ "${{ steps.check-changes.outputs.has-changes }}" == "true" ]]; then
-          echo "Rule metadata changes were detected. PR was created." >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.create-pr.outputs.pull-request-url }}" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "No rule metadata changes detected. No PR was created." >> $GITHUB_STEP_SUMMARY
-        fi
