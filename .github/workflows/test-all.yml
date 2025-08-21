@@ -29,3 +29,6 @@ jobs:
 
   test-get-jira-release-notes:
     uses: ./.github/workflows/test-get-jira-release-notes.yml
+
+  test-publish-github-release:
+    uses: ./.github/workflows/test-publish-github-release.yml

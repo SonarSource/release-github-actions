@@ -1,55 +1,35 @@
 name: 'Publish GitHub Release'
-description: 'Publishes a GitHub Release with release notes that are provided directly or fetched from Jira.'
+description: 'Publishes a GitHub Release.'
 author: 'SonarSource'
 
 inputs:
-  version:
-    description: 'The version number for the new release (e.g., v1.0.0). This will also be the tag name.'
+  github-token:
+    description: 'The GitHub token for API calls.'
     required: true
+    default: ${{ github.token }}
+  release-version:
+    description: 'The version number for the new release (e.g., v1.0.0). This will also be the tag name. If not provided, uses RELEASE_VERSION environment variable.'
+    required: false
   branch:
     description: 'The branch, commit, or tag to create the release from.'
     required: false
     default: 'master'
+  release-notes:
+    description: 'The full markdown content for the release notes.'
+    required: false
   draft:
     description: 'A boolean value to indicate if the release should be a draft. Defaults to true.'
     required: false
     default: 'true'
-  release_notes:
-    description: 'The full markdown content for the release notes. If provided, this is used directly.'
-    required: false
-    default: ''
-  jira_release_name:
-    description: 'The name of the Jira release version. If provided and release_notes is empty, notes will be fetched from Jira.'
-    required: false
-    default: ''
-  jira_project_key:
-    description: 'The Jira project key (e.g., "SONARPHP") to fetch notes from.'
-    required: false
-  issue_types:
-    description: 'Optional comma-separated list of Jira issue types to include in the release notes, in order.'
-    required: false
-    default: ''
-  use_sandbox:
-    description: "Use the sandbox Jira server instead of production."
-    required: false
-    default: 'false'
-  github_token:
-    description: 'The GitHub token for API calls.'
-    required: true
-    default: ${{ github.token }}
-  release_workflow:
+  release-workflow:
     description: 'The filename of the release workflow to trigger in the caller repository.'
     required: false
     default: 'release.yml'
-  release_workflow_ref:
-    description: 'The branch or ref to trigger the release workflow from.'
-    required: false
-    default: 'master'
 
 outputs:
-  release_url:
+  release-url:
     description: 'The URL of the newly created release.'
-    value: ${{ steps.create_release.outputs.release_url }}
+    value: ${{ steps.create-release.outputs.release-url }}
 
 runs:
   using: "composite"
@@ -57,74 +37,33 @@ runs:
     - name: Check out repository
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-    - name: Validate Inputs
+    - name: Validate Version Input
       shell: bash
       run: |
-        if [[ -z "${{ inputs.release_notes }}" && -z "${{ inputs.jira_release_name }}" ]]; then
-          echo "Error: You must provide either the 'release_notes' or the 'jira_release_name' input."
+        VERSION="${{ inputs.release-version || env.RELEASE_VERSION }}"
+        if [[ -z "$VERSION" ]]; then
+          echo "::error::Both release-version input and RELEASE_VERSION environment variable are missing. One must be provided."
           exit 1
         fi
-        if [[ -n "${{ inputs.jira_release_name }}" && -z "${{ inputs.jira_project_key }}" ]]; then
-          echo "Error: When using 'jira_release_name', you must also provide 'jira_project_key'."
-          exit 1
-        fi
-
-    - name: Get Jira Credentials from Vault
-      id: secrets
-      uses: SonarSource/vault-action-wrapper@v3
-      with:
-        secrets: |
-          development/kv/data/jira user | JIRA_USER;
-          development/kv/data/jira token | JIRA_TOKEN;
+        echo "VALIDATED_VERSION=$VERSION" >> $GITHUB_ENV
 
     - name: Prepare Release Notes
-      id: prepare_notes
       shell: bash
       run: |
-        # Case 1: Direct release_notes are provided.
-        if [[ -n "${{ inputs.release_notes }}" ]]; then
-          echo "Using provided release_notes."
-          echo "${{ inputs.release_notes }}" > release-notes.md
-          exit 0
+        if [[ -n "${{ inputs.release-notes }}" ]]; then
+          echo "${{ inputs.release-notes }}" > release-notes.md
+        else
+          echo "" > release-notes.md
         fi
-
-        # Case 2: Fetch notes from Jira.
-        if [[ -n "${{ inputs.jira_release_name }}" ]]; then
-          echo "Fetching release notes from Jira for version: ${{ inputs.jira_release_name }}"
-
-          # Setup Python environment
-          echo "Setting up Python..."
-          python -m venv .venv
-          source .venv/bin/activate
-          pip install -r ${{ github.action_path }}/requirements.txt
-          echo "Python setup complete."
-
-          SANDBOX_FLAG=""
-          if [[ "${{ inputs.use_sandbox }}" == "true" ]]; then
-            SANDBOX_FLAG="--use-sandbox"
-          fi
-
-          python ${{ github.action_path }}/fetch_jira_release_notes.py \
-            --project-key "${{ inputs.jira_project_key }}" \
-            --release-name "${{ inputs.jira_release_name }}" \
-            --issue-types "${{ inputs.issue_types }}" \
-            $SANDBOX_FLAG > release-notes.md
-
-          echo "Successfully fetched notes from Jira."
-          exit 0
-        fi
-      env:
-        JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
-        JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
 
     - name: Create Release with GitHub CLI
-      id: create_release
+      id: create-release
       shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
-        echo "${{ inputs.github_token }}" | gh auth login --with-token
-
         # Check if a release with the same title already exists
-        EXPECTED_TITLE="${{ inputs.version }}"
+        EXPECTED_TITLE="$VALIDATED_VERSION"
         EXISTING_RELEASE=$(gh api repos/${{ github.repository }}/releases --jq ".[] | select(.name == \"$EXPECTED_TITLE\")" || echo "")
 
         if [[ -n "$EXISTING_RELEASE" ]]; then
@@ -136,16 +75,16 @@ runs:
           if [[ "${{ inputs.draft }}" == "true" ]]; then
             # If draft=true and release exists, log warning and do nothing
             echo "::warning::A release with title '$EXPECTED_TITLE' already exists. Skipping creation since draft=true."
-            echo "release_url=${EXISTING_URL}" >> $GITHUB_OUTPUT
-            echo "release_id=${EXISTING_ID}" >> $GITHUB_OUTPUT
+            echo "release-url=${EXISTING_URL}" >> $GITHUB_OUTPUT
+            echo "release-id=${EXISTING_ID}" >> $GITHUB_OUTPUT
             exit 0
           else
             if [[ "$EXISTING_DRAFT" == "true" ]]; then
             # If draft=false and existing release is a draft, publish it
               echo "Found existing draft release with title '$EXPECTED_TITLE'. Publishing it instead of creating a new one."
               gh release edit "$EXISTING_TAG" --draft=false
-              echo "release_url=${EXISTING_URL}" >> $GITHUB_OUTPUT
-              echo "release_id=${EXISTING_ID}" >> $GITHUB_OUTPUT
+              echo "release-url=${EXISTING_URL}" >> $GITHUB_OUTPUT
+              echo "release-id=${EXISTING_ID}" >> $GITHUB_OUTPUT
               exit 0
             else
               # If draft=false and existing release is already published, this is an error
@@ -161,39 +100,44 @@ runs:
           DRAFT_FLAG="--draft"
         fi
 
-        RELEASE_URL=$(gh release create "${{ inputs.version }}" \
+        # Build the gh release create command
+        NOTES_FLAG=""
+        if [[ -n "${{ inputs.release-notes }}" ]]; then
+          NOTES_FLAG="--notes-file release-notes.md"
+        fi
+
+        RELEASE_URL=$(gh release create "$VALIDATED_VERSION" \
           --target "${{ inputs.branch }}" \
-          --title "${{ inputs.version }}" \
-          --notes-file "release-notes.md" \
+          --title "$VALIDATED_VERSION" \
+          $NOTES_FLAG \
           $DRAFT_FLAG)
 
-        echo "release_url=${RELEASE_URL}" >> $GITHUB_OUTPUT
+        echo "release-url=${RELEASE_URL}" >> $GITHUB_OUTPUT
 
         # Get the release ID only for published releases
         if [[ "${{ inputs.draft }}" != "true" ]]; then
-          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/${{ inputs.version }} --jq '.id')
-          echo "release_id=${RELEASE_ID}" >> $GITHUB_OUTPUT
+          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/$VALIDATED_VERSION --jq '.id')
+          echo "release-id=${RELEASE_ID}" >> $GITHUB_OUTPUT
         fi
 
     - name: Trigger Release Workflow
       shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
-        echo "${{ inputs.github_token }}" | gh auth login --with-token
-        
         # Set release ID based on draft status
         if [[ "${{ inputs.draft }}" == "true" ]]; then
           RELEASE_ID_VALUE="N/A"
         else
-          RELEASE_ID_VALUE="${{ steps.create_release.outputs.release_id }}"
+          RELEASE_ID_VALUE="${{ steps.create-release.outputs.release-id }}"
         fi
         
-        echo "Triggering release workflow '${{ inputs.release_workflow }}' with tag '${{ inputs.version }}', release ID '$RELEASE_ID_VALUE', and dryRun=${{ inputs.draft }}..."
+        echo "Triggering release workflow '${{ inputs.release-workflow }}' with tag '$VALIDATED_VERSION', release ID '$RELEASE_ID_VALUE', and dryRun=${{ inputs.draft }}..."
         
         # Trigger the workflow
-        gh workflow run "${{ inputs.release_workflow }}" \
+        gh workflow run "${{ inputs.release-workflow }}" \
           --repo "${{ github.repository }}" \
-          --ref "${{ inputs.release_workflow_ref }}" \
-          -f "version=${{ inputs.version }}" \
+          -f "version=$VALIDATED_VERSION" \
           -f "releaseId=$RELEASE_ID_VALUE" \
           -f "dryRun=${{ inputs.draft }}"
         
@@ -204,8 +148,9 @@ runs:
         
         RUN_ID=$(gh run list \
           --repo "${{ github.repository }}" \
-          --workflow "${{ inputs.release_workflow }}" \
+          --workflow "${{ inputs.release-workflow }}" \
           --limit 1 \
+          --created "$(date -u -d '10 minutes ago' +%Y-%m-%dT%H:%M:%SZ).." \
           --json databaseId \
           --jq '.[0].databaseId')
         
