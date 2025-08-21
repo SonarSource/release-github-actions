@@ -149,9 +149,9 @@ runs:
             rule_count=$(echo "$line" | grep -o 'Found [0-9]\+' | grep -o '[0-9]\+')
             if [[ -n "$rule_count" && "$rule_count" != "0" && -n "$current_sonarpedia" ]]; then
               if [[ -n "$summary" ]]; then
-                summary="${summary}, "
+                summary="${summary},\n"
               fi
-              summary="${summary} Checkked ${rule_count} rules for ${current_sonarpedia}"
+              summary="${summary} ${rule_count} rules for ${current_sonarpedia}"
             fi
           fi
         done < rule-api-logs.txt
@@ -159,7 +159,7 @@ runs:
         if [[ -z "$summary" ]]; then
           summary="Update rule metadata"
         else
-          summary="Check rule metadata for: ${summary}"
+          summary="Check rule metadata for:\n ${summary}"
         fi
         
         echo "summary=${summary}" >> $GITHUB_OUTPUT
