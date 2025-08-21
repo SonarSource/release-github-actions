@@ -41,29 +41,24 @@ jobs:
           echo "Updating all SonarSource/release-github-actions references to: ${TARGET_REF}"
           
           # Find all action.yml files that contain SonarSource/release-github-actions references
-          # Exclude .git directory and the workflow file itself
           find . -type f -name "action.yml" \
             -not -path "./.git/*" \
             -exec grep -l "SonarSource/release-github-actions/" {} \; | while read file; do
             
             echo "Processing file: $file"
             
-            # Use sed to replace the reference pattern
             # Pattern: SonarSource/release-github-actions/{action-name}@{old-ref}
             # Replace with: SonarSource/release-github-actions/{action-name}@{new-ref}
             sed -i.bak -E "s|(SonarSource/release-github-actions/[^@]+)@[^[:space:]]+|\1@${TARGET_REF}|g" "$file"
             
-            # Check if file was modified
             if ! diff -q "$file" "$file.bak" >/dev/null 2>&1; then
               echo "  ✓ Updated references in $file"
-              # Show what changed
               echo "  Changes:"
               diff "$file.bak" "$file" | grep -E "^[<>]" | head -5 || true
             else
               echo "  - No changes needed in $file"
             fi
             
-            # Clean up backup file
             rm -f "$file.bak"
           done
 
