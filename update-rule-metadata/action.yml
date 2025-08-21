@@ -82,7 +82,7 @@ runs:
       id: generate-summary
       shell: bash
       run: |
-        summary="Check rule metadata for:<br>"
+        summary="Check rule metadata for:\n"
         while IFS= read -r line; do
           if [[ $line == "=== "* ]]; then
             current_lang=$(echo "$line" | sed 's/=== \(.*\) ===/\1/')
@@ -90,7 +90,7 @@ runs:
             rule_count=$(echo "$line" | grep -o '[0-9]\+' | head -1)
             if [[ -n "$rule_count" && "$rule_count" != "0" ]]; then
               if [[ -n "$summary" ]]; then
-                summary="${summary}<br>"
+                summary="${summary}}\n"
               fi
               summary="${summary} ${rule_count} ${current_lang} rules"
             fi
@@ -104,6 +104,12 @@ runs:
         echo "summary=${summary}" >> $GITHUB_OUTPUT
         rm rule-api-logs.txt
 
+    - name: Prepare summary for PR
+      id: prepare-summary
+      shell: bash
+      run: |
+        workflow_summary=$(echo "${{ steps.update-rule-metadata.outputs.summary }}" | sed 's/\n/<br>/g')
+
     - name: Create PR
       if: steps.check-changes.outputs.has-changes == 'true'
       id: create-pr
@@ -114,10 +120,11 @@ runs:
         body: |
           ## Rule Metadata Update Summary
           
-          ${{ steps.generate-summary.outputs.summary }}
+          ${{ steps.prepare-summary.outputs.summary }}
           
           This PR was automatically generated to update rule metadata across all supported languages.
         base: master
         branch: bot/update-rule-metadata
         branch-suffix: timestamp
         labels: skip-qa
+
