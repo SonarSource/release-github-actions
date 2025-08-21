@@ -107,6 +107,8 @@ runs:
         # Store the original directory
         original_dir=$(pwd)
         
+        log_file="$original_dir/rule-api-logs.txt"
+        
         # Loop through each directory containing sonarpedia.json
         while IFS= read -r dir; do
           if [ -d "$dir" ]; then
@@ -120,13 +122,13 @@ runs:
               dir_name="${parent_dir##*/}/${dir_name}"
             fi
             
-            echo "=== $dir_name ===" >> "$original_dir/rule-api-logs.txt"
+            echo "=== $dir_name/sonarpedia.json ===" >> $log_file
             
             # Calculate relative path to rule-api.jar from current directory
             rel_path=$(realpath --relative-to="$PWD" "$original_dir/rule-api.jar")
             
             # Run rule-api update in the current directory
-            java -jar "$rel_path" update 2>&1 | tee -a "$original_dir/rule-api-logs.txt"
+            java -jar "$rel_path" update 2>&1 | tee -a $log_file
             
             # Return to the original directory
             cd "$original_dir"
@@ -137,26 +139,28 @@ runs:
       id: generate-summary
       shell: bash
       run: |
-        summary="Check rule metadata for:\n"
+        summary=""
+        current_sonarpedia=""
+        
         while IFS= read -r line; do
           if [[ $line == "=== "* ]]; then
-            current_lang=$(echo "$line" | sed 's/=== \(.*\) ===/\1/')
-          elif [[ $line == "Found "* ]]; then
-            rule_count=$(echo "$line" | grep -o '[0-9]\+' | head -1)
-            if [[ -n "$rule_count" && "$rule_count" != "0" ]]; then
+            current_sonarpedia=$(echo "$line" | sed 's/=== \(.*\) ===/\1/')
+          elif [[ $line == *"Found "* && $line == *" rule(s) to update"* ]]; then
+            rule_count=$(echo "$line" | grep -o 'Found [0-9]\+' | grep -o '[0-9]\+')
+            if [[ -n "$rule_count" && "$rule_count" != "0" && -n "$current_sonarpedia" ]]; then
               if [[ -n "$summary" ]]; then
-                summary="${summary}}\n"
+                summary="${summary}, "
               fi
-              summary="${summary} ${rule_count} ${current_lang} rules"
+              summary="${summary} Checkked ${rule_count} rules for ${current_sonarpedia}"
             fi
           fi
         done < rule-api-logs.txt
         
         if [[ -z "$summary" ]]; then
           summary="Update rule metadata"
+        else
+          summary="Check rule metadata for: ${summary}"
         fi
-        
-        cat rule-api-logs.txt
         
         echo "summary=${summary}" >> $GITHUB_OUTPUT
         rm rule-api-logs.txt
