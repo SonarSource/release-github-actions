@@ -1,0 +1,210 @@
+name: Update Rule Metadata
+description: |
+  This workflow updates rule metadata across all supported languages using the rule-api tooling.
+  It checks for changes and creates a pull request if any updates are made.
+
+inputs:
+  rule-api-version:
+    description: Version of the rule-api tooling to be used for the workflow.
+  sonarpedia-files:
+    description: |
+      Comma-separated list of sonarpedia files to be updated.
+      By default, it will update all Sonarpedia files in the repository.
+
+outputs:
+  has-changes:
+      description: 'Indicates whether rule metadata changes were detected.'
+      value: ${{ steps.check-changes.outputs.has-changes }}
+  pull-request-url:
+      description: 'URL of the created pull request if changes were detected.'
+      value: ${{ steps.create-pr.outputs.pull-request-url }}
+  summary:
+      description: 'Summary of the rule metadata update.'
+      value: ${{ steps.generate-summary.outputs.summary }}
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v4
+    - name: Get vault secrets
+      id: secrets
+      uses: SonarSource/vault-action-wrapper@320bd31b03e5dacaac6be51bbbb15adf7caccc32 # v3.1
+      with:
+        secrets: |
+          development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader access_token | ARTIFACTORY_ACCESS_TOKEN;
+          development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader role | ARTIFACTORY_ROLE;  
+
+    - name: Cache rule-api jar
+      id: cache-rule-api
+      uses: actions/cache@v4
+      with:
+        path: rule-api.jar
+        key: rule-api-${{ inputs.rule-api-version || '2.15.0.4476' }}
+
+    - name: Download rule-api jar
+      if: ${{ steps.cache-rule-api.outputs.cache-hit != 'true' }}
+      env:
+        REPOX_USER: vault-${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_ROLE }}
+        REPOX_PASS: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_ACCESS_TOKEN }}
+        RULE_API_VERSION: ${{ inputs.rule-api-version || '2.15.0.4476' }}
+      shell: bash
+      run: |
+        echo "Downloading rule-api.jar version '$RULE_API_VERSION' from Artifactory"
+        curl -u $REPOX_USER:$REPOX_PASS -o rule-api.jar "https://repox.jfrog.io/artifactory/sonarsource-private-releases/com/sonarsource/rule-api/rule-api/$RULE_API_VERSION/rule-api-$RULE_API_VERSION.jar"
+        echo "Downloaded rule-api.jar ($(ls -lh rule-api.jar | awk '{print $5}'))"
+
+    - name: Install Java to run rule-api
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: 17
+
+    - name: Run rule-api to update metadata
+      shell: bash
+      run: |
+        echo "" > rule-api-logs.txt
+        
+        # Check if specific sonarpedia-files input is provided
+        if [ -n "${{ inputs.sonarpedia-files}}" ]; then
+          echo "Using specified sonarpedia files: ${{ inputs.sonarpedia-files}}"
+          
+          # Convert comma-separated list to array and process each file
+          IFS=',' read -ra SONARPEDIA_FILES <<< "${{ inputs.sonarpedia-files}}"
+          sonarpedia_dirs=""
+          
+          for file in "${SONARPEDIA_FILES[@]}"; do
+            # Trim whitespace
+            file=$(echo "$file" | xargs)
+            
+            # Check if file exists
+            if [ -f "$file" ]; then
+              # Get directory containing the file
+              dir=$(dirname "$file")
+              sonarpedia_dirs="$sonarpedia_dirs$dir"$'\n'
+            else
+              echo "Warning: Specified sonarpedia file not found: $file"
+            fi
+          done
+          
+          # Remove empty lines and duplicates
+          sonarpedia_dirs=$(echo "$sonarpedia_dirs" | grep -v '^$' | sort | uniq)
+        else
+          echo "No specific files provided, discovering all sonarpedia.json files in repository"
+          
+          # Find all directories containing sonarpedia.json files
+          sonarpedia_dirs=$(find . -name "sonarpedia.json" -type f | sed 's|/sonarpedia.json$||' | sort | uniq)
+        fi
+        
+        if [ -z "$sonarpedia_dirs" ]; then
+          echo "No sonarpedia.json files found to process"
+          exit 1
+        fi
+        
+        echo "Found sonarpedia.json files in the following directories:"
+        echo "$sonarpedia_dirs"
+        echo ""
+        
+        # Store the original directory
+        original_dir=$(pwd)
+        
+        log_file="$original_dir/rule-api-logs.txt"
+        
+        # Loop through each directory containing sonarpedia.json
+        while IFS= read -r dir; do
+          if [ -d "$dir" ]; then
+            echo "Processing directory: $dir"
+            cd "$dir"
+            
+            # Extract a meaningful name for logging (use last part of path)
+            dir_name=$(basename "$dir")
+            parent_dir=$(dirname "$dir")
+            if [ "$parent_dir" != "." ]; then
+              dir_name="${parent_dir##*/}/${dir_name}"
+            fi
+            
+            echo "=== $dir_name/sonarpedia.json ===" >> $log_file
+            
+            # Calculate relative path to rule-api.jar from current directory
+            rel_path=$(realpath --relative-to="$PWD" "$original_dir/rule-api.jar")
+            
+            # Run rule-api update in the current directory
+            java -jar "$rel_path" update 2>&1 | tee -a $log_file
+            
+            # Return to the original directory
+            cd "$original_dir"
+          fi
+        done <<< "$sonarpedia_dirs"
+
+    - name: Generate summary
+      id: generate-summary
+      shell: bash
+      run: |
+        summary=""
+        current_sonarpedia=""
+        
+        while IFS= read -r line; do
+          if [[ $line == "=== "* ]]; then
+            current_sonarpedia=$(echo "$line" | sed 's/=== \(.*\) ===/\1/')
+          elif [[ $line == *"Found "* && $line == *" rule(s) to update"* ]]; then
+            rule_count=$(echo "$line" | grep -o 'Found [0-9]\+' | grep -o '[0-9]\+')
+            if [[ -n "$rule_count" && "$rule_count" != "0" && -n "$current_sonarpedia" ]]; then
+              if [[ -n "$summary" ]]; then
+                summary="${summary},\n"
+              fi
+              summary="${summary} ${rule_count} rules for ${current_sonarpedia}"
+            fi
+          fi
+        done < rule-api-logs.txt
+        
+        if [[ -z "$summary" ]]; then
+          summary="Update rule metadata"
+        else
+          summary="Check rule metadata for:\n ${summary}"
+        fi
+        
+        echo "summary=${summary}" >> $GITHUB_OUTPUT
+        rm rule-api-logs.txt
+
+    - name: Prepare summary for PR
+      id: pr-summary
+      shell: bash
+      run: |
+        echo "summary=${{ steps.generate-summary.outputs.summary }}" | sed ':a;N;$!ba;s/\n/<br>/g' >> $GITHUB_OUTPUT
+        
+    - name: Check Rule Metadata Changes
+      id: check-changes
+      shell: bash
+      run: |
+        echo "Checking for rule metadata changes (excluding sonarpedia.json files)..."
+        
+        # Show the diff excluding sonarpedia.json files
+        if git diff --quiet HEAD -- . ':!*sonarpedia.json'; then
+          echo "No changes detected (excluding sonarpedia.json files)"
+          echo "has-changes=false" >> $GITHUB_OUTPUT
+        else
+          echo "Changes detected in rule metadata files:"
+          echo ""
+          echo "=== Git Diff (excluding sonarpedia.json) ==="
+          git diff HEAD -- . ':!*sonarpedia.json'
+          echo "=== End of Git Diff ==="
+          echo ""
+          echo "has-changes=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Create PR
+      if: ${{ steps.check-changes.outputs.has-changes == 'true' }}
+      id: create-pr
+      uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+      with:
+        commit-message: Update rule metadata
+        title: Update rule metadata
+        body: |
+          ## Rule Metadata Update Summary
+          
+          ${{ steps.pr-summary.outputs.summary }}
+          
+          This PR was automatically generated to update rule metadata across all supported languages.
+        base: master
+        branch: bot/update-rule-metadata
+        branch-suffix: timestamp
+        labels: skip-qa
