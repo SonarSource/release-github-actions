@@ -169,7 +169,7 @@ runs:
       id: pr-summary
       shell: bash
       run: |
-         echo "summary=$(echo "${{ steps.generate-summary.outputs.summary }}" | sed 's/\n/<br>/g')" >> $GITHUB_OUTPUT
+        echo "summary=${{ steps.generate-summary.outputs.summary }}" | sed ':a;N;$!ba;s/\n/<br>/g' >> $GITHUB_OUTPUT
         
     - name: Check Rule Metadata Changes
       id: check-changes
