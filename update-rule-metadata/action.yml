@@ -167,14 +167,17 @@ runs:
           summary="Update rule metadata"
         fi
         
+        cat rule-api-logs.txt
+        
         echo "summary=${summary}" >> $GITHUB_OUTPUT
         rm rule-api-logs.txt
 
     - name: Prepare summary for PR
-      id: prepare-summary
+      id: pr-summary
       shell: bash
       run: |
-        workflow_summary=$(echo "${{ steps.update-rule-metadata.outputs.summary }}" | sed 's/\n/<br>/g')
+         echo "summary=$(echo "${{ steps.update-rule-metadata.outputs.summary }}" | sed 's/\n/<br>/g')" >> $GITHUB_OUTPUT
+        
 
     - name: Create PR
       if: steps.check-changes.outputs.has-changes == 'true'
@@ -186,7 +189,7 @@ runs:
         body: |
           ## Rule Metadata Update Summary
           
-          ${{ steps.prepare-summary.outputs.summary }}
+          ${{ steps.pr-summary.outputs.summary }}
           
           This PR was automatically generated to update rule metadata across all supported languages.
         base: master
