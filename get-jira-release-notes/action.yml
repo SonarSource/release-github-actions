@@ -6,10 +6,9 @@ inputs:
   jira-project-key:
     description: 'The key of the Jira project (e.g., SONARIAC). Can also be set via JIRA_PROJECT_KEY environment variable.'
   jira-version-name:
-    description: 'The name of the Jira version/fixVersion (e.g., 1.2.3). Can also be set via JIRA_VERSION environment variable.'
+    description: 'The name of the Jira version/fixVersion (e.g., 1.2.3). Can also be set via JIRA_VERSION_NAME environment variable.'
   use-jira-sandbox:
     description: "Use the sandbox Jira server instead of production."
-    default: 'false'
   issue-types:
     description: 'Optional comma-separated list of issue types to include, in order.'
     default: 'New Feature,False Positive,False Negative,Bug,Improvement'
@@ -42,8 +41,8 @@ runs:
       shell: bash
       run: pip install -r ${{ github.action_path }}/requirements.txt
 
-    - name: Get JIRA_VERSION if not provided
-      if: ${{ !inputs.jira-version-name && !env.JIRA_VERSION }}
+    - name: Get JIRA_VERSION_NAME if not provided
+      if: ${{ !inputs.jira-version-name && !env.JIRA_VERSION_NAME }}
       uses: SonarSource/release-github-actions/get-jira-version@6452648457a9c19d90b859faf36465af99454bc6
 
     - name: Get Jira release notes and URL
@@ -56,7 +55,7 @@ runs:
         JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
       run: |
         PROJECT_KEY="${{ inputs.jira-project-key || env.JIRA_PROJECT_KEY }}"
-        VERSION_NAME="${{ inputs.jira-version-name || env.JIRA_VERSION }}"
+        VERSION_NAME="${{ inputs.jira-version-name || env.JIRA_VERSION_NAME }}"
         
         if [[ -z "$PROJECT_KEY" || -z "$VERSION_NAME" ]]; then
           echo "::error::Both jira-project-key and jira-version-name must be provided"

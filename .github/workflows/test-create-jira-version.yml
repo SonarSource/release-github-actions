@@ -1,12 +1,17 @@
 name: Test Create Jira Version Action
 
 on:
+  workflow_call:
   pull_request:
-  merge_group:
+    paths:
+      - 'create-jira-version/**'
+      - '.github/workflows/test-create-jira-version.yml'
   push:
     branches:
-      - master
       - branch-*
+    paths:
+      - 'create-jira-version/**'
+      - '.github/workflows/test-create-jira-version.yml'
   workflow_dispatch:
 
 jobs:

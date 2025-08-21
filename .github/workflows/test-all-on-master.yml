@@ -1,0 +1,30 @@
+name: Test All Actions on Master
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  test-get-jira-version:
+    uses: ./.github/workflows/test-get-jira-version.yml
+
+  test-create-jira-version:
+    uses: ./.github/workflows/test-create-jira-version.yml
+
+  test-release-jira-version:
+    uses: ./.github/workflows/test-release-jira-version.yml
+
+  test-create-jira-release-ticket:
+    uses: ./.github/workflows/test-create-jira-release-ticket.yml
+
+  test-create-integration-ticket:
+    uses: ./.github/workflows/test-create-integration-ticket.yml
+
+  test-check-releasability-status:
+    uses: ./.github/workflows/test-check-releasability-status.yml
+
+  test-get-release-version:
+    uses: ./.github/workflows/test-get-release-version.yml
+
+  test-get-jira-release-notes:
+    uses: ./.github/workflows/test-get-jira-release-notes.yml

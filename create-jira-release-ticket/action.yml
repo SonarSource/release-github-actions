@@ -20,7 +20,6 @@ inputs:
     description: 'The version being released (e.g., 11.44.2), or leave empty to use the release version.'
   use-jira-sandbox:
     description: "Use the sandbox server instead of the production Jira."
-    default: 'false'
   documentation-status:
     description: 'Status of the documentation'
     default: 'N/A'

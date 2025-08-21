@@ -22,6 +22,7 @@ CUSTOM_FIELDS = {
 }
 
 
+# noinspection DuplicatedCode
 def eprint(*args, **kwargs):
     """
     Prints messages to the standard error stream (stderr).
@@ -62,7 +63,6 @@ def get_jira_instance(jira_url):
     except Exception as e:
         eprint(f"An unexpected error occurred during JIRA connection: {e}")
         sys.exit(1)
-
 
 
 def create_release_ticket(jira_client, args, link_to_release_notes):

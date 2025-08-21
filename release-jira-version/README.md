@@ -6,8 +6,9 @@ This GitHub Action automates releasing a version in Jira.
 
 The action performs the following operations:
 1. Connecting to Jira using authentication credentials from Vault
-2. Finding a Jira version matching the `jira_version_name` input within the specified `jira_project_key`
-3. Marking that version as "released" in Jira, setting the release date to the current day
+2. Validating required project key from inputs or environment variables
+3. Finding a Jira version matching the `jira-version-name` input within the specified `jira-project-key`
+4. Marking that version as "released" in Jira, setting the release date to the current day
 
 ## Dependencies
 
@@ -17,11 +18,13 @@ This action depends on:
 
 ## Inputs
 
-| Input               | Description                                                                                                                                      | Required | Default         |
-|---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|----------|-----------------|
-| `jira_project_key`  | The key of the Jira project (e.g., SONARIAC)                                                                                                     | Yes      | -               |
-| `jira_version_name` | The name of the Jira version to release (e.g., 1.2.3). If not provided, the script will determine the next version based on the release version. | No       | Auto-determined |
-| `use_jira_sandbox`  | Use the sandbox Jira server instead of production. Can also be controlled via `USE_JIRA_SANDBOX` environment variable.                           | No       | `false`         |
+| Input               | Description                                                                                                                                                                  | Required | Default         |
+|---------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|-----------------|
+| `jira-project-key`  | The key of the Jira project (e.g., SONARIAC). Can also be set via `JIRA_PROJECT_KEY` environment variable                                                                     | No*      | -               |
+| `jira-version-name` | The name of the Jira version to release (e.g., 1.2.3). Can also be set via `JIRA_VERSION_NAME` environment variable. If not provided, the script will determine the next version based on the release version. | No       | Auto-determined |
+| `use-jira-sandbox`  | Use the sandbox server instead of the production Jira. Can also be controlled via `USE_JIRA_SANDBOX` environment variable                                                     | No       | -               |
+
+*Either the input or corresponding environment variable must be provided for jira-project-key.
 
 ## Outputs
 
@@ -35,8 +38,8 @@ No outputs are defined for this action, as it primarily performs operations with
 - name: Release Jira Version
   uses: SonarSource/release-github-actions/release-jira-version@master
   with:
-    jira_project_key: 'SONARIAC'
-    jira_version_name: '1.2.3'
+    jira-project-key: 'SONARIAC'
+    jira-version-name: '1.2.3'
 ```
 
 ### Auto-determine version to release
@@ -45,38 +48,37 @@ No outputs are defined for this action, as it primarily performs operations with
 - name: Release Current Jira Version
   uses: SonarSource/release-github-actions/release-jira-version@master
   with:
-    jira_project_key: 'SONARIAC'
-    # jira_version_name is omitted - will auto-determine from the release version
+    jira-project-key: 'SONARIAC'
+    # jira-version-name is omitted - will auto-determine from the release version
 ```
 
-### Using sandbox environment (with input)
+### Using environment variables
 
 ```yaml
-- name: Release Jira Version in Sandbox
-  uses: SonarSource/release-github-actions/release-jira-version@master
-  with:
-    jira_project_key: 'SONARIAC'
-    jira_version_name: '1.2.3'
-    use_jira_sandbox: 'true'
-```
-
-### Using sandbox environment (with environment variable)
-
-```yaml
-- name: Release Jira Version in Sandbox
+- name: Release Jira Version
   uses: SonarSource/release-github-actions/release-jira-version@master
   env:
-    USE_JIRA_SANDBOX: 'true'
+    JIRA_PROJECT_KEY: 'SONARIAC'
+    JIRA_VERSION_NAME: '1.2.3'
+```
+
+### Using sandbox environment
+
+```yaml
+- name: Release Jira Version in Sandbox
+  uses: SonarSource/release-github-actions/release-jira-version@master
   with:
-    jira_project_key: 'SONARIAC'
-    jira_version_name: '1.2.3'
+    jira-project-key: 'SONARIAC'
+    jira-version-name: '1.2.3'
+    use-jira-sandbox: 'true'
 ```
 
 ## Implementation Details
 
 The action uses a Python script that:
 - Authenticates with Jira using credentials from HashiCorp Vault
-- Supports both production and sandbox Jira environments (via input or environment variable)
+- Validates required project key from inputs or environment variables
+- Supports both production and sandbox Jira environments via URL selection
 - Can auto-determine which version to release by finding the latest unreleased version
 - Releases the specified version using the Jira REST API
 
@@ -90,7 +92,8 @@ The [Jira API user](https://sonarsource.atlassian.net/jira/people/712020:9dcffe4
 ## Notes
 
 - This action requires access to SonarSource's HashiCorp Vault for Jira credentials
+- Either `jira-project-key` input or `JIRA_PROJECT_KEY` environment variable must be provided
+- Input parameters take precedence over environment variables when both are provided
 - The action supports both production and sandbox Jira environments
-- Environment variables take precedence when both input and environment variable are provided
 - Version names should follow semantic versioning patterns for best results
 - The released version will be marked with the current date as the release date

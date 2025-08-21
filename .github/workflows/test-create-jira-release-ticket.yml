@@ -1,12 +1,17 @@
 name: Test Create Jira Release Ticket Action
 
 on:
+  workflow_call:
   pull_request:
-  merge_group:
+    paths:
+      - 'create-jira-release-ticket/**'
+      - '.github/workflows/test-create-jira-release-ticket.yml'
   push:
     branches:
-      - master
       - branch-*
+    paths:
+      - 'create-jira-release-ticket/**'
+      - '.github/workflows/test-create-jira-release-ticket.yml'
   workflow_dispatch:
 
 jobs:

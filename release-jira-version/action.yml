@@ -3,18 +3,15 @@ description: 'Releases a specified Jira version and creates a new one.'
 author: 'SonarSource'
 
 inputs:
-  jira_project_key:
-    description: 'The key of the Jira project (e.g., SONARIAC).'
-    required: true
-  jira_version_name:
-    description: |
-      The name of the Jira version to release (e.g., 1.2.3).
-      If not provided, the script will determine the next version based on the Jira version.'
+  jira-project-key:
+    description: 'The key of the Jira project (e.g., SONARIAC). Required if JIRA_PROJECT_KEY env var is not set.'
     required: false
-  use_jira_sandbox:
-    description: "Use the sandbox Jira server instead of production."
+  jira-version-name:
+    description: 'The name of the Jira version to release (e.g., 1.2.3). Can also be set via JIRA_VERSION_NAME environment variable. If not provided, the script will determine the next version based on the Jira version.'
     required: false
-    default: 'false'
+  use-jira-sandbox:
+    description: "Use the sandbox server instead of the production Jira. Can also be controlled via USE_JIRA_SANDBOX environment variable."
+    required: false
 
 runs:
   using: "composite"
@@ -37,14 +34,15 @@ runs:
       run: pip install -r ${{ github.action_path }}/requirements.txt
 
     - uses: SonarSource/release-github-actions/get-jira-version@6452648457a9c19d90b859faf36465af99454bc6
-      if: ${{ !inputs.jira_version_name }}
+      id: get-jira-version
+      if: ${{ !inputs.jira-version-name && !env.JIRA_VERSION_NAME }}
 
     - name: Determine Jira Version
-      id: determine_version_name
-      if: ${{ !inputs.jira_version_name }}
+      id: determine-version-name
+      if: ${{ !inputs.jira-version-name && !env.JIRA_VERSION_NAME }}
       shell: bash
       run: |
-        echo "VERSION_NAME=$(echo "${{ steps.get-jira-version.outputs.jira_version }}" | awk -F. '{$NF+=1; OFS="."; print $0}')" >> $GITHUB_OUTPUT
+        echo "VERSION_NAME=$(echo "${{ steps.get-jira-version.outputs.jira-version-name }}" | awk -F. '{$NF+=1; OFS="."; print $0}')" >> $GITHUB_OUTPUT
 
     - name: Release Jira Version
       id: run_python_script
@@ -55,8 +53,15 @@ runs:
         JIRA_PROD_URL: "https://sonarsource.atlassian.net/"
         JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
       run: |
+        PROJECT_KEY="${{ inputs.jira-project-key || env.JIRA_PROJECT_KEY }}"
+        
+        if [[ -z "$PROJECT_KEY" ]]; then
+          echo "::error::Both jira-project-key input and JIRA_PROJECT_KEY environment variable are missing. One must be provided."
+          exit 1
+        fi
+
         python ${{ github.action_path }}/release_jira_version.py \
-        --project-key="${{ inputs.jira_project_key }}" \
-        --version-name="${{ inputs.jira_version_name || steps.determine_version_name.outputs.VERSION_NAME }}" \
-        --jira-url="${{ ((inputs.use_jira_sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
+        --project-key="$PROJECT_KEY" \
+        --version-name="${{ inputs.jira-version-name || env.JIRA_VERSION_NAME || steps.determine-version-name.outputs.VERSION_NAME }}" \
+        --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
         >> $GITHUB_OUTPUT
