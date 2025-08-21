@@ -47,10 +47,9 @@ runs:
       env:
         REPOX_USER: vault-${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_ROLE }}
         REPOX_PASS: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_ACCESS_TOKEN }}
-        RULE_API_VERSION: ${{ inputs.rule-api-version }}
       shell: bash
       run: |
-        curl -u $REPOX_USER:$REPOX_PASS -o rule-api.jar "https://repox.jfrog.io/artifactory/sonarsource-private-releases/com/sonarsource/rule-api/rule-api/$RULE_API_VERSION/rule-api-$RULE_API_VERSION.jar"
+        curl -u $REPOX_USER:$REPOX_PASS -o rule-api.jar "https://repox.jfrog.io/artifactory/sonarsource-private-releases/com/sonarsource/rule-api/rule-api/${{ inputs.rule-api-version }}/rule-api-${{ inputs.rule-api-version }}.jar"
         echo "Downloaded rule-api.jar ($(ls -lh rule-api.jar | awk '{print $5}'))"
 
     - name: Install Java to run rule-api
