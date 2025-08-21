@@ -6,10 +6,6 @@ on:
     paths:
       - 'check-releasability-status/**'
       - '.github/workflows/test-check-releasability-status.yml'
-  merge_group:
-    paths:
-      - 'check-releasability-status/**'
-      - '.github/workflows/test-check-releasability-status.yml'
   push:
     branches:
       - branch-*

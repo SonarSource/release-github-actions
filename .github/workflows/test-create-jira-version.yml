@@ -6,10 +6,6 @@ on:
     paths:
       - 'create-jira-version/**'
       - '.github/workflows/test-create-jira-version.yml'
-  merge_group:
-    paths:
-      - 'create-jira-version/**'
-      - '.github/workflows/test-create-jira-version.yml'
   push:
     branches:
       - branch-*

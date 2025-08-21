@@ -6,10 +6,6 @@ on:
     paths:
       - 'get-release-version/**'
       - '.github/workflows/test-get-release-version.yml'
-  merge_group:
-    paths:
-      - 'get-release-version/**'
-      - '.github/workflows/test-get-release-version.yml'
   push:
     branches:
       - branch-*

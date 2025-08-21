@@ -6,10 +6,6 @@ on:
     paths:
       - 'create-integration-ticket/**'
       - '.github/workflows/test-create-integration-ticket.yml'
-  merge_group:
-    paths:
-      - 'create-integration-ticket/**'
-      - '.github/workflows/test-create-integration-ticket.yml'
   push:
     branches:
       - branch-*
