@@ -6,7 +6,6 @@ description: |
 inputs:
   rule-api-version:
     description: Version of the rule-api tooling to be used for the workflow.
-    default: '2.15.0.4476'
   sonarpedia-files:
     description: |
       Comma-separated list of sonarpedia files to be updated.
@@ -40,17 +39,18 @@ runs:
       uses: actions/cache@v4
       with:
         path: rule-api.jar
-        key: rule-api-${{ inputs.rule-api-version }}
+        key: rule-api-${{ inputs.rule-api-version | '2.15.0.4476' }}
 
     - name: Download rule-api jar
       if: ${{ steps.cache-rule-api.outputs.cache-hit != 'true' }}
       env:
         REPOX_USER: vault-${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_ROLE }}
         REPOX_PASS: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_ACCESS_TOKEN }}
+        RULE_API_VERSION: ${{ inputs.rule-api-version | '2.15.0.4476' }}
       shell: bash
       run: |
-        echo "Downloading rule-api.jar version '${{ inputs.rule-api-version }}' from Artifactory"
-        curl -u $REPOX_USER:$REPOX_PASS -o rule-api.jar "https://repox.jfrog.io/artifactory/sonarsource-private-releases/com/sonarsource/rule-api/rule-api/${{ inputs.rule-api-version }}/rule-api-${{ inputs.rule-api-version }}.jar"
+        echo "Downloading rule-api.jar version '$RULE_API_VERSION' from Artifactory"
+        curl -u $REPOX_USER:$REPOX_PASS -o rule-api.jar "https://repox.jfrog.io/artifactory/sonarsource-private-releases/com/sonarsource/rule-api/rule-api/$RULE_API_VERSION/rule-api-$RULE_API_VERSION.jar"
         echo "Downloaded rule-api.jar ($(ls -lh rule-api.jar | awk '{print $5}'))"
 
     - name: Install Java to run rule-api
