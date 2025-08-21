@@ -169,18 +169,26 @@ runs:
       id: pr-summary
       shell: bash
       run: |
-         echo "summary=$(echo "${{ steps.update-rule-metadata.outputs.summary }}" | sed 's/\n/<br>/g')" >> $GITHUB_OUTPUT
+         echo "summary=$(echo "${{ steps.generate-summary.outputs.summary }}" | sed 's/\n/<br>/g')" >> $GITHUB_OUTPUT
         
     - name: Check Rule Metadata Changes
       id: check-changes
       shell: bash
       run: |
-        if git diff HEAD -- . ':!*sonarpedia.json'; then
-          echo "Changes detected"
-          echo "has-changes=true" >> $GITHUB_OUTPUT
-        else
+        echo "Checking for rule metadata changes (excluding sonarpedia.json files)..."
+        
+        # Show the diff excluding sonarpedia.json files
+        if git diff --quiet HEAD -- . ':!*sonarpedia.json'; then
           echo "No changes detected (excluding sonarpedia.json files)"
           echo "has-changes=false" >> $GITHUB_OUTPUT
+        else
+          echo "Changes detected in rule metadata files:"
+          echo ""
+          echo "=== Git Diff (excluding sonarpedia.json) ==="
+          git diff HEAD -- . ':!*sonarpedia.json'
+          echo "=== End of Git Diff ==="
+          echo ""
+          echo "has-changes=true" >> $GITHUB_OUTPUT
         fi
 
     - name: Create PR
