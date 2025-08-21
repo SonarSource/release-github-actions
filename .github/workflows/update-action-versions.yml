@@ -12,6 +12,9 @@ jobs:
   update-versions:
     name: Update Action Versions
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
 
     steps:
       - name: Checkout repository
@@ -37,11 +40,10 @@ jobs:
           TARGET_REF="${{ steps.get-ref.outputs.target_ref }}"
           echo "Updating all SonarSource/release-github-actions references to: ${TARGET_REF}"
           
-          # Find all files that contain SonarSource/release-github-actions references
+          # Find all action.yml files that contain SonarSource/release-github-actions references
           # Exclude .git directory and the workflow file itself
-          find . -type f \( -name "*.yml" -o -name "*.yaml" -o -name "*.md" \) \
+          find . -type f -name "action.yml" \
             -not -path "./.git/*" \
-            -not -path "./.github/workflows/update-action-versions.yml" \
             -exec grep -l "SonarSource/release-github-actions/" {} \; | while read file; do
             
             echo "Processing file: $file"
@@ -95,7 +97,7 @@ jobs:
             
             ## Changes
             
-            - Updated action references in YAML files and documentation
+            - Updated action references in action.yml files
             - Used reference: `${{ steps.get-ref.outputs.target_ref }}`
             
             ## Files Modified
