@@ -39,14 +39,14 @@ runs:
       uses: actions/cache@v4
       with:
         path: rule-api.jar
-        key: rule-api-${{ inputs.rule-api-version | '2.15.0.4476' }}
+        key: rule-api-${{ inputs.rule-api-version || '2.15.0.4476' }}
 
     - name: Download rule-api jar
       if: ${{ steps.cache-rule-api.outputs.cache-hit != 'true' }}
       env:
         REPOX_USER: vault-${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_ROLE }}
         REPOX_PASS: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_ACCESS_TOKEN }}
-        RULE_API_VERSION: ${{ inputs.rule-api-version | '2.15.0.4476' }}
+        RULE_API_VERSION: ${{ inputs.rule-api-version || '2.15.0.4476' }}
       shell: bash
       run: |
         echo "Downloading rule-api.jar version '$RULE_API_VERSION' from Artifactory"
