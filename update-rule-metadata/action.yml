@@ -1,0 +1,129 @@
+name: Update Rule Metadata
+description: |
+  This workflow updates rule metadata across all supported languages using the rule-api tooling.
+  It checks for changes and creates a pull request if any updates are made.
+
+inputs:
+  rule-api-version:
+    description: Version of the rule-api tooling to be used for the workflow.
+    default: '2.15.0.4476'
+  sonarpedia-files:
+    description: |
+      Comma-separated list of sonarpedia files to be updated.
+      By default, it will update all Sonarpedia files in the repository.
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v4
+    - name: Get vault secrets
+      id: secrets
+      uses: SonarSource/vault-action-wrapper@320bd31b03e5dacaac6be51bbbb15adf7caccc32 # v3.1
+      with:
+        secrets: |
+          development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader access_token | ARTIFACTORY_ACCESS_TOKEN;
+          development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader role | ARTIFACTORY_ROLE;  
+
+    - name: Cache rule-api jar
+      id: cache-rule-api
+      uses: actions/cache@v4
+      with:
+        path: rule-api.jar
+        key: rule-api-${{ inputs.rule-api-version }}
+
+    - name: Download rule-api jar
+      if: steps.cache-rule-api.outputs.cache-hit != 'true'
+      env:
+        REPOX_USER: vault-${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_ROLE }}
+        REPOX_PASS: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_ACCESS_TOKEN }}
+        RULE_API_VERSION: ${{ inputs.rule-api-version }}
+      shell: bash
+      run: |
+        curl -u $REPOX_USER:$REPOX_PASS -o rule-api.jar "https://repox.jfrog.io/artifactory/sonarsource-private-releases/com/sonarsource/rule-api/rule-api/$RULE_API_VERSION/rule-api-$RULE_API_VERSION.jar"
+        echo "Downloaded rule-api.jar ($(ls -lh rule-api.jar | awk '{print $5}'))"
+
+    - name: Install Java to run rule-api
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: 17
+
+    - name: Run rule-api to update metadata
+      shell: bash
+      env:
+        PROVIDED_SONARPEDIA_FILES: ${{ inputs.sonarpedia-files || '' }}
+      run: |
+        bash ${github.action_path}/run_rule_api.sh
+
+    - name: Check Rule Metadata Changes
+      id: check-changes
+      shell: bash
+      run: |
+        if git diff --quiet HEAD -- . ':!*sonarpedia.json'; then
+          echo "No changes detected (excluding sonarpedia.json files)"
+          echo "has-changes=false" >> $GITHUB_OUTPUT
+        else
+          echo "Changes detected"
+          echo "has-changes=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Generate summary
+      id: generate-summary
+      shell: bash
+      run: |
+        summary="Check rule metadata for:<br>"
+        while IFS= read -r line; do
+          if [[ $line == "=== "* ]]; then
+            current_lang=$(echo "$line" | sed 's/=== \(.*\) ===/\1/')
+          elif [[ $line == "Found "* ]]; then
+            rule_count=$(echo "$line" | grep -o '[0-9]\+' | head -1)
+            if [[ -n "$rule_count" && "$rule_count" != "0" ]]; then
+              if [[ -n "$summary" ]]; then
+                summary="${summary}<br>"
+              fi
+              summary="${summary} ${rule_count} ${current_lang} rules"
+            fi
+          fi
+        done < rule-api-logs.txt
+        
+        if [[ -z "$summary" ]]; then
+          summary="Update rule metadata"
+        fi
+        
+        echo "summary=${summary}" >> $GITHUB_OUTPUT
+        rm rule-api-logs.txt
+
+    - name: Create PR
+      if: steps.check-changes.outputs.has-changes == 'true'
+      id: create-pr
+      uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+      with:
+        commit-message: Update rule metadata
+        title: Update rule metadata
+        body: |
+          ## Rule Metadata Update Summary
+          
+          ${{ steps.generate-summary.outputs.summary }}
+          
+          This PR was automatically generated to update rule metadata across all supported languages.
+        base: master
+        branch: bot/update-rule-metadata
+        branch-suffix: timestamp
+        labels: skip-qa
+
+    - name: Workflow summary
+      shell: bash
+      run: |
+        workflow_summary=$(echo "${{ steps.generate-summary.outputs.summary }}" | sed 's/<br>/\n/g')
+        
+        echo "## Rule Metadata Update Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo -e "${workflow_summary}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [[ "${{ steps.check-changes.outputs.has-changes }}" == "true" ]]; then
+          echo "Rule metadata changes were detected. PR was created." >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.create-pr.outputs.pull-request-url }}" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "No rule metadata changes detected. No PR was created." >> $GITHUB_STEP_SUMMARY
+        fi
