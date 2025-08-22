@@ -121,6 +121,8 @@ runs:
       id: create_release
       shell: bash
       run: |
+        # clear GITHUB_TOKEN for gh auth login to be happy
+        export GITHUB_TOKEN=
         echo "${{ inputs.github_token }}" | gh auth login --with-token
 
         # Check if a release with the same title already exists
@@ -178,6 +180,8 @@ runs:
     - name: Trigger Release Workflow
       shell: bash
       run: |
+        # clear GITHUB_TOKEN for gh auth login to be happy
+        export GITHUB_TOKEN=
         echo "${{ inputs.github_token }}" | gh auth login --with-token
         
         # Set release ID based on draft status
