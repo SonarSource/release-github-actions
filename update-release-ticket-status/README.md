@@ -11,12 +11,13 @@ portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platfo
 
 ## Inputs
 
-| Input         | Description                                                                     | Required | Default |
-|---------------|---------------------------------------------------------------------------------|----------|---------|
-| `ticket_key`  | The key of the Jira ticket to update (e.g., `REL-1234`).                        | `true`   |         |
-| `status`      | The target status. Possible values: `Start Progress`, `Technical Release Done`. | `true`   |         |
-| `assignee`    | The email of the user to assign the ticket to.                                  | `false`  | `''`    |
-| `use_sandbox` | Set to `true` to use the Jira sandbox server.                                   | `false`  | `false` |
+| Input             | Description                                                                                                   | Required | Default |
+| ----------------- | ------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `ticket_key`      | The key of the Jira ticket to update (e.g., `REL-1234`).                                                      | `true`   |         |
+| `status`          | The target status. Possible values: `Start Progress`, `Technical Release Done`.                               | `true`   |         |
+| `expected_status` | The status the ticket is expected to be in before the transition. If not, the ticket will not be transitioned | `false`  | `''`    |
+| `assignee`        | The email of the user to assign the ticket to.                                                                | `false`  | `''`    |
+| `use_sandbox`     | Set to `true` to use the Jira sandbox server.                                                                 | `false`  | `false` |
 
 ## Example Usage
 

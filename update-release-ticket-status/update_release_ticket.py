@@ -61,13 +61,14 @@ def get_jira_instance(use_sandbox=False):
         sys.exit(1)
 
 
-def update_ticket_status(jira_client, ticket_key, new_status, assignee_email):
+def update_ticket_status(jira_client, ticket_key, expected_status, new_status, assignee_email):
     """
     Updates the status of a Jira ticket and optionally assigns it to a new user.
 
     Args:
         jira_client (JIRA): The authenticated JIRA client.
         ticket_key (str): The key of the ticket to update (e.g., 'REL-1234').
+        expected_status (str or None): The status the ticket is expected to be in before updating. If None, the status is always updated.
         new_status (str): The target status for the ticket.
         assignee_email (str): The email of the user to assign the ticket to. Can be None.
     """
@@ -94,8 +95,13 @@ def update_ticket_status(jira_client, ticket_key, new_status, assignee_email):
             sys.exit(1)
 
     try:
-        jira_client.transition_issue(issue, new_status)
-        eprint(f"Successfully transitioned ticket to '{new_status}'.")
+        current_status = issue.fields.status.name
+        eprint(f"Current status of ticket '{ticket_key}': {current_status}")
+        if expected_status is None or current_status == expected_status:
+            jira_client.transition_issue(issue, new_status)
+            eprint(f"Successfully transitioned ticket to '{new_status}'.")
+        else:
+            eprint(f"Ticket '{ticket_key}' wasn't in the expected status '{expected_status}'. Ticket was not transitioned")
     except JIRAError as e:
         eprint(f"Error: Failed to transition ticket to '{new_status}'. Status: {e.status_code}")
         eprint(f"Response text: {e.text}")
@@ -113,6 +119,8 @@ def main():
     )
 
     parser.add_argument("--ticket-key", required=True, help="The key of the Jira ticket to update (e.g., REL-1234).")
+    parser.add_argument("--expected-status", required=False, default=None,
+                        help="The status the ticket is expected to be in before updating. If the ticket is in a different status, the script won't update the status.")
     parser.add_argument("--status", required=True, choices=['Start Progress', 'Technical Release Done'],
                         help="The target status for the ticket.")
     parser.add_argument("--assignee", required=False, default=None,
@@ -123,7 +131,7 @@ def main():
     args = parser.parse_args()
 
     jira = get_jira_instance(args.use_sandbox)
-    update_ticket_status(jira, args.ticket_key, args.status, args.assignee)
+    update_ticket_status(jira, args.ticket_key, args.expected_status, args.status, args.assignee)
 
     eprint("\n" + "=" * 50)
     eprint("🎉 Successfully updated Jira ticket!")
