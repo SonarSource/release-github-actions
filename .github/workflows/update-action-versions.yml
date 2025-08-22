@@ -1,0 +1,117 @@
+name: Update Action Versions
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Reference to use for updating action versions (default: latest commit SHA on master)'
+        required: false
+        type: string
+
+jobs:
+  update-versions:
+    name: Update Action Versions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get target reference
+        id: get-ref
+        run: |
+          if [ -n "${{ github.event.inputs.ref }}" ]; then
+            echo "target_ref=${{ github.event.inputs.ref }}" >> $GITHUB_OUTPUT
+            echo "Using provided reference: ${{ github.event.inputs.ref }}"
+          else
+            # Get the latest commit SHA on master
+            LATEST_SHA=$(git rev-parse origin/master)
+            echo "target_ref=${LATEST_SHA}" >> $GITHUB_OUTPUT
+            echo "Using latest master commit: ${LATEST_SHA}"
+          fi
+
+      - name: Update action references
+        run: |
+          TARGET_REF="${{ steps.get-ref.outputs.target_ref }}"
+          echo "Updating all SonarSource/release-github-actions references to: ${TARGET_REF}"
+          
+          # Find all action.yml files that contain SonarSource/release-github-actions references
+          find . -type f -name "action.yml" \
+            -not -path "./.git/*" \
+            -exec grep -l "SonarSource/release-github-actions/" {} \; | while read file; do
+            
+            echo "Processing file: $file"
+            
+            # Pattern: SonarSource/release-github-actions/{action-name}@{old-ref}
+            # Replace with: SonarSource/release-github-actions/{action-name}@{new-ref}
+            sed -i.bak -E "s|(SonarSource/release-github-actions/[^@]+)@[^[:space:]]+|\1@${TARGET_REF}|g" "$file"
+            
+            if ! diff -q "$file" "$file.bak" >/dev/null 2>&1; then
+              echo "  ✓ Updated references in $file"
+              echo "  Changes:"
+              diff "$file.bak" "$file" | grep -E "^[<>]" | head -5 || true
+            else
+              echo "  - No changes needed in $file"
+            fi
+            
+            rm -f "$file.bak"
+          done
+
+      - name: Check for changes
+        id: check-changes
+        run: |
+          if git diff --quiet; then
+            echo "changes_detected=false" >> $GITHUB_OUTPUT
+            echo "No changes detected"
+          else
+            echo "changes_detected=true" >> $GITHUB_OUTPUT
+            echo "Changes detected"
+            echo "Modified files:"
+            git diff --name-only
+          fi
+
+      - name: Create Pull Request
+        if: steps.check-changes.outputs.changes_detected == 'true'
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: |
+            Update action versions to ${{ steps.get-ref.outputs.target_ref }}
+            
+            Updated all SonarSource/release-github-actions references to use ${{ steps.get-ref.outputs.target_ref }}
+          title: "Update action versions to ${{ steps.get-ref.outputs.target_ref }}"
+          body: |
+            ## Summary
+            
+            This PR updates all `SonarSource/release-github-actions` references to use `${{ steps.get-ref.outputs.target_ref }}`.
+            
+            ## Changes
+            
+            - Updated action references in action.yml files
+            - Used reference: `${{ steps.get-ref.outputs.target_ref }}`
+            
+            ## Files Modified
+            
+            ```
+            ${{ steps.check-changes.outputs.modified_files }}
+            ```
+            
+            ---
+            
+            This PR was automatically created by the `update-action-versions` workflow.
+          branch: update-action-versions-${{ steps.get-ref.outputs.target_ref }}
+          delete-branch: true
+
+      - name: Summary
+        run: |
+          if [ "${{ steps.check-changes.outputs.changes_detected }}" == "true" ]; then
+            echo "✅ Successfully created PR with updated action versions"
+            echo "Target reference: ${{ steps.get-ref.outputs.target_ref }}"
+          else
+            echo "ℹ️ No updates needed - all references are already up to date"
+          fi

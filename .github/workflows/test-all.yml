@@ -1,8 +1,9 @@
-name: Test All Actions on Master
+name: Test All Actions
 
 on:
   push:
     branches: [master]
+  workflow_dispatch:
 
 jobs:
   test-get-jira-version:
