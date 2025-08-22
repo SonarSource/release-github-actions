@@ -23,7 +23,7 @@ After creating the GitHub release, this action automatically triggers a release 
 
 - Triggers the specified release workflow (default: `release.yml`) 
 - Passes the release tag name, release ID, and dry-run flag (based on the `draft` input) to the triggered workflow
-- Monitors the workflow execution and waits for it to complete (checking only runs from the last 10 minutes)
+- Monitors the workflow execution and waits for it to complete (checking only runs from the last 5 minutes)
 - Succeeds if the release workflow completes successfully, or fails if the release workflow fails
 
 This ensures that the entire release process (GitHub release creation + downstream release workflow) succeeds or fails as a unit.
@@ -101,7 +101,7 @@ The action:
 - Uses the GitHub CLI (`gh`) to create releases and trigger workflows
 - Validates version input using either the `release-version` input or `RELEASE_VERSION` environment variable
 - Creates releases with provided markdown content directly
-- Monitors triggered workflows with a 10-minute time window to prevent picking up stale runs
+- Monitors triggered workflows with a 5-minute time window to prevent picking up stale runs
 - Uses kebab-case naming conventions for all inputs and outputs
 
 ## Error Handling
@@ -117,5 +117,5 @@ The action will fail with a non-zero exit code if:
 
 - Release notes are provided directly as input
 - The action requires the GitHub CLI tool (pre-installed on GitHub-hosted runners)
-- Workflow monitoring only considers runs from the last 10 minutes to avoid timing issues
+- Workflow monitoring only considers runs from the last 5 minutes to avoid timing issues
 - The action ensures atomic success/failure of both release creation and workflow execution

@@ -150,7 +150,7 @@ runs:
           --repo "${{ github.repository }}" \
           --workflow "${{ inputs.release-workflow }}" \
           --limit 1 \
-          --created "$(date -u -d '10 minutes ago' +%Y-%m-%dT%H:%M:%SZ).." \
+          --created ">=$(date -u -d '5 minutes ago' +%Y-%m-%dT%H:%M:%SZ)" \
           --json databaseId \
           --jq '.[0].databaseId')
         
