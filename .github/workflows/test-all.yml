@@ -32,3 +32,6 @@ jobs:
 
   test-publish-github-release:
     uses: ./.github/workflows/test-publish-github-release.yml
+
+  test-update-release-ticket-status:
+    uses: ./.github/workflows/test-update-release-ticket-status.yml

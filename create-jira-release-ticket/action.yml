@@ -105,7 +105,7 @@ runs:
       if: ${{ inputs.start-progress == 'true' }}
       uses: SonarSource/release-github-actions/update-release-ticket-status@791b75b3be379f454224a79314afdb9b063668f4
       with:
-        ticket_key: ${{ steps.run_python_script.outputs.ticket_key }}
+        release-ticket-key: ${{ steps.run_python_script.outputs.ticket_key }}
         status: "Start Progress"
 
     - name: Set Env Variables

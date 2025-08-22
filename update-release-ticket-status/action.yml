@@ -3,7 +3,7 @@ description: 'Updates the status of a Jira release ticket and can change its ass
 author: 'SonarSource'
 
 inputs:
-  ticket_key:
+  release-ticket-key:
     description: 'The key of the Jira ticket to update (e.g., REL-1234).'
     required: true
   status:
@@ -13,10 +13,9 @@ inputs:
     description: 'The email of the user to assign the ticket to.'
     required: false
     default: ''
-  use_sandbox:
-    description: "Set to 'true' to use the sandbox Jira server."
+  use-jira-sandbox:
+    description: 'Use the sandbox server instead of the production Jira. Can also be controlled via USE_JIRA_SANDBOX environment variable.'
     required: false
-    default: 'false'
 
 runs:
   using: "composite"
@@ -42,21 +41,18 @@ runs:
       id: run_python_script
       shell: bash
       run: |
-        SANDBOX_FLAG=""
-        if [[ "${{ inputs.use_sandbox }}" == "true" ]]; then
-          SANDBOX_FLAG="--use-sandbox"
-        fi
-
         ASSIGNEE_FLAG=""
         if [[ -n "${{ inputs.assignee }}" ]]; then
           ASSIGNEE_FLAG="--assignee=${{ inputs.assignee }}"
         fi
 
         python ${{ github.action_path }}/update_release_ticket.py \
-          --ticket-key="${{ inputs.ticket_key }}" \
+          --ticket-key="${{ inputs.release-ticket-key }}" \
           --status="${{ inputs.status }}" \
           ${ASSIGNEE_FLAG} \
-          ${SANDBOX_FLAG}
+          --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}"
       env:
         JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
+        JIRA_PROD_URL: "https://sonarsource.atlassian.net/"
+        JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
