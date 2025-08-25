@@ -35,3 +35,6 @@ jobs:
 
   test-update-release-ticket-status:
     uses: ./.github/workflows/test-update-release-ticket-status.yml
+
+  test-update-analyzer:
+    uses: ./.github/workflows/test-update-analyzer.yml

@@ -21,18 +21,18 @@ This action depends on:
 
 ## Inputs
 
-| Input               | Description                                                                                                                                      | Required | Default         |
-|---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|----------|-----------------|
-| `rule-api-version`  | Version of the rule-api tooling to be used for the workflow.                                                                                     | No       | `2.15.0.4476`   |
-| `sonarpedia-files`  | Comma-separated list of sonarpedia files to be updated. By default, it will update all Sonarpedia files in the repository.                     | No       | Auto-discovered |
+| Input              | Description                                                                                                                | Required | Default         |
+|--------------------|----------------------------------------------------------------------------------------------------------------------------|----------|-----------------|
+| `rule-api-version` | Version of the rule-api tooling to be used for the workflow.                                                               | No       | `2.15.0.4476`   |
+| `sonarpedia-files` | Comma-separated list of sonarpedia files to be updated. By default, it will update all Sonarpedia files in the repository. | No       | Auto-discovered |
 
 ## Outputs
 
-| Output              | Description                                                                                                                                      |
-|---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
-| `has-changes`       | Boolean indicating whether any rule metadata changes were detected (from check-changes step)                                                    |
-| `summary`           | Summary of the rule metadata updates including rule counts for each language (from generate-summary step)                                      |
-| `pull-request-url`  | URL of the created pull request (only available if changes were detected, from create-pr step)                                                 |
+| Output             | Description                                                                                               |
+|--------------------|-----------------------------------------------------------------------------------------------------------|
+| `has-changes`      | Boolean indicating whether any rule metadata changes were detected (from check-changes step)              |
+| `summary`          | Summary of the rule metadata updates including rule counts for each language (from generate-summary step) |
+| `pull-request-url` | URL of the created pull request (only available if changes were detected, from create-pr step)            |
 
 ## Usage
 

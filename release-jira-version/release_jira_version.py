@@ -12,6 +12,8 @@ import datetime
 from jira import JIRA
 from jira.exceptions import JIRAError
 
+
+# noinspection DuplicatedCode
 def eprint(*args, **kwargs):
     """Prints messages to the standard error stream (stderr) for logging."""
     print(*args, file=sys.stderr, **kwargs)

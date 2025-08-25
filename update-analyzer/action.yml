@@ -3,22 +3,22 @@ description: 'Updates the version of a specified analyzer in SonarQube or SonarC
 author: 'SonarSource'
 
 inputs:
-  version:
+  release-version:
     description: 'The new version to set for the analyzer (e.g., 1.12.0.12345).'
     required: true
-  ticket:
+  ticket-key:
     description: 'The Jira ticket number (e.g., SONAR-12345 or SC-12345). This determines the target product.'
     required: true
-  plugin_language:
+  plugin-name:
     description: 'The language key of the plugin to update (e.g., architecture, java, csharp).'
     required: true
-  secret_name:
+  secret-name:
     description: 'Name of the secret to fetch from the vault that has access to the target repository.'
     required: true
-  plugin_artifacts:
-    description: 'Comma-separated list of plugin artifact names to update instead of plugin_language.'
+  plugin-artifacts:
+    description: 'Comma-separated list of plugin artifact names to update instead of plugin-name.'
     required: false
-  base_branch:
+  base-branch:
     description: 'The base branch for the product pull request.'
     required: false
     default: 'master'
@@ -29,12 +29,12 @@ inputs:
   reviewers:
     description: 'A comma-separated list of GitHub usernames to request a review from.'
     required: false
-  pr_body:
+  pull-request-body:
     description: 'The body of the pull request.'
     required: false
 
 outputs:
-  pr_url:
+  pull-request-url:
     description: 'The URL of the created pull request.'
     value: ${{ steps.create_pr.outputs.pull-request-url }}
 
@@ -46,16 +46,16 @@ runs:
       uses: SonarSource/vault-action-wrapper@v3
       with:
         secrets: |
-          development/github/token/SonarSource-${{ inputs.secret_name}} token | GITHUB_TOKEN;
+          development/github/token/SonarSource-${{ inputs.secret-name}} token | GITHUB_TOKEN;
 
     - name: Set up environment
       id: setup_env
       shell: bash
       run: |
-        if [[ "${{ inputs.ticket }}" == SONAR-* ]]; then
+        if [[ "${{ inputs.ticket-key }}" == SONAR-* ]]; then
           echo "PRODUCT_REPOSITORY=sonar-enterprise" >> $GITHUB_ENV
           echo "BUILD_GRADLE_FILE=build.gradle" >> $GITHUB_ENV
-        elif [[ "${{ inputs.ticket }}" == SC-* ]]; then
+        elif [[ "${{ inputs.ticket-key }}" == SC-* ]]; then
           echo "PRODUCT_REPOSITORY=sonarcloud-core" >> $GITHUB_ENV
           echo "BUILD_GRADLE_FILE=private/edition-sonarcloud/build.gradle" >> $GITHUB_ENV
         else
@@ -67,7 +67,7 @@ runs:
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         repository: SonarSource/${{ env.PRODUCT_REPOSITORY }}
-        ref: ${{ inputs.base_branch }}
+        ref: ${{ inputs.base-branch }}
         sparse-checkout: ${{ env.BUILD_GRADLE_FILE }}
         sparse-checkout-cone-mode: false
         fetch-depth: 0
@@ -78,19 +78,19 @@ runs:
       run: |
         set -euo pipefail
         # Prepare the list of plugins to update
-        if [[ -n "${{ inputs.plugin_artifacts }}" ]]; then
-          echo "Using plugin_artifacts: ${{ inputs.plugin_artifacts }}"
-          IFS=',' read -ra PLUGINS <<< "${{ inputs.plugin_artifacts }}"
+        if [[ -n "${{ inputs.plugin-artifacts }}" ]]; then
+          echo "Using plugin-artifacts: ${{ inputs.plugin-artifacts }}"
+          IFS=',' read -ra PLUGINS <<< "${{ inputs.plugin-artifacts }}"
         else
-          echo "Using plugin_language: ${{ inputs.plugin_language }}"
-          PLUGINS=("${{ inputs.plugin_language }}")
+          echo "Using plugin-name: ${{ inputs.plugin-name }}"
+          PLUGINS=("${{ inputs.plugin-name }}")
         fi
         
         # Update each plugin
         for plugin in "${PLUGINS[@]}"; do
           plugin=$(echo "$plugin" | xargs)
           echo "Updating analyzer version in ${{ env.BUILD_GRADLE_FILE }} for plugin $plugin"
-          sed -i "s/\(:sonar-$plugin.*-plugin:\)[0-9.]*/\1${{ inputs.version }}/g" ${{ env.BUILD_GRADLE_FILE }}
+          sed -i "s/\(:sonar-$plugin.*-plugin:\)[0-9.]*/\1${{ inputs.release-version }}/g" ${{ env.BUILD_GRADLE_FILE }}
         done
         
         echo "Showing diff:"
@@ -101,11 +101,11 @@ runs:
       uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
       with:
         author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
-        commit-message: '${{ inputs.ticket }} Update `${{ inputs.plugin_language }}` plugins to version ${{ inputs.version }}'
-        title: '${{ inputs.ticket }} Update `${{ inputs.plugin_language }}` to version ${{ inputs.version }}'
-        body: ${{ inputs.pr_body }}
-        base: ${{ inputs.base_branch }}
-        branch: '${{ inputs.plugin_language }}/update-analyzer-${{ inputs.version }}'
+        commit-message: '${{ inputs.ticket-key }} Update `${{ inputs.plugin-name }}` plugins to version ${{ inputs.release-version }}'
+        title: '${{ inputs.ticket-key }} Update `${{ inputs.plugin-name }}` to version ${{ inputs.release-version }}'
+        body: ${{ inputs.pull-request-body }}
+        base: ${{ inputs.base-branch }}
+        branch: '${{ inputs.plugin-name }}/update-analyzer-${{ inputs.release-version }}'
         token: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
         draft: ${{ inputs.draft }}
         reviewers: ${{ inputs.reviewers }}
