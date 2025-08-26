@@ -34,6 +34,7 @@ class TestReleaseJiraVersion(unittest.TestCase):
             get_jira_instance('https://test.jira.com')
         self.assertEqual(cm.exception.code, 1)
 
+    # noinspection DuplicatedCode
     @patch.dict(os.environ, {'JIRA_USER': 'test', 'JIRA_TOKEN': 'token'})
     @patch('release_jira_version.JIRA')
     def test_get_jira_instance_success(self, mock_jira_class):
@@ -71,6 +72,7 @@ class TestReleaseJiraVersion(unittest.TestCase):
             get_jira_instance('https://prod.com')
         self.assertEqual(cm.exception.code, 1)
 
+    # noinspection DuplicatedCode
     @patch('sys.argv', ['release_jira_version.py', '--project-key', 'TEST', '--version-name', '1.0.0', '--jira-url', 'https://test.jira.com'])
     @patch('release_jira_version.get_jira_instance')
     @patch('sys.stderr', new_callable=StringIO)
@@ -112,6 +114,7 @@ class TestReleaseJiraVersion(unittest.TestCase):
         self.assertIn("Found version '1.0.0'. Releasing it now...", stderr_output)
         self.assertIn("✅ Successfully released version '1.0.0'.", stderr_output)
 
+    # noinspection DuplicatedCode
     @patch('sys.argv', ['release_jira_version.py', '--project-key', 'TEST', '--version-name', '1.0.0', '--jira-url', 'https://test.jira.com'])
     @patch('release_jira_version.get_jira_instance')
     @patch('sys.stderr', new_callable=StringIO)
@@ -206,6 +209,7 @@ class TestReleaseJiraVersion(unittest.TestCase):
         stderr_output = mock_stderr.getvalue()
         self.assertIn("Error: Failed to release version. Status: 403, Text: Forbidden: Insufficient permissions", stderr_output)
 
+    # noinspection DuplicatedCode
     @patch('sys.argv', ['release_jira_version.py', '--project-key', 'TEST', '--version-name', '1.0.0', '--jira-url', 'https://sandbox.jira.com'])
     @patch('release_jira_version.get_jira_instance')
     def test_main_with_different_jira_url(self, mock_get_jira):
@@ -226,6 +230,7 @@ class TestReleaseJiraVersion(unittest.TestCase):
         # Verify get_jira_instance was called with the sandbox URL
         mock_get_jira.assert_called_once_with('https://sandbox.jira.com')
 
+    # noinspection PyUnusedLocal
     @patch('sys.argv', ['release_jira_version.py', '--project-key', 'TEST', '--version-name', '1.0.0', '--jira-url', 'https://test.jira.com'])
     @patch('release_jira_version.get_jira_instance')
     @patch('sys.stderr', new_callable=StringIO)
@@ -245,6 +250,7 @@ class TestReleaseJiraVersion(unittest.TestCase):
         # Verify the project fetch was attempted
         mock_jira.project.assert_called_once_with('TEST')
 
+    # noinspection PyUnusedLocal,DuplicatedCode
     @patch('sys.argv', ['release_jira_version.py', '--project-key', 'TEST', '--version-name', '1.0.0', '--jira-url', 'https://test.jira.com'])
     @patch('release_jira_version.get_jira_instance')
     @patch('sys.stderr', new_callable=StringIO)
