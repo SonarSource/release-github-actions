@@ -108,7 +108,7 @@ jobs:
         id: get-release-version
         uses: SonarSource/release-github-actions/get-release-version@5f9e625213d4288f53555490fb4919295db40de2
         with:
-          branch: ${{ input.branch }}
+          branch: ${{ inputs.branch }}
 
       - name: Get Jira Version
         id: get-jira-version
@@ -158,7 +158,7 @@ jobs:
           release-notes: ${{ needs.prepare-release.outputs.release-notes }}
           release-workflow: 'sonar-release.yml'
           draft: ${{ inputs.is-draft-release }}
-          branch: ${{ input.branch }}
+          branch: ${{ inputs.branch }}
 
   lock_master_branch:
     name: Unlock master branch
