@@ -58,7 +58,7 @@ on:
 jobs:
   lock_master_branch:
     name: Lock master branch
-    uses: SonarSource/release-github-actions/check-releasability-status@yp/add_cloud_security_workflow
+    uses: SonarSource/release-github-actions/.github/workflows/ToggleLockBranch.yml@yp/add_cloud_security_workflow
     permissions:
       id-token: write
     with:
@@ -162,7 +162,7 @@ jobs:
 
   unlock_master_branch:
     name: Unlock master branch
-    uses: SonarSource/release-github-actions/check-releasability-status@yp/add_cloud_security_workflow
+    uses: SonarSource/release-github-actions/.github/workflows/ToggleLockBranch.yml@yp/add_cloud_security_workflow
     permissions:
       id-token: write
     with:
