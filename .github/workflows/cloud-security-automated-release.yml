@@ -194,7 +194,7 @@ jobs:
       - name: Move release ticket to done
         uses: SonarSource/release-github-actions/update-release-ticket-status@5f9e625213d4288f53555490fb4919295db40de2
         with:
-          ticket_key: ${{ needs.create_release_ticket.outputs.release_ticket_key }}
+          release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           status: "Technical Release Done"
           assignee: ${{ inputs.pm-email }}
 
