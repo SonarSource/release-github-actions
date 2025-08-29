@@ -247,8 +247,8 @@ jobs:
     permissions:
       id-token: write
     outputs:
-      sqc-pull-request-url: ${{ steps.update-sqc.outputs.pull-request-url }}
       sqs-pull-request-url: ${{ steps.update-sqs.outputs.pull-request-url }}
+      sqc-pull-request-url: ${{ steps.update-sqc.outputs.pull-request-url }}
     steps:
       - name: Update analyzer in SQS
         id: update-sqs
@@ -260,7 +260,7 @@ jobs:
           secret-name: ${{ inputs.release-automation-secret-name }}
           draft: ${{ inputs.is-draft-release }}
       - name: Update analyzer in SQC
-        id: update-sqs
+        id: update-sqc
         uses: SonarSource/release-github-actions/update-analyzer@5f9e625213d4288f53555490fb4919295db40de2
         with:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
