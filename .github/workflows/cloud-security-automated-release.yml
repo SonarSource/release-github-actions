@@ -19,6 +19,10 @@ on:
         description: "Plugin name"
         required: true
         type: string
+      plugin-artifacts:
+        description: "Plugin artifacts"
+        required: true
+        type: string
       use-jira-sandbox:
         description: "Use Jira sandbox"
         required: false
@@ -258,6 +262,7 @@ jobs:
           ticket-key: ${{ needs.release-in-jira.outputs.sqs-ticket-key }}
           plugin-name: ${{ inputs.plugin-name }}
           secret-name: ${{ inputs.release-automation-secret-name }}
+          plugin-artifacts: ${{inputs.plugin-artifacts }}
           draft: ${{ inputs.is-draft-release }}
       - name: Update analyzer in SQC
         id: update-sqc
@@ -267,6 +272,7 @@ jobs:
           ticket-key: ${{ needs.release-in-jira.outputs.sqc-ticket-key }}
           plugin-name: ${{ inputs.plugin-name }}
           secret-name: ${{ inputs.release-automation-secret-name }}
+          plugin-artifacts: ${{inputs.plugin-artifacts }}
           draft: ${{ inputs.is-draft-release }}
 
   summarize_release:
