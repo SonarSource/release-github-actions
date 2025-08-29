@@ -1,0 +1,184 @@
+name: Automate release
+
+env:
+  JIRA_PROJECT_KEY: ${{ inputs.jira-project-key }}
+  USE_JIRA_SANDBOX: ${{ inputs.use-jira-sandbox }}
+
+on:
+  workflow_call:
+    inputs:
+      jira-project-key:
+        description: "Jira project key"
+        required: true
+        type: string
+      project-name:
+        description: "Project name"
+        required: true
+        type: string
+      plugin-name:
+        description: "Plugin name"
+        required: true
+        type: string
+      use-jira-sandbox:
+        description: "Use Jira sandbox"
+        required: false
+        type: boolean
+        default: true
+      is-draft-release:
+        description: "Create draft release"
+        required: false
+        type: boolean
+        default: true
+      pm-email:
+        description: "Product manager email"
+        required: true
+        type: string
+      release-automation-secret-name:
+        description: "Release automation secret name"
+        required: true
+        type: string
+      short-description:
+        description: "A brief summary of what the release contains"
+        required: true
+        type: string
+      rule-props-changed:
+        description: "Did any rule properties change in this release"
+        required: true
+        type: string
+      sq-compatibility:
+        description: "SonarQube compatibility"
+        required: true
+        type: string
+
+jobs:
+  lock_master_branch:
+    name: Lock master branch
+    uses: ./.github/workflows/ToggleLockBranch.yml
+    permissions:
+      id-token: write
+
+  pre-release-checks:
+    name: Pre-release checks
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: read
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Check Releasability Status
+        uses: SonarSource/release-github-actions/check-releasability-status@5f9e625213d4288f53555490fb4919295db40de2
+
+      - name: Update Rule Metadata
+        id: update-rule-metadata
+        uses: SonarSource/release-github-actions/update-rule-metadata@5f9e625213d4288f53555490fb4919295db40de2
+
+      - name: Check Rule Metadata Changes
+        if: steps.update-rule-metadata.outputs.has-changes == 'true'
+        run: |
+          echo "::error::Rule metadata changes detected. The generated PR needs to be merged first before continuing with the release."
+          echo "::error::Pull Request URL: ${{ steps.update-rule-metadata.outputs.pull-request-url }}"
+          echo "::error::Please merge the PR and restart this workflow."
+          exit 1
+
+  prepare-release:
+    name: Prepare release
+    runs-on: ubuntu-latest
+    needs: pre-release-checks
+    permissions:
+      statuses: read
+      contents: read
+      id-token: write
+    outputs:
+      release-version: ${{ steps.get-release-version.outputs.release-version }}
+      jira-version-name: ${{ steps.get-jira-version.outputs.jira-version-name }}
+      release-notes: ${{ steps.get-jira-release-notes.outputs.release-notes }}
+      jira-release-url: ${{ steps.get-jira-release-notes.outputs.jira-release-url }}
+    steps:
+      - name: Get Release Version
+        id: get-release-version
+        uses: SonarSource/release-github-actions/get-release-version@5f9e625213d4288f53555490fb4919295db40de2
+
+      - name: Get Jira Version
+        id: get-jira-version
+        uses: SonarSource/release-github-actions/get-jira-version@5f9e625213d4288f53555490fb4919295db40de2
+
+      - name: Get Jira Release Notes
+        id: get-jira-release-notes
+        uses: SonarSource/release-github-actions/get-jira-release-notes@5f9e625213d4288f53555490fb4919295db40de2
+
+  create-release-ticket:
+    name: Create release ticket
+    runs-on: ubuntu-latest
+    needs: prepare-release
+    permissions:
+      id-token: write
+    outputs:
+      release-ticket-key: ${{ steps.create-ticket.outputs.release-ticket-key }}
+      release-ticket-url: ${{ steps.create-ticket.outputs.release-ticket-url }}
+    steps:
+      - name: Create Jira Release Ticket
+        id: create-ticket
+        uses: SonarSource/release-github-actions/create-jira-release-ticket@5f9e625213d4288f53555490fb4919295db40de2
+        with:
+          project-name: ${{ inputs.project-name }}
+          short-description: ${{ inputs.short-description }}
+          sq-compatibility: ${{ inputs.sq-compatibility }}
+          rule-props-changed: ${{ inputs.rule-props-changed }}
+          jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
+          start-progress: true
+
+  publish-github-release:
+    name: Publish github release
+    runs-on: ubuntu-latest
+    needs: [prepare-release, create-release-ticket]
+    permissions:
+      id-token: write
+      contents: write
+      actions: write
+    outputs:
+      github-release-url: ${{ steps.publish-github-release.outputs.release-url}}
+    steps:
+      - name: Publish GitHub Release
+        id: publish-github-release
+        uses: SonarSource/release-github-actions/publish-github-release@5f9e625213d4288f53555490fb4919295db40de2
+        with:
+          release-version: ${{ needs.prepare-release.outputs.release-version }}
+          release-notes: ${{ needs.prepare-release.outputs.release-notes }}
+          release-workflow: 'sonar-release.yml'
+          draft: ${{ inputs.is-draft-release }}
+
+#  update-analyzers:
+#    name: Update Analyzers in SQS and SQC
+#    runs-on: ubuntu-latest
+#    needs: [prepare-release, publish-github-release]
+#    permissions:
+#      id-token: write
+#    outputs:
+#      sqs-pull-request-url: ${{ steps.update-sqs.outputs.pull-request-url }}
+#    steps:
+#      - name: Update analyzer in SQS
+#        id: update-sqs
+#        uses: SonarSource/release-github-actions/update-analyzer@5f9e625213d4288f53555490fb4919295db40de2
+#        with:
+#          release-version: ${{ needs.prepare-release.outputs.release-version }}
+#          ticket-key: 'SONAR-25669'
+#          plugin-name: ${{ inputs.plugin-name }}
+#          secret-name: ${{ inputs.release-automation-secret-name }}
+#          draft: ${{ inputs.is-draft-release }}
+#          reviewers: ${{ github.event.inputs.integration_prs_reviewers }}
+
+  summarize_release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: [prepare-release, publish-github-release, update-analyzers]
+    steps:
+      - name: Post Summary to Workflow
+        run: |
+          echo "**Summary of the release:**" >> $GITHUB_STEP_SUMMARY
+          echo "- **Released Version:** ${{ needs.prepare-release.outputs.release-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **New Version:** ${{ needs.prepare-release.outputs.jira-version-name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Jira Release URL:** ${{ needs.prepare-release.outputs.jira-release-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **GitHub Release URL:** ${{ needs.publish-github-release.outputs.github-release-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **SQS Analyzer PR URL:** ${{ needs.update-analyzers.outputs.sqs_pr_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
