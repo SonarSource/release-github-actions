@@ -54,20 +54,24 @@ on:
         required: true
         type: string
         default: "master"
+      new-version:
+        description: "New version to release"
+        required: false
+        type: string
 
 jobs:
-  lock-master-branch:
-    name: Lock master branch
-    uses: SonarSource/release-github-actions/.github/workflows/ToggleLockBranch.yml@yp/add_cloud_security_workflow
-    permissions:
-      id-token: write
-    with:
-      branch: ${{ inputs.branch }}
+#  lock-master-branch:
+#    name: Lock master branch
+#    uses: SonarSource/release-github-actions/.github/workflows/ToggleLockBranch.yml@yp/add_cloud_security_workflow
+#    permissions:
+#      id-token: write
+#    with:
+#      branch: ${{ inputs.branch }}
 
   pre-release-checks:
     name: Pre-release checks
     runs-on: ubuntu-latest
-    needs: lock-master-branch
+#    needs: lock-master-branch
     permissions:
       statuses: read
       contents: write
@@ -162,14 +166,88 @@ jobs:
           draft: ${{ inputs.is-draft-release }}
           branch: ${{ inputs.branch }}
 
-  unlock-master-branch:
-    name: Unlock master branch
-    uses: SonarSource/release-github-actions/.github/workflows/ToggleLockBranch.yml@yp/add_cloud_security_workflow
-    needs: publish-github-release
+  release-in-jira:
+    name: Release in Jira
+    runs-on: ubuntu-latest
+    needs: [ prepare-release, publish-github-release, create-release-ticket ]
     permissions:
+      contents: read
       id-token: write
-    with:
-      branch: ${{ inputs.branch }}
+    outputs:
+      new-version: ${{ steps.create-jira-version.outputs.jira-version-name }}
+      sqc-ticket-key: ${{ steps.create-sc-ticket.outputs.ticket-key }}
+      sqc-ticket-url: ${{ steps.create-sc-ticket.outputs.ticket-url }}
+      sqs-ticket-key: ${{ steps.create-sonar-ticket.outputs.ticket-key }}
+      sqs-ticket-url: ${{ steps.create-sonar-ticket.outputs.ticket-url }}
+    steps:
+      - name: Release in Jira
+        uses: SonarSource/release-github-actions/release-jira-version@5f9e625213d4288f53555490fb4919295db40de2
+        with:
+          jira-version-name: ${{ needs.prepare-release.jira-version-name }}
+
+      - name: Create new release in jira
+        id: create-jira-version
+        uses: SonarSource/release-github-actions/create-jira-version@5f9e625213d4288f53555490fb4919295db40de2
+        with:
+          jira-version-name: ${{ inputs.new-version }}
+
+      - name: Move release ticket to done
+        uses: SonarSource/release-github-actions/update-release-ticket-status@5f9e625213d4288f53555490fb4919295db40de2
+        with:
+          ticket_key: ${{ needs.create_release_ticket.outputs.release_ticket_key }}
+          status: "Technical Release Done"
+          assignee: ${{ inputs.pm-email }}
+
+      - name: Create SLVSCODE Ticket
+        uses: SonarSource/release-github-actions/create-integration-ticket@5f9e625213d4288f53555490fb4919295db40de2
+        with:
+          plugin-name: ${{ inputs.plugin-name }}
+          release-version: ${{ needs.prepare-release.release-version }}
+          release-ticket-key: ${{ needs.create-release-ticket.release-ticket-key }}
+          target-jira-project: "SLVSCODE"
+
+      - name: Create SLE Ticket
+        uses: SonarSource/release-github-actions/create-integration-ticket@5f9e625213d4288f53555490fb4919295db40de2
+        with:
+          plugin-name: ${{ inputs.plugin-name }}
+          release-version: ${{ needs.prepare-release.release-version }}
+          release-ticket-key: ${{ needs.create-release-ticket.release-ticket-key }}
+          target-jira-project: "SLE"
+
+      - name: Create SLI Ticket
+        uses: SonarSource/release-github-actions/create-integration-ticket@5f9e625213d4288f53555490fb4919295db40de2
+        with:
+          plugin-name: ${{ inputs.plugin-name }}
+          release-version: ${{ needs.prepare-release.release-version }}
+          release-ticket-key: ${{ needs.create-release-ticket.release-ticket-key }}
+          target-jira-project: "SLI"
+
+      - name: Create SC Ticket
+        id: create-sc-ticket
+        uses: SonarSource/release-github-actions/create-integration-ticket@5f9e625213d4288f53555490fb4919295db40de2
+        with:
+          plugin-name: ${{ inputs.plugin-name }}
+          release-version: ${{ needs.prepare-release.release-version }}
+          release-ticket-key: ${{ needs.create-release-ticket.release-ticket-key }}
+          target-jira-project: "SC"
+
+      - name: Create SONAR Ticket
+        id: create-sonar-ticket
+        uses: SonarSource/release-github-actions/create-integration-ticket@5f9e625213d4288f53555490fb4919295db40de2
+        with:
+          plugin-name: ${{ inputs.plugin-name }}
+          release-version: ${{ needs.prepare-release.release-version }}
+          release-ticket-key: ${{ needs.create-release-ticket.release-ticket-key }}
+          target-jira-project: "SONAR"
+
+#  unlock-master-branch:
+#    name: Unlock master branch
+#    uses: SonarSource/release-github-actions/.github/workflows/ToggleLockBranch.yml@yp/add_cloud_security_workflow
+#    needs: release-in-jira
+#    permissions:
+#      id-token: write
+#    with:
+#      branch: ${{ inputs.branch }}
 
 #  update-analyzers:
 #    name: Update Analyzers in SQS and SQC
@@ -194,14 +272,22 @@ jobs:
   summarize_release:
     name: Release
     runs-on: ubuntu-latest
-    needs: [prepare-release, publish-github-release]
+    needs: [prepare-release, publish-github-release, create-release-ticket, release-in-jira]
     steps:
       - name: Post Summary to Workflow
         run: |
+          echo "### 🎉🚀 Congratulations! Release Successful! 🚀🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Summary of the release:**" >> $GITHUB_STEP_SUMMARY
           echo "- **Released Version:** ${{ needs.prepare-release.outputs.release-version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **New Version:** ${{ needs.prepare-release.outputs.jira-version-name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **New Version:** ${{ needs.release-in-jira.outputs.new-version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Jira Release URL:** ${{ needs.prepare-release.outputs.jira-release-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release Ticket URL:** ${{ needs.create-release-ticket.outputs.release-ticket-url }}" >> $GITHUB_STEP_SUMMARY
           echo "- **GitHub Release URL:** ${{ needs.publish-github-release.outputs.github-release-url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **SQS Analyzer PR URL:** ${{ needs.update-analyzers.outputs.sqs_pr_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **SQS Integration Ticket URL:** ${{ needs.release-in-jira.outputs.sqs-ticket-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **SQC Integration Ticket URL:** ${{ needs.release-in-jira.outputs.sqc-ticket-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **SQS Analyzer PR URL:** ${{ needs.update-analyzers.outputs.sqs-pull-request-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **SQC Analyzer PR URL:** ${{ needs.update-analyzers.outputs.sqc-pull-request-url }}" >> $GITHUB_STEP_SUMMARY
+
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "PS: Don't forget to review and merge the bump version, SQS and SQC PRs!" >> $GITHUB_STEP_SUMMARY

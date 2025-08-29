@@ -7,7 +7,7 @@ inputs:
     description: 'The key of the Jira project (e.g., SONARIAC). Required if JIRA_PROJECT_KEY env var is not set.'
     required: false
   jira-version-name:
-    description: 'The name of the Jira version to release (e.g., 1.2.3). Can also be set via JIRA_VERSION_NAME environment variable. If not provided, the script will determine the next version based on the Jira version.'
+    description: 'The name of the Jira version to release (e.g., 1.2.3). Can also be set via JIRA_VERSION_NAME environment variable.'
     required: false
   use-jira-sandbox:
     description: "Use the sandbox server instead of the production Jira. Can also be controlled via USE_JIRA_SANDBOX environment variable."
