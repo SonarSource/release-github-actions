@@ -49,13 +49,20 @@ on:
         description: "SonarQube compatibility"
         required: true
         type: string
+      branch:
+        description: "Branch from which to do the release"
+        required: true
+        type: string
+        default: "master"
 
 jobs:
   lock_master_branch:
     name: Lock master branch
-    uses: ./.github/workflows/ToggleLockBranch.yml
+    uses: SonarSource/release-github-actions/check-releasability-status@yp/add_cloud_security_workflow
     permissions:
       id-token: write
+    with:
+      branch: ${{ inputs.branch }}
 
   pre-release-checks:
     name: Pre-release checks
@@ -68,6 +75,8 @@ jobs:
     steps:
       - name: Check Releasability Status
         uses: SonarSource/release-github-actions/check-releasability-status@5f9e625213d4288f53555490fb4919295db40de2
+        with:
+          branch: ${{ inputs.branch }}
 
       - name: Update Rule Metadata
         id: update-rule-metadata
@@ -98,6 +107,8 @@ jobs:
       - name: Get Release Version
         id: get-release-version
         uses: SonarSource/release-github-actions/get-release-version@5f9e625213d4288f53555490fb4919295db40de2
+        with:
+          branch: ${{ input.branch }}
 
       - name: Get Jira Version
         id: get-jira-version
@@ -147,6 +158,15 @@ jobs:
           release-notes: ${{ needs.prepare-release.outputs.release-notes }}
           release-workflow: 'sonar-release.yml'
           draft: ${{ inputs.is-draft-release }}
+          branch: ${{ input.branch }}
+
+  lock_master_branch:
+    name: Unlock master branch
+    uses: SonarSource/release-github-actions/check-releasability-status@yp/add_cloud_security_workflow
+    permissions:
+      id-token: write
+    with:
+      branch: ${{ inputs.branch }}
 
 #  update-analyzers:
 #    name: Update Analyzers in SQS and SQC
