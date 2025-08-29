@@ -56,7 +56,7 @@ on:
         default: "master"
 
 jobs:
-  lock_master_branch:
+  lock-master-branch:
     name: Lock master branch
     uses: SonarSource/release-github-actions/.github/workflows/ToggleLockBranch.yml@yp/add_cloud_security_workflow
     permissions:
@@ -161,7 +161,7 @@ jobs:
           draft: ${{ inputs.is-draft-release }}
           branch: ${{ inputs.branch }}
 
-  unlock_master_branch:
+  unlock-master-branch:
     name: Unlock master branch
     uses: SonarSource/release-github-actions/.github/workflows/ToggleLockBranch.yml@yp/add_cloud_security_workflow
     needs: publish-github-release
