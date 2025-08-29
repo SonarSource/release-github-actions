@@ -272,7 +272,7 @@ jobs:
   summarize_release:
     name: Release
     runs-on: ubuntu-latest
-    needs: [prepare-release, publish-github-release, create-release-ticket, release-in-jira]
+    needs: [prepare-release, publish-github-release, create-release-ticket, release-in-jira, update-analyzers]
     steps:
       - name: Post Summary to Workflow
         run: |
