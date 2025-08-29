@@ -160,7 +160,7 @@ jobs:
           draft: ${{ inputs.is-draft-release }}
           branch: ${{ inputs.branch }}
 
-  lock_master_branch:
+  unlock_master_branch:
     name: Unlock master branch
     uses: SonarSource/release-github-actions/check-releasability-status@yp/add_cloud_security_workflow
     permissions:
