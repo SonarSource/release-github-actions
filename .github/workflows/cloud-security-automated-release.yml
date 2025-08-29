@@ -203,7 +203,7 @@ jobs:
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.release-version }}
-          release-ticket-key: ${{ needs.create-release-ticket.release-ticket-key }}
+          release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SLVSCODE"
 
       - name: Create SLE Ticket
@@ -211,7 +211,7 @@ jobs:
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.release-version }}
-          release-ticket-key: ${{ needs.create-release-ticket.release-ticket-key }}
+          release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SLE"
 
       - name: Create SLI Ticket
@@ -219,7 +219,7 @@ jobs:
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.release-version }}
-          release-ticket-key: ${{ needs.create-release-ticket.release-ticket-key }}
+          release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SLI"
 
       - name: Create SC Ticket
@@ -228,7 +228,7 @@ jobs:
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.release-version }}
-          release-ticket-key: ${{ needs.create-release-ticket.release-ticket-key }}
+          release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SC"
 
       - name: Create SONAR Ticket
@@ -237,7 +237,7 @@ jobs:
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.release-version }}
-          release-ticket-key: ${{ needs.create-release-ticket.release-ticket-key }}
+          release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SONAR"
 
 #  unlock-master-branch:
