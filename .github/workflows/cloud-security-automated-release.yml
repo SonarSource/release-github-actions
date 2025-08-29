@@ -67,6 +67,7 @@ jobs:
   pre-release-checks:
     name: Pre-release checks
     runs-on: ubuntu-latest
+    needs: lock-master-branch
     permissions:
       statuses: read
       contents: write
@@ -163,6 +164,7 @@ jobs:
   unlock_master_branch:
     name: Unlock master branch
     uses: SonarSource/release-github-actions/.github/workflows/ToggleLockBranch.yml@yp/add_cloud_security_workflow
+    needs: publish-github-release
     permissions:
       id-token: write
     with:
