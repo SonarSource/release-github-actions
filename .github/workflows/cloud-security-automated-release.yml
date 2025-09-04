@@ -210,6 +210,7 @@ jobs:
           release-version: ${{ needs.prepare-release.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SLVSCODE"
+          ticket-description: ${{ needs.prepare-release.outputs.jira-release-notes }}
 
       - name: Create SLE Ticket
         uses: SonarSource/release-github-actions/create-integration-ticket@yp/add_jira_release_notes
@@ -218,7 +219,7 @@ jobs:
           release-version: ${{ needs.prepare-release.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SLE"
-          description: ${{ needs.prepare-release.outputs.jira-release-notes }}
+          ticket-description: ${{ needs.prepare-release.outputs.jira-release-notes }}
 
       - name: Create SLI Ticket
         uses: SonarSource/release-github-actions/create-integration-ticket@yp/add_jira_release_notes
@@ -227,7 +228,7 @@ jobs:
           release-version: ${{ needs.prepare-release.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SLI"
-          description: ${{ needs.prepare-release.outputs.jira-release-notes }}
+          ticket-description: ${{ needs.prepare-release.outputs.jira-release-notes }}
 
       - name: Create SC Ticket
         id: create-sc-ticket
@@ -237,7 +238,7 @@ jobs:
           release-version: ${{ needs.prepare-release.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SC"
-          description: ${{ needs.prepare-release.outputs.jira-release-notes }}
+          ticket-description: ${{ needs.prepare-release.outputs.jira-release-notes }}
 
       - name: Create SONAR Ticket
         id: create-sonar-ticket
@@ -247,7 +248,7 @@ jobs:
           release-version: ${{ needs.prepare-release.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SONAR"
-          description: ${{ needs.prepare-release.outputs.jira-release-notes }}
+          ticket-description: ${{ needs.prepare-release.outputs.jira-release-notes }}
 
 #  update-analyzers:
 #    name: Update Analyzers in SQS and SQC
