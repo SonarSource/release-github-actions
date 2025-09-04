@@ -163,7 +163,7 @@ jobs:
     steps:
       - name: Publish GitHub Release
         id: publish-github-release
-        uses: SonarSource/release-github-actions/publish-github-release@5f9e625213d4288f53555490fb4919295db40de2
+        uses: SonarSource/release-github-actions/publish-github-release@yp/add_jira_release_notes
         with:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           release-notes: ${{ inputs.release_notes != '' && inputs.release_notes || needs.prepare-release.outputs.release-notes }}

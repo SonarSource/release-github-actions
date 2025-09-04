@@ -50,14 +50,11 @@ runs:
     - name: Prepare Release Notes
       shell: bash
       run: |
-        # Use environment variable to safely handle multiline content
-        if [[ -n "${RELEASE_NOTES}" ]]; then
-          echo "${RELEASE_NOTES}" > release-notes.md
+        if [[ -n "${{ inputs.release-notes }}" ]]; then
+          echo "${{ inputs.release-notes }}" > release-notes.md
         else
           echo "" > release-notes.md
         fi
-      env:
-        RELEASE_NOTES: ${{ inputs.release-notes }}
 
     - name: Create Release with GitHub CLI
       id: create-release
