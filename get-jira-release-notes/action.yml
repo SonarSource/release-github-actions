@@ -17,6 +17,9 @@ outputs:
   release-notes:
     description: 'The formatted release notes as Markdown.'
     value: ${{ steps.get_notes.outputs.release-notes }}
+  jira-release-notes:
+    description: 'The formatted release notes in Jira wiki markup format.'
+    value: ${{ steps.get_notes.outputs.jira-release-notes }}
   jira-release-url:
     description: 'The URL to the Jira release notes page.'
     value: ${{ steps.get_notes.outputs.jira-release-url }}
@@ -67,4 +70,4 @@ runs:
           --version-name="$VERSION_NAME" \
           --issue-types="${{ inputs.issue-types }}" \
           --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
-          | tee -a $GITHUB_OUTPUT | sed 's/^jira-release-url=/JIRA_RELEASE_URL=/' | sed 's/^release-notes<</RELEASE_NOTES<</' >> $GITHUB_ENV
+          | tee -a $GITHUB_OUTPUT | sed 's/^jira-release-url=/JIRA_RELEASE_URL=/' | sed 's/^release-notes<</RELEASE_NOTES<</' | sed 's/^jira-release-notes<</JIRA_RELEASE_NOTES<</' >> $GITHUB_ENV

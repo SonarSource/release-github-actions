@@ -8,7 +8,7 @@ The action retrieves Jira release information by:
 1. Connecting to Jira using authentication credentials from Vault
 2. Fetching the version ID for the specified project and version name
 3. Retrieving all issues associated with the specified fixVersion
-4. Formatting the issues into categorized Markdown release notes
+4. Formatting the issues into categorized release notes in both Markdown and Jira wiki markup formats
 5. Generating the proper Jira release notes URL
 6. Returning both the formatted release notes and the URL
 
@@ -31,17 +31,19 @@ This action depends on:
 
 ## Outputs
 
-| Output             | Description                             |
-|--------------------|-----------------------------------------|
-| `release-notes`    | The formatted release notes as Markdown |
-| `jira-release-url` | The URL to the Jira release notes page  |
+| Output                | Description                                      |
+|-----------------------|--------------------------------------------------|
+| `release-notes`       | The formatted release notes as Markdown          |
+| `jira-release-notes`  | The formatted release notes in Jira wiki markup  |
+| `jira-release-url`    | The URL to the Jira release notes page           |
 
 ## Environment Variables Set
 
-| Environment Variable | Description                                                                        |
-|----------------------|------------------------------------------------------------------------------------|
-| `RELEASE_NOTES`      | The formatted release notes as Markdown (same content as `release-notes` output)   |
-| `JIRA_RELEASE_URL`   | The URL to the Jira release notes page (same content as `jira-release-url` output) |
+| Environment Variable   | Description                                                                              |
+|------------------------|------------------------------------------------------------------------------------------|
+| `RELEASE_NOTES`        | The formatted release notes as Markdown (same content as `release-notes` output)        |
+| `JIRA_RELEASE_NOTES`   | The formatted release notes in Jira wiki markup (same content as `jira-release-notes` output) |
+| `JIRA_RELEASE_URL`     | The URL to the Jira release notes page (same content as `jira-release-url` output)      |
 
 ## Usage
 
@@ -58,8 +60,10 @@ This action depends on:
 - name: Use the outputs
   run: |
     echo "Release Notes URL: ${{ steps.jira-notes.outputs.jira-release-url }}"
-    echo "Release Notes:"
+    echo "Release Notes (Markdown):"
     echo "${{ steps.jira-notes.outputs.release-notes }}"
+    echo "Release Notes (Jira Format):"
+    echo "${{ steps.jira-notes.outputs.jira-release-notes }}"
 ```
 
 ### Custom issue types ordering
@@ -127,7 +131,7 @@ The action will:
 1. Connect to Jira and find version `1.2.3` in project `SONARIAC`
 2. Fetch all 6 issues with fixVersion `1.2.3`
 3. Generate a Markdown document with categorized sections
-4. Return both the release notes URL (`https://sonarsource.atlassian.net/projects/SONARIAC/versions/12345/tab/release-report-all-issues`) and the formatted release notes in Markdown format
+4. Return the release notes URL (`https://sonarsource.atlassian.net/projects/SONARIAC/versions/12345/tab/release-report-all-issues`) and the formatted release notes in both Markdown and Jira wiki markup formats
 
 ## Implementation Details
 
