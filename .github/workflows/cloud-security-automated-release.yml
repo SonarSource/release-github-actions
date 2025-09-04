@@ -111,6 +111,7 @@ jobs:
       release-version: ${{ steps.get-release-version.outputs.release-version }}
       jira-version-name: ${{ steps.get-jira-version.outputs.jira-version-name }}
       release-notes: ${{ steps.get-jira-release-notes.outputs.release-notes }}
+      jira-release-notes: ${{ steps.get-jira-release-notes.outputs.release-notes }}
       jira-release-url: ${{ steps.get-jira-release-notes.outputs.jira-release-url }}
     steps:
       - name: Get Release Version
@@ -126,7 +127,7 @@ jobs:
       - name: Get Jira Release Notes
         id: get-jira-release-notes
         if: inputs.release_notes == ''
-        uses: SonarSource/release-github-actions/get-jira-release-notes@5f9e625213d4288f53555490fb4919295db40de2
+        uses: SonarSource/release-github-actions/get-jira-release-notes@yp/add_jira_release_notes
 
   create-release-ticket:
     name: Create release ticket
@@ -203,7 +204,7 @@ jobs:
           assignee: ${{ inputs.pm-email }}
 
       - name: Create SLVSCODE Ticket
-        uses: SonarSource/release-github-actions/create-integration-ticket@5f9e625213d4288f53555490fb4919295db40de2
+        uses: SonarSource/release-github-actions/create-integration-ticket@yp/add_jira_release_notes
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.release-version }}
@@ -211,74 +212,78 @@ jobs:
           target-jira-project: "SLVSCODE"
 
       - name: Create SLE Ticket
-        uses: SonarSource/release-github-actions/create-integration-ticket@5f9e625213d4288f53555490fb4919295db40de2
+        uses: SonarSource/release-github-actions/create-integration-ticket@yp/add_jira_release_notes
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SLE"
+          description: ${{ needs.prepare-release.outputs.jira-release-notes }}
 
       - name: Create SLI Ticket
-        uses: SonarSource/release-github-actions/create-integration-ticket@5f9e625213d4288f53555490fb4919295db40de2
+        uses: SonarSource/release-github-actions/create-integration-ticket@yp/add_jira_release_notes
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SLI"
+          description: ${{ needs.prepare-release.outputs.jira-release-notes }}
 
       - name: Create SC Ticket
         id: create-sc-ticket
-        uses: SonarSource/release-github-actions/create-integration-ticket@5f9e625213d4288f53555490fb4919295db40de2
+        uses: SonarSource/release-github-actions/create-integration-ticket@yp/add_jira_release_notes
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SC"
+          description: ${{ needs.prepare-release.outputs.jira-release-notes }}
 
       - name: Create SONAR Ticket
         id: create-sonar-ticket
-        uses: SonarSource/release-github-actions/create-integration-ticket@5f9e625213d4288f53555490fb4919295db40de2
+        uses: SonarSource/release-github-actions/create-integration-ticket@yp/add_jira_release_notes
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SONAR"
+          description: ${{ needs.prepare-release.outputs.jira-release-notes }}
 
-  update-analyzers:
-    name: Update Analyzers in SQS and SQC
-    runs-on: ubuntu-latest
-    needs: [prepare-release, release-in-jira]
-    permissions:
-      id-token: write
-    outputs:
-      sqs-pull-request-url: ${{ steps.update-sqs.outputs.pull-request-url }}
-      sqc-pull-request-url: ${{ steps.update-sqc.outputs.pull-request-url }}
-    steps:
-      - name: Update analyzer in SQS
-        id: update-sqs
-        uses: SonarSource/release-github-actions/update-analyzer@5f9e625213d4288f53555490fb4919295db40de2
-        with:
-          release-version: ${{ needs.prepare-release.outputs.release-version }}
-          ticket-key: ${{ needs.release-in-jira.outputs.sqs-ticket-key }}
-          plugin-name: ${{ inputs.plugin-name }}
-          secret-name: ${{ inputs.release-automation-secret-name }}
-          plugin-artifacts: ${{inputs.plugin-artifacts }}
-          draft: ${{ inputs.is-draft-release }}
-      - name: Update analyzer in SQC
-        id: update-sqc
-        uses: SonarSource/release-github-actions/update-analyzer@5f9e625213d4288f53555490fb4919295db40de2
-        with:
-          release-version: ${{ needs.prepare-release.outputs.release-version }}
-          ticket-key: ${{ needs.release-in-jira.outputs.sqc-ticket-key }}
-          plugin-name: ${{ inputs.plugin-name }}
-          secret-name: ${{ inputs.release-automation-secret-name }}
-          plugin-artifacts: ${{inputs.plugin-artifacts }}
-          draft: ${{ inputs.is-draft-release }}
+#  update-analyzers:
+#    name: Update Analyzers in SQS and SQC
+#    runs-on: ubuntu-latest
+#    needs: [prepare-release, release-in-jira]
+#    permissions:
+#      id-token: write
+#    outputs:
+#      sqs-pull-request-url: ${{ steps.update-sqs.outputs.pull-request-url }}
+#      sqc-pull-request-url: ${{ steps.update-sqc.outputs.pull-request-url }}
+#    steps:
+#      - name: Update analyzer in SQS
+#        id: update-sqs
+#        uses: SonarSource/release-github-actions/update-analyzer@5f9e625213d4288f53555490fb4919295db40de2
+#        with:
+#          release-version: ${{ needs.prepare-release.outputs.release-version }}
+#          ticket-key: ${{ needs.release-in-jira.outputs.sqs-ticket-key }}
+#          plugin-name: ${{ inputs.plugin-name }}
+#          secret-name: ${{ inputs.release-automation-secret-name }}
+#          plugin-artifacts: ${{inputs.plugin-artifacts }}
+#          draft: ${{ inputs.is-draft-release }}
+#      - name: Update analyzer in SQC
+#        id: update-sqc
+#        uses: SonarSource/release-github-actions/update-analyzer@5f9e625213d4288f53555490fb4919295db40de2
+#        with:
+#          release-version: ${{ needs.prepare-release.outputs.release-version }}
+#          ticket-key: ${{ needs.release-in-jira.outputs.sqc-ticket-key }}
+#          plugin-name: ${{ inputs.plugin-name }}
+#          secret-name: ${{ inputs.release-automation-secret-name }}
+#          plugin-artifacts: ${{inputs.plugin-artifacts }}
+#          draft: ${{ inputs.is-draft-release }}
 
   summarize_release:
     name: Release
     runs-on: ubuntu-latest
-    needs: [prepare-release, publish-github-release, create-release-ticket, release-in-jira, update-analyzers]
+    needs: [prepare-release, publish-github-release, create-release-ticket, release-in-jira]
     steps:
       - name: Post Summary to Workflow
         run: |
