@@ -117,7 +117,7 @@ def create_integration_ticket(jira_client, args):
     # Add description if provided
     if args.ticket_description:
         ticket_details['description'] = args.ticket_description
-        eprint(f"Adding description to ticket")
+        eprint("Adding description to ticket")
 
     try:
         new_ticket = jira_client.create_issue(fields=ticket_details)
