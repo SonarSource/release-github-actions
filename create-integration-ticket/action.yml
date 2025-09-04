@@ -80,11 +80,16 @@ runs:
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
         JIRA_PROD_URL: "https://sonarsource.atlassian.net/"
         JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
+        TICKET_DESCRIPTION: ${{ inputs.ticket-description }}
       run: |
-        python ${{ github.action_path }}/create_integration_ticket.py \
-          --ticket-summary "${{ steps.validate_inputs.outputs.ticket_summary }}" \
-          --target-jira-project "${{ inputs.target-jira-project }}" \
-          --release-ticket-key "${{ inputs.release-ticket-key }}" \
-          --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
-          --link-type "${{ inputs.link-type }}" \
-          ${{ inputs.ticket-description && format('--ticket-description "{0}"', inputs.ticket-description) || '' }} >> $GITHUB_OUTPUT
+        ARGS="--ticket-summary \"${{ steps.validate_inputs.outputs.ticket_summary }}\" \
+          --target-jira-project \"${{ inputs.target-jira-project }}\" \
+          --release-ticket-key \"${{ inputs.release-ticket-key }}\" \
+          --jira-url=\"${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}\" \
+          --link-type \"${{ inputs.link-type }}\""
+        
+        if [ -n "$TICKET_DESCRIPTION" ]; then
+          python ${{ github.action_path }}/create_integration_ticket.py $ARGS --ticket-description "$TICKET_DESCRIPTION" >> $GITHUB_OUTPUT
+        else
+          python ${{ github.action_path }}/create_integration_ticket.py $ARGS >> $GITHUB_OUTPUT
+        fi
