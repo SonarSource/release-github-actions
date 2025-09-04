@@ -198,12 +198,47 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         self.assertEqual(result, mock_ticket)
         mock_jira.create_issue.assert_called_once()
 
-        # Verify the issue creation call includes description
+        # Verify the issue creation call does NOT include description
         call_args = mock_jira.create_issue.call_args[1]['fields']
         self.assertEqual(call_args['project'], 'INT')
         self.assertEqual(call_args['issuetype'], {'name': 'Task'})
         self.assertEqual(call_args['summary'], 'Integration ticket for release')
-        self.assertEqual(call_args['description'], 'This is a detailed description of the integration ticket')
+        self.assertNotIn('description', call_args)
+        
+        # Verify the description was set via update
+        mock_ticket.update.assert_called_once_with(fields={'description': 'This is a detailed description of the integration ticket'})
+
+    @patch('create_integration_ticket.eprint')
+    def test_create_integration_ticket_description_update_fails(self, mock_eprint):
+        """Test creating integration ticket when description update fails."""
+        mock_jira = Mock()
+        mock_project = Mock()
+        mock_jira.project.return_value = mock_project
+
+        mock_jira.createmeta.return_value = {
+            'projects': [{'issuetypes': [{'name': 'Task'}]}]
+        }
+
+        mock_ticket = Mock()
+        mock_ticket.key = 'INT-123'
+        mock_jira.create_issue.return_value = mock_ticket
+        
+        # Mock description update failure
+        mock_response = Mock()
+        mock_response.text = 'Description field update failed'
+        mock_ticket.update.side_effect = JIRAError(status_code=400, response=mock_response)
+
+        args = Mock()
+        args.target_jira_project = 'INT'
+        args.ticket_summary = 'Integration ticket for release'
+        args.ticket_description = 'This description will fail to set'
+
+        result = create_integration_ticket(mock_jira, args)
+
+        # Should still return the ticket even if description update failed
+        self.assertEqual(result, mock_ticket)
+        mock_jira.create_issue.assert_called_once()
+        mock_ticket.update.assert_called_once_with(fields={'description': 'This description will fail to set'})
 
     # noinspection DuplicatedCode
     def test_create_integration_ticket_with_improvement_type(self):

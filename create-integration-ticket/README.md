@@ -8,8 +8,9 @@ The action creates an integration ticket in Jira by:
 1. Connecting to Jira using authentication credentials
 2. Validating that the release ticket exists and is accessible
 3. Creating a new integration ticket with the provided summary
-4. Linking the new ticket to the existing ticket with the specified link type
-5. Returning the ticket key and URL for use in subsequent workflow steps
+4. Setting the description on the ticket (if provided)
+5. Linking the new ticket to the existing ticket with the specified link type
+6. Returning the ticket key and URL for use in subsequent workflow steps
 
 ## Dependencies
 
@@ -24,7 +25,7 @@ This action requires:
 | `release-ticket-key`  | The key of the ticket to link to (e.g., REL-123)                                                                                          | Yes      | -            |
 | `target-jira-project` | The key of the project where the ticket will be created (e.g., SQS)                                                                       | Yes      | -            |
 | `ticket-summary`      | The summary/title for the integration ticket                                                                                              | No       | -            |
-| `ticket-description`  | The description for the integration ticket                                                                                                | No       | -            |
+| `ticket-description`  | Description for the integration ticket                                                                                                    | No       | -            |
 | `plugin-name`         | The name of the plugin (used to generate ticket summary if ticket-summary is not provided)                                                | No       | -            |
 | `release-version`     | The release version (used to generate ticket summary if ticket-summary is not provided). If not set version will be retreived from build. | No       | -            |
 | `use-jira-sandbox`    | Use the sandbox Jira server instead of production. Can also be controlled via `USE_JIRA_SANDBOX` environment variable                     | No       | -            |
@@ -88,10 +89,11 @@ This action requires:
 
 ## Features
 
-- Creates a Jira ticket in the specified project with a custom summary and optional description
-- Automatically detects appropriate issue type (Task, Story, or first available)
+- Creates a Jira ticket in the specified project with optional description
+- Automatically detects appropriate issue type (Task, Improvement, or first available)
 - Links the created ticket to an existing ticket using the specified link type
 - Validates that the release ticket exists before creating the new ticket
+- Gracefully handles description field limitations (warns if description cannot be set but continues)
 - Supports both production and sandbox Jira instances
 - Provides detailed error messages and logging
 - Returns ticket key and URL as outputs for use in subsequent workflow steps
@@ -103,3 +105,7 @@ The action will fail if:
 - The specified project doesn't exist or isn't accessible
 - The release ticket doesn't exist or isn't accessible
 - Ticket creation fails
+
+The action will continue but warn if:
+- The description field cannot be set (due to project configuration or permissions)
+- Ticket linking fails (the ticket is still created successfully)

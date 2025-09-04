@@ -113,15 +113,22 @@ def create_integration_ticket(jira_client, args):
         'issuetype': {'name': issue_type},
         'summary': args.ticket_summary,
     }
-    
-    # Add description if provided
-    if args.ticket_description:
-        ticket_details['description'] = args.ticket_description
-        eprint("Adding description to ticket")
 
     try:
         new_ticket = jira_client.create_issue(fields=ticket_details)
         eprint(f"Successfully created ticket: {new_ticket.key}")
+        
+        # Update description if provided (as a separate operation)
+        if args.ticket_description:
+            eprint("Setting description on ticket...")
+            try:
+                new_ticket.update(fields={'description': args.ticket_description})
+                eprint("Description successfully set")
+            except JIRAError as desc_e:
+                eprint(f"Warning: Failed to set description on ticket. Status: {desc_e.status_code}")
+                eprint(f"Description error: {desc_e.response.text}")
+                eprint("Ticket was created successfully but without description")
+        
         return new_ticket
     except JIRAError as e:
         eprint(f"Error: Failed to create Jira ticket. Status: {e.status_code}")
