@@ -113,6 +113,11 @@ def create_integration_ticket(jira_client, args):
         'issuetype': {'name': issue_type},
         'summary': args.ticket_summary,
     }
+    
+    # Add description if provided
+    if args.ticket_description:
+        ticket_details['description'] = args.ticket_description
+        eprint(f"Adding description to ticket")
 
     try:
         new_ticket = jira_client.create_issue(fields=ticket_details)
@@ -159,6 +164,8 @@ def main():
 
     parser.add_argument("--ticket-summary", required=True,
                        help="The summary/title for the integration ticket.")
+    parser.add_argument("--ticket-description",
+                       help="Optional description for the integration ticket.")
     parser.add_argument("--release-ticket-key", required=True,
                        help="The key of the ticket to link to (e.g., REL-123).")
     parser.add_argument("--target-jira-project", required=True,

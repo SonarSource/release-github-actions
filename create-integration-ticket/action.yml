@@ -11,6 +11,8 @@ inputs:
     required: true
   ticket-summary:
     description: 'The summary/title for the integration ticket'
+  ticket-description:
+    description: 'Description for the integration ticket'
   plugin-name:
     description: 'The name of the plugin (used to generate ticket summary if ticket-summary is not provided)'
   release-version:
@@ -84,4 +86,5 @@ runs:
           --target-jira-project "${{ inputs.target-jira-project }}" \
           --release-ticket-key "${{ inputs.release-ticket-key }}" \
           --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
-          --link-type "${{ inputs.link-type }}" >> $GITHUB_OUTPUT
+          --link-type "${{ inputs.link-type }}" \
+          ${{ inputs.ticket-description && format('--ticket-description "{0}"', inputs.ticket-description) || '' }} >> $GITHUB_OUTPUT

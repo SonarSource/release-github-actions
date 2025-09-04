@@ -24,6 +24,7 @@ This action requires:
 | `release-ticket-key`  | The key of the ticket to link to (e.g., REL-123)                                                                                          | Yes      | -            |
 | `target-jira-project` | The key of the project where the ticket will be created (e.g., SQS)                                                                       | Yes      | -            |
 | `ticket-summary`      | The summary/title for the integration ticket                                                                                              | No       | -            |
+| `ticket-description`  | The description for the integration ticket                                                                                                | No       | -            |
 | `plugin-name`         | The name of the plugin (used to generate ticket summary if ticket-summary is not provided)                                                | No       | -            |
 | `release-version`     | The release version (used to generate ticket summary if ticket-summary is not provided). If not set version will be retreived from build. | No       | -            |
 | `use-jira-sandbox`    | Use the sandbox Jira server instead of production. Can also be controlled via `USE_JIRA_SANDBOX` environment variable                     | No       | -            |
@@ -40,13 +41,14 @@ This action requires:
 
 ## Usage
 
-### Example 1: Using explicit ticket summary
+### Example 1: Using explicit ticket summary with description
 ```yaml
 - name: Create Integration Ticket
   id: create-ticket
   uses: ./create-integration-ticket
   with:
     ticket-summary: "Update SonarPython analyzer to 5.8.0.24785"
+    ticket-description: "This ticket tracks the integration of SonarPython analyzer version 5.8.0.24785 into our platform. Please ensure all tests pass before closing."
     release-ticket-key: "REL-456"
     target-jira-project: "SQS"
     link-type: "depends on"
@@ -65,6 +67,17 @@ This action requires:
     link-type: "depends on"
 ```
 
+### Example 3: Simple integration ticket (without description)
+```yaml
+- name: Create Integration Ticket
+  id: create-ticket
+  uses: ./create-integration-ticket
+  with:
+    ticket-summary: "Simple integration ticket"
+    release-ticket-key: "REL-456"
+    target-jira-project: "SQS"
+```
+
 ### Using outputs
 ```yaml
 - name: Use ticket outputs
@@ -75,7 +88,7 @@ This action requires:
 
 ## Features
 
-- Creates a Jira ticket in the specified project with a custom summary
+- Creates a Jira ticket in the specified project with a custom summary and optional description
 - Automatically detects appropriate issue type (Task, Story, or first available)
 - Links the created ticket to an existing ticket using the specified link type
 - Validates that the release ticket exists before creating the new ticket

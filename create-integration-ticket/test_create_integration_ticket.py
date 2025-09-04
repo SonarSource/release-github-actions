@@ -154,6 +154,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         args = Mock()
         args.target_jira_project = 'INT'
         args.ticket_summary = 'Integration ticket for release'
+        args.ticket_description = None
 
         result = create_integration_ticket(mock_jira, args)
 
@@ -165,6 +166,44 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         self.assertEqual(call_args['project'], 'INT')
         self.assertEqual(call_args['issuetype'], {'name': 'Task'})
         self.assertEqual(call_args['summary'], 'Integration ticket for release')
+        self.assertNotIn('description', call_args)  # No description provided
+
+    def test_create_integration_ticket_with_description(self):
+        """Test creating integration ticket with description."""
+        mock_jira = Mock()
+        mock_project = Mock()
+        mock_jira.project.return_value = mock_project
+
+        # Mock issue types with Task available
+        mock_jira.createmeta.return_value = {
+            'projects': [{
+                'issuetypes': [
+                    {'name': 'Task'}
+                ]
+            }]
+        }
+
+        mock_ticket = Mock()
+        mock_ticket.key = 'INT-123'
+        mock_jira.create_issue.return_value = mock_ticket
+
+        # Mock args with description
+        args = Mock()
+        args.target_jira_project = 'INT'
+        args.ticket_summary = 'Integration ticket for release'
+        args.ticket_description = 'This is a detailed description of the integration ticket'
+
+        result = create_integration_ticket(mock_jira, args)
+
+        self.assertEqual(result, mock_ticket)
+        mock_jira.create_issue.assert_called_once()
+
+        # Verify the issue creation call includes description
+        call_args = mock_jira.create_issue.call_args[1]['fields']
+        self.assertEqual(call_args['project'], 'INT')
+        self.assertEqual(call_args['issuetype'], {'name': 'Task'})
+        self.assertEqual(call_args['summary'], 'Integration ticket for release')
+        self.assertEqual(call_args['description'], 'This is a detailed description of the integration ticket')
 
     # noinspection DuplicatedCode
     def test_create_integration_ticket_with_improvement_type(self):
@@ -190,6 +229,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         args = Mock()
         args.target_jira_project = 'INT'
         args.ticket_summary = 'Integration ticket for release'
+        args.ticket_description = None
 
         result = create_integration_ticket(mock_jira, args)
 
@@ -223,6 +263,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         args = Mock()
         args.target_jira_project = 'INT'
         args.ticket_summary = 'Integration ticket for release'
+        args.ticket_description = None
 
         result = create_integration_ticket(mock_jira, args)
 
@@ -245,6 +286,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
 
         args = Mock()
         args.target_jira_project = 'INT'
+        args.ticket_description = None
 
         with self.assertRaises(SystemExit) as cm:
             create_integration_ticket(mock_jira, args)
@@ -257,6 +299,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
 
         args = Mock()
         args.target_jira_project = 'INT'
+        args.ticket_description = None
 
         with self.assertRaises(SystemExit) as cm:
             create_integration_ticket(mock_jira, args)
@@ -281,6 +324,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         args = Mock()
         args.target_jira_project = 'INT'
         args.ticket_summary = 'Test ticket'
+        args.ticket_description = None
 
         with self.assertRaises(SystemExit) as cm:
             create_integration_ticket(mock_jira, args)
@@ -438,3 +482,64 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         mock_link_tickets.assert_called_once_with(
             mock_jira, mock_integration_ticket, mock_release_ticket, 'relates to'
         )
+
+    @patch('sys.argv', [
+        'create_integration_ticket.py',
+        '--ticket-summary', 'Integration ticket with description',
+        '--ticket-description', 'This ticket has a detailed description',
+        '--release-ticket-key', 'REL-789',
+        '--target-jira-project', 'DESC',
+        '--jira-url', 'https://sonarsource.atlassian.net/',
+        '--link-type', 'depends on'
+    ])
+    @patch('create_integration_ticket.get_jira_instance')
+    @patch('create_integration_ticket.validate_release_ticket')
+    @patch('create_integration_ticket.create_integration_ticket')
+    @patch('create_integration_ticket.link_tickets')
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_main_with_description(self, mock_stderr, mock_link_tickets,
+                                   mock_create_ticket, mock_validate_release_ticket, mock_get_jira):
+        """Test main function with description parameter."""
+        # Mock JIRA instance
+        mock_jira = Mock()
+        mock_get_jira.return_value = mock_jira
+
+        # Mock release ticket validation
+        mock_release_ticket = Mock()
+        mock_release_ticket.key = 'REL-789'
+        mock_validate_release_ticket.return_value = mock_release_ticket
+
+        # Mock integration ticket creation
+        mock_integration_ticket = Mock()
+        mock_integration_ticket.key = 'DESC-101'
+        mock_integration_ticket.permalink.return_value = 'https://jira.com/DESC-101'
+        mock_create_ticket.return_value = mock_integration_ticket
+
+        main()
+
+        # Verify get_jira_instance was called with correct URL
+        mock_get_jira.assert_called_once_with('https://sonarsource.atlassian.net/')
+
+        # Verify validate_release_ticket was called
+        mock_validate_release_ticket.assert_called_once_with(mock_jira, 'REL-789')
+
+        # Verify create_integration_ticket was called with description
+        mock_create_ticket.assert_called_once()
+        call_args = mock_create_ticket.call_args[0]
+        self.assertEqual(call_args[0], mock_jira)  # jira client
+        args = call_args[1]  # args object
+        self.assertEqual(args.ticket_summary, 'Integration ticket with description')
+        self.assertEqual(args.ticket_description, 'This ticket has a detailed description')
+        self.assertEqual(args.release_ticket_key, 'REL-789')
+        self.assertEqual(args.target_jira_project, 'DESC')
+        self.assertEqual(args.jira_url, 'https://sonarsource.atlassian.net/')
+        self.assertEqual(args.link_type, 'depends on')
+
+        # Verify link_tickets was called
+        mock_link_tickets.assert_called_once_with(
+            mock_jira, mock_integration_ticket, mock_release_ticket, 'depends on'
+        )
+
+
+if __name__ == '__main__':
+    unittest.main()
