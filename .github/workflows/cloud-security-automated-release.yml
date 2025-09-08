@@ -166,7 +166,6 @@ jobs:
         with:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           release-notes: ${{ inputs.release_notes != '' && inputs.release_notes || needs.prepare-release.outputs.release-notes }}
-          release-workflow: 'sonar-release.yml'
           draft: ${{ inputs.is-draft-release }}
           branch: ${{ inputs.branch }}
 
