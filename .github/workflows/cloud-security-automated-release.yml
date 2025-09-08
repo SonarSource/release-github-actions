@@ -62,7 +62,7 @@ on:
         required: true
         type: string
         default: "master"
-      release_notes:
+      release-notes:
         description: "Release notes"
         required: true
         type: string
@@ -129,7 +129,7 @@ jobs:
 
       - name: Get Jira Release Notes
         id: get-jira-release-notes
-        if: inputs.release_notes == ''
+        if: inputs.release-notes == ''
         uses: SonarSource/release-github-actions/get-jira-release-notes@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
 
   create-release-ticket:
@@ -169,7 +169,7 @@ jobs:
         uses: SonarSource/release-github-actions/publish-github-release@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
         with:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
-          release-notes: ${{ inputs.release_notes != '' && inputs.release_notes || needs.prepare-release.outputs.release-notes }}
+          release-notes: ${{ inputs.release-notes != '' && inputs.release-notes || needs.prepare-release.outputs.release-notes }}
           draft: ${{ inputs.is-draft-release }}
           branch: ${{ inputs.branch }}
 
