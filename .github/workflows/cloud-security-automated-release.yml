@@ -152,6 +152,7 @@ jobs:
           rule-props-changed: ${{ inputs.rule-props-changed }}
           jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
           start-progress: true
+          version: ${{ needs.prepare-release.outputs.release-version }}
 
   publish-github-release:
     name: Publish github release
