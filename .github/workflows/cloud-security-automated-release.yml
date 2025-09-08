@@ -152,9 +152,9 @@ jobs:
           short-description: ${{ inputs.short-description }}
           sq-compatibility: ${{ inputs.sq-compatibility }}
           rule-props-changed: ${{ inputs.rule-props-changed }}
-          jira-release-url: "https://sonarsource-sandbox-608.atlassian.net/projects/SONARPHP/versions/17432/tab/release-report-all-issues"
-          start-progress: true
+          jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
           version: ${{ needs.prepare-release.outputs.release-version }}
+          start-progress: true
 
   publish-github-release:
     name: Publish github release
@@ -181,6 +181,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ prepare-release, publish-github-release, create-release-ticket ]
     permissions:
+      statuses: read
       contents: read
       id-token: write
     outputs:
@@ -190,16 +191,16 @@ jobs:
       sqs-ticket-key: ${{ steps.create-sonar-ticket.outputs.ticket-key }}
       sqs-ticket-url: ${{ steps.create-sonar-ticket.outputs.ticket-url }}
     steps:
-#      - name: Release in Jira
-#        uses: SonarSource/release-github-actions/release-jira-version@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
-#        with:
-#          jira-version-name: ${{ needs.prepare-release.outputs.jira-version-name }}
+      - name: Release in Jira
+        uses: SonarSource/release-github-actions/release-jira-version@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
+        with:
+          jira-version-name: ${{ needs.prepare-release.outputs.jira-version-name }}
 
-#      - name: Create new release in jira
-#        id: create-jira-version
-#        uses: SonarSource/release-github-actions/create-jira-version@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
-#        with:
-#          jira-version-name: ${{ inputs.new-version }}
+      - name: Create new release in jira
+        id: create-jira-version
+        uses: SonarSource/release-github-actions/create-jira-version@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
+        with:
+          jira-version-name: ${{ inputs.new-version }}
 
       - name: Move release ticket to done
         uses: SonarSource/release-github-actions/update-release-ticket-status@9b1c9f8f9a3ba07708451bcc30f68e120e80fad0
