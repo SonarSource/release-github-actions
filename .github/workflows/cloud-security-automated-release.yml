@@ -190,16 +190,16 @@ jobs:
       sqs-ticket-key: ${{ steps.create-sonar-ticket.outputs.ticket-key }}
       sqs-ticket-url: ${{ steps.create-sonar-ticket.outputs.ticket-url }}
     steps:
-      - name: Release in Jira
-        uses: SonarSource/release-github-actions/release-jira-version@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
-        with:
-          jira-version-name: "2.22"
+#      - name: Release in Jira
+#        uses: SonarSource/release-github-actions/release-jira-version@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
+#        with:
+#          jira-version-name: ${{ needs.prepare-release.outputs.jira-version-name }}
 
-      - name: Create new release in jira
-        id: create-jira-version
-        uses: SonarSource/release-github-actions/create-jira-version@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
-        with:
-          jira-version-name: ${{ inputs.new-version }}
+#      - name: Create new release in jira
+#        id: create-jira-version
+#        uses: SonarSource/release-github-actions/create-jira-version@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
+#        with:
+#          jira-version-name: ${{ inputs.new-version }}
 
       - name: Move release ticket to done
         uses: SonarSource/release-github-actions/update-release-ticket-status@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
