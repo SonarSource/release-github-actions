@@ -116,6 +116,30 @@ def format_notes_as_markdown(issues, jira_url, project_name, version, category_o
     return "\n".join(markdown_lines)
 
 
+def format_notes_as_jira_markup(issues, jira_url, project_name, version, category_order):
+    """Formats a list of Jira issues into a categorized Jira wiki markup string."""
+    if not issues:
+        return f"h1. Release notes - {project_name} - {version}\n\nNo issues found for this release."
+
+    categorized_issues = defaultdict(list)
+    for issue in issues:
+        issue_type = issue.fields.issuetype.name
+        categorized_issues[issue_type].append(issue)
+
+    jira_lines = [f"h1. Release notes - {project_name} - {version}\n"]
+
+    for category_name in category_order:
+        if category_name in categorized_issues:
+            jira_lines.append(f"h3. {category_name}")
+            for issue in categorized_issues[category_name]:
+                issue_link = f"{jira_url.rstrip('/')}/browse/{issue.key}"
+                line = f"[{issue.key}|{issue_link}] {issue.fields.summary}"
+                jira_lines.append(line)
+            jira_lines.append("")
+
+    return "\n".join(jira_lines)
+
+
 def generate_release_notes_url(jira_url, project_key, version_id):
     """Generates the release notes URL using the same logic as create_release_ticket.py."""
     return f"{jira_url.rstrip('/')}/projects/{project_key}/versions/{version_id}/tab/release-report-all-issues"
@@ -157,16 +181,20 @@ def main():
     # Generate release notes URL
     release_notes_url = generate_release_notes_url(args.jira_url, args.project_key, version_id)
     
-    # Get project name and issues for markdown generation
+    # Get project name and issues for both formats
     project_name = get_project_name(jira, args.project_key)
     issues = get_issues_for_release(jira, args.project_key, args.version_name)
     markdown_notes = format_notes_as_markdown(issues, args.jira_url, project_name, args.version_name, category_order)
+    jira_markup_notes = format_notes_as_jira_markup(issues, args.jira_url, project_name, args.version_name, category_order)
 
     # Output results for GitHub Actions
     # Using multiline string format for the release notes
     print(f"jira-release-url={release_notes_url}")
     print("release-notes<<EOF")
     print(markdown_notes)
+    print("EOF")
+    print("jira-release-notes<<EOF")
+    print(jira_markup_notes)
     print("EOF")
 
 

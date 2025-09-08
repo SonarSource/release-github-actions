@@ -11,6 +11,8 @@ inputs:
     required: true
   ticket-summary:
     description: 'The summary/title for the integration ticket'
+  ticket-description:
+    description: 'Description for the integration ticket'
   plugin-name:
     description: 'The name of the plugin (used to generate ticket summary if ticket-summary is not provided)'
   release-version:
@@ -78,10 +80,12 @@ runs:
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
         JIRA_PROD_URL: "https://sonarsource.atlassian.net/"
         JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
+        TICKET_DESCRIPTION: ${{ inputs.ticket-description }}
       run: |
         python ${{ github.action_path }}/create_integration_ticket.py \
           --ticket-summary "${{ steps.validate_inputs.outputs.ticket_summary }}" \
           --target-jira-project "${{ inputs.target-jira-project }}" \
           --release-ticket-key "${{ inputs.release-ticket-key }}" \
           --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
-          --link-type "${{ inputs.link-type }}" >> $GITHUB_OUTPUT
+          --link-type "${{ inputs.link-type }}" \
+          ${TICKET_DESCRIPTION:+--ticket-description "$TICKET_DESCRIPTION"} >> $GITHUB_OUTPUT

@@ -117,6 +117,18 @@ def create_integration_ticket(jira_client, args):
     try:
         new_ticket = jira_client.create_issue(fields=ticket_details)
         eprint(f"Successfully created ticket: {new_ticket.key}")
+        
+        # Update description if provided (as a separate operation)
+        if args.ticket_description:
+            eprint("Setting description on ticket...")
+            try:
+                new_ticket.update(fields={'description': args.ticket_description})
+                eprint("Description successfully set")
+            except JIRAError as desc_e:
+                eprint(f"Warning: Failed to set description on ticket. Status: {desc_e.status_code}")
+                eprint(f"Description error: {desc_e.response.text}")
+                eprint("Ticket was created successfully but without description")
+        
         return new_ticket
     except JIRAError as e:
         eprint(f"Error: Failed to create Jira ticket. Status: {e.status_code}")
@@ -159,6 +171,8 @@ def main():
 
     parser.add_argument("--ticket-summary", required=True,
                        help="The summary/title for the integration ticket.")
+    parser.add_argument("--ticket-description",
+                       help="Optional description for the integration ticket.")
     parser.add_argument("--release-ticket-key", required=True,
                        help="The key of the ticket to link to (e.g., REL-123).")
     parser.add_argument("--target-jira-project", required=True,

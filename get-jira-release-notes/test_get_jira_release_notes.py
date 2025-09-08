@@ -20,6 +20,7 @@ from get_jira_release_notes import (
     get_version_id,
     get_issues_for_release,
     format_notes_as_markdown,
+    format_notes_as_jira_markup,
     generate_release_notes_url,
     main
 )
@@ -223,10 +224,11 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
     @patch('get_jira_release_notes.get_project_name')
     @patch('get_jira_release_notes.get_issues_for_release')
     @patch('get_jira_release_notes.format_notes_as_markdown')
+    @patch('get_jira_release_notes.format_notes_as_jira_markup')
     @patch('get_jira_release_notes.generate_release_notes_url')
     @patch('sys.stderr', new_callable=StringIO)
     @patch('builtins.print')
-    def test_main_success(self, mock_print, mock_stderr, mock_generate_url, mock_format_notes,
+    def test_main_success(self, mock_print, mock_stderr, mock_generate_url, mock_format_jira_markup, mock_format_notes,
                           mock_get_issues, mock_get_project_name, mock_get_version_id, mock_get_jira):
         """Test successful main function execution."""
         # Setup mocks
@@ -236,6 +238,7 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
         mock_get_project_name.return_value = "Test Project"
         mock_get_issues.return_value = []
         mock_format_notes.return_value = "# Release notes - Test Project - 1.0.0\n\nNo issues found."
+        mock_format_jira_markup.return_value = "h1. Release notes - Test Project - 1.0.0\n\nNo issues found."
         mock_generate_url.return_value = "https://test.jira.com/projects/TEST/versions/10001/tab/release-report-all-issues"
 
         main()
@@ -247,14 +250,21 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
         mock_get_project_name.assert_called_once_with(mock_jira, 'TEST')
         mock_get_issues.assert_called_once_with(mock_jira, 'TEST', '1.0.0')
 
+        # Verify both format functions were called
+        mock_format_notes.assert_called_once()
+        mock_format_jira_markup.assert_called_once()
+
         # Verify expected output format
         print_calls = mock_print.call_args_list
-        self.assertEqual(len(print_calls), 5)
-        # Skip the eprint call (index 0) and check the actual stdout print calls
+        self.assertEqual(len(print_calls), 8)  # URL + markdown start/content/end + jira start/content/end
+        # Check the main outputs
         self.assertEqual(print_calls[1][0][0], "jira-release-url=https://test.jira.com/projects/TEST/versions/10001/tab/release-report-all-issues")
         self.assertEqual(print_calls[2][0][0], "release-notes<<EOF")
         self.assertEqual(print_calls[3][0][0], "# Release notes - Test Project - 1.0.0\n\nNo issues found.")
         self.assertEqual(print_calls[4][0][0], "EOF")
+        self.assertEqual(print_calls[5][0][0], "jira-release-notes<<EOF")
+        self.assertEqual(print_calls[6][0][0], "h1. Release notes - Test Project - 1.0.0\n\nNo issues found.")
+        self.assertEqual(print_calls[7][0][0], "EOF")
 
     @patch('sys.argv', [
         'get_jira_release_notes.py',
@@ -392,6 +402,54 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
         improvement_pos = result.find("### Improvement")
         self.assertLess(new_feature_pos, bug_pos)
         self.assertLess(bug_pos, improvement_pos)
+
+    def test_format_notes_as_jira_markup_empty_issues(self):
+        """Test Jira markup formatting with no issues."""
+        result = format_notes_as_jira_markup([], 'https://jira.com', 'Test Project', '1.0.0', [])
+
+        expected = "h1. Release notes - Test Project - 1.0.0\n\nNo issues found for this release."
+        self.assertEqual(result, expected)
+
+    def test_format_notes_as_jira_markup_with_issues(self):
+        """Test Jira markup formatting with issues."""
+        mock_issue1 = Mock()
+        mock_issue1.key = "TEST-1"
+        mock_issue1.fields.summary = "Fix bug in login"
+        mock_issue1.fields.issuetype.name = "Bug"
+
+        mock_issue2 = Mock()
+        mock_issue2.key = "TEST-2"
+        mock_issue2.fields.summary = "Add new feature"
+        mock_issue2.fields.issuetype.name = "New Feature"
+
+        issues = [mock_issue1, mock_issue2]
+        category_order = ["New Feature", "Bug"]
+
+        result = format_notes_as_jira_markup(issues, 'https://jira.com', 'Test Project', '1.0.0', category_order)
+
+        expected_lines = [
+            "h1. Release notes - Test Project - 1.0.0",
+            "",
+            "h3. New Feature",
+            "[TEST-2|https://jira.com/browse/TEST-2] Add new feature",
+            "",
+            "h3. Bug",
+            "[TEST-1|https://jira.com/browse/TEST-1] Fix bug in login",
+            ""
+        ]
+        expected = "\n".join(expected_lines)
+        self.assertEqual(result, expected)
+
+    def test_format_notes_as_jira_markup_jira_url_trailing_slash(self):
+        """Test Jira markup formatting handles trailing slashes in URL."""
+        mock_issue = Mock()
+        mock_issue.key = "TEST-1"
+        mock_issue.fields.summary = "Test issue"
+        mock_issue.fields.issuetype.name = "Bug"
+
+        result = format_notes_as_jira_markup([mock_issue], 'https://jira.com/', 'Test Project', '1.0.0', ["Bug"])
+
+        self.assertIn("[TEST-1|https://jira.com/browse/TEST-1]", result)
 
 
 if __name__ == '__main__':

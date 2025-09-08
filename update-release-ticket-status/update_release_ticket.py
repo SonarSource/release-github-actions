@@ -87,9 +87,17 @@ def update_ticket_status(jira_client, ticket_key, new_status, assignee_email):
             eprint("Please ensure the user exists and has assignable permissions for this project.")
             sys.exit(1)
 
+    # Check current status before attempting transition
+    current_status = issue.fields.status.name
+    eprint(f"Current ticket status: '{current_status}'")
+    
+    if current_status == new_status:
+        print(f"::warning::Ticket {ticket_key} is already at status '{new_status}'. No status transition needed.")
+        return
+    
     try:
         jira_client.transition_issue(issue, new_status)
-        eprint(f"Successfully transitioned ticket to '{new_status}'.")
+        eprint(f"Successfully transitioned ticket from '{current_status}' to '{new_status}'.")
     except JIRAError as e:
         eprint(f"Error: Failed to transition ticket to '{new_status}'. Status: {e.status_code}")
         eprint(f"Response text: {e.text}")
