@@ -246,6 +246,7 @@ jobs:
           release-version: ${{ needs.prepare-release.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SONAR"
+          ticket-description: ${{ needs.prepare-release.outputs.jira-release-notes }}
 
   update-analyzers:
     name: Update Analyzers in SQS and SQC
