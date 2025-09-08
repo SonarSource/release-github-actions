@@ -202,14 +202,14 @@ jobs:
 #          jira-version-name: ${{ inputs.new-version }}
 
       - name: Move release ticket to done
-        uses: SonarSource/release-github-actions/update-release-ticket-status@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
+        uses: SonarSource/release-github-actions/update-release-ticket-status@f7efb6d0da97b8a34777d8462dc9aac05e23430e
         with:
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           status: "Technical Release Done"
           assignee: ${{ inputs.pm-email }}
 
       - name: Create SLVSCODE Ticket
-        uses: SonarSource/release-github-actions/create-integration-ticket@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
+        uses: SonarSource/release-github-actions/create-integration-ticket@f7efb6d0da97b8a34777d8462dc9aac05e23430e
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.release-version }}
@@ -218,7 +218,7 @@ jobs:
           ticket-description: ${{ needs.prepare-release.outputs.jira-release-notes }}
 
       - name: Create SLE Ticket
-        uses: SonarSource/release-github-actions/create-integration-ticket@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
+        uses: SonarSource/release-github-actions/create-integration-ticket@f7efb6d0da97b8a34777d8462dc9aac05e23430e
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.release-version }}
@@ -227,7 +227,7 @@ jobs:
           ticket-description: ${{ needs.prepare-release.outputs.jira-release-notes }}
 
       - name: Create SLI Ticket
-        uses: SonarSource/release-github-actions/create-integration-ticket@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
+        uses: SonarSource/release-github-actions/create-integration-ticket@f7efb6d0da97b8a34777d8462dc9aac05e23430e
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.release-version }}
@@ -237,7 +237,7 @@ jobs:
 
       - name: Create SC Ticket
         id: create-sc-ticket
-        uses: SonarSource/release-github-actions/create-integration-ticket@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
+        uses: SonarSource/release-github-actions/create-integration-ticket@f7efb6d0da97b8a34777d8462dc9aac05e23430e
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.release-version }}
@@ -247,7 +247,7 @@ jobs:
 
       - name: Create SONAR Ticket
         id: create-sonar-ticket
-        uses: SonarSource/release-github-actions/create-integration-ticket@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
+        uses: SonarSource/release-github-actions/create-integration-ticket@f7efb6d0da97b8a34777d8462dc9aac05e23430e
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.release-version }}
