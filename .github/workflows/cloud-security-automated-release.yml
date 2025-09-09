@@ -198,7 +198,7 @@ jobs:
 
       - name: Create new release in jira
         id: create-jira-version
-        uses: SonarSource/release-github-actions/create-jira-version@934cb16fa3d59bdccb6dcccadbabc68d8fadfc17
+        uses: SonarSource/release-github-actions/create-jira-version@7af904de065b0ab3c022af1a2a8754deb6c54e46
         with:
           jira-version-name: ${{ needs.prepare-release.outputs.jira-version-name }}
           jira-new-version-name: ${{ inputs.new-version }}
@@ -209,6 +209,15 @@ jobs:
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           status: "Technical Release Done"
           assignee: ${{ inputs.pm-email }}
+
+      - name: Create SLVS Ticket
+        uses: SonarSource/release-github-actions/create-integration-ticket@9b1c9f8f9a3ba07708451bcc30f68e120e80fad0
+        with:
+          plugin-name: ${{ inputs.plugin-name }}
+          release-version: ${{ needs.prepare-release.release-version }}
+          release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
+          target-jira-project: "SLVS"
+          ticket-description: ${{ needs.prepare-release.outputs.jira-release-notes }}
 
       - name: Create SLVSCODE Ticket
         uses: SonarSource/release-github-actions/create-integration-ticket@9b1c9f8f9a3ba07708451bcc30f68e120e80fad0
