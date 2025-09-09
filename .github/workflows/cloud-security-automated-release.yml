@@ -66,10 +66,31 @@ on:
         description: "Release notes"
         required: true
         type: string
+      create-slvs-ticket:
+        description: "Create SLVS integration ticket"
+        required: false
+        type: boolean
+        default: true
+      create-slvscode-ticket:
+        description: "Create SLVSCODE integration ticket"
+        required: false
+        type: boolean
+        default: true
+      create-sle-ticket:
+        description: "Create SLE integration ticket"
+        required: false
+        type: boolean
+        default: true
+      create-sli-ticket:
+        description: "Create SLI integration ticket"
+        required: false
+        type: boolean
+        default: true
       new-version:
         description: "New version to release"
         required: false
         type: string
+
     outputs:
       new-version:
         description: "New version to release"
@@ -211,6 +232,7 @@ jobs:
           assignee: ${{ inputs.pm-email }}
 
       - name: Create SLVS Ticket
+        if: ${{ inputs.create-slvs-ticket }}
         uses: SonarSource/release-github-actions/create-integration-ticket@9b1c9f8f9a3ba07708451bcc30f68e120e80fad0
         with:
           plugin-name: ${{ inputs.plugin-name }}
@@ -220,6 +242,7 @@ jobs:
           ticket-description: ${{ needs.prepare-release.outputs.jira-release-notes }}
 
       - name: Create SLVSCODE Ticket
+        if: ${{ inputs.create-slvscode-ticket }}
         uses: SonarSource/release-github-actions/create-integration-ticket@9b1c9f8f9a3ba07708451bcc30f68e120e80fad0
         with:
           plugin-name: ${{ inputs.plugin-name }}
@@ -229,6 +252,7 @@ jobs:
           ticket-description: ${{ needs.prepare-release.outputs.jira-release-notes }}
 
       - name: Create SLE Ticket
+        if: ${{ inputs.create-sle-ticket }}
         uses: SonarSource/release-github-actions/create-integration-ticket@9b1c9f8f9a3ba07708451bcc30f68e120e80fad0
         with:
           plugin-name: ${{ inputs.plugin-name }}
@@ -238,6 +262,7 @@ jobs:
           ticket-description: ${{ needs.prepare-release.outputs.jira-release-notes }}
 
       - name: Create SLI Ticket
+        if: ${{ inputs.create-sli-ticket }}
         uses: SonarSource/release-github-actions/create-integration-ticket@9b1c9f8f9a3ba07708451bcc30f68e120e80fad0
         with:
           plugin-name: ${{ inputs.plugin-name }}

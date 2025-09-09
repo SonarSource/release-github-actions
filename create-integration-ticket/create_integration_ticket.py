@@ -9,6 +9,7 @@ and links it to another existing ticket.
 import argparse
 import os
 import sys
+import time
 from jira import JIRA
 from jira.exceptions import JIRAError
 
@@ -120,6 +121,8 @@ def create_integration_ticket(jira_client, args):
         
         # Update description if provided (as a separate operation)
         if args.ticket_description:
+            eprint("Waiting 3 seconds before setting description...")
+            time.sleep(3)
             eprint("Setting description on ticket...")
             try:
                 new_ticket.update(fields={'description': args.ticket_description})
