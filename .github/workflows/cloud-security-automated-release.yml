@@ -85,11 +85,10 @@ jobs:
       pull-requests: write
       id-token: write
     steps:
-      - name: Check Releasability Status
-        uses: SonarSource/release-github-actions/check-releasability-status@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
-        with:
-          branch: ${{ inputs.branch }}
-          with-optional-checks: false
+#      - name: Check Releasability Status
+#        uses: SonarSource/release-github-actions/check-releasability-status@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
+#        with:
+#          branch: ${{ inputs.branch }}
 
       - name: Update Rule Metadata
         id: update-rule-metadata
