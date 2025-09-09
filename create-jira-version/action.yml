@@ -7,17 +7,20 @@ inputs:
         description: 'The key of the Jira project (e.g., SONARIAC). Required if JIRA_PROJECT_KEY env var is not set.'
         required: false
     jira-version-name:
-        description: 'The name of the Jira version to create (e.g., 1.2.3). Can also be set via JIRA_VERSION_NAME environment variable.'
+      description: 'The name of the current Jira version. Can also be set via JIRA_VERSION_NAME environment variable. Used to determine the next version if jira-new-version-name is not provided.'
+      required: false
+    jira-new-version-name:
+        description: 'The name of the new Jira version to create (e.g., 1.2.3). If not provided, the next version will be automatically determined by incrementing the current version.'
         required: false
     use-jira-sandbox:
         description: "Use the sandbox server instead of the production Jira. Can also be controlled via USE_JIRA_SANDBOX environment variable."
         required: false
 
 outputs:
-    jira-version-id:
+    jira-new-version-id:
         description: 'The ID of the created Jira version.'
         value: ${{ steps.run_python_script.outputs.new_version_id }}
-    jira-version-name:
+    jira-new-version-name:
         description: 'The name of the created Jira version.'
         value: ${{ steps.run_python_script.outputs.new_version_name }}
 
@@ -43,14 +46,30 @@ runs:
 
     - uses: SonarSource/release-github-actions/get-jira-version@f450c1d5ec393371788f0ad9c889a82358da2b5e
       id: get-jira-version
-      if: ${{ !inputs.jira-version-name && !env.JIRA_VERSION_NAME }}
+      if: ${{ !inputs.jira-version-name && !env.JIRA_VERSION_NAME && !inputs.jira-new-version-name }}
 
-    - name: Determine New Jira Version
-      id: determine-version-name
-      if: ${{ !inputs.jira-version-name && !env.JIRA_VERSION_NAME }}
+    - name: Determine Current Version
+      id: determine-current-version
+      if: ${{ !inputs.jira-new-version-name }}
       shell: bash
       run: |
-        echo "VERSION_NAME=$(echo "${{ steps.get-jira-version.outputs.jira-version-name }}" | awk -F. '{$NF+=1; OFS="."; print $0}')" >> $GITHUB_OUTPUT
+        if [[ -n "${{ inputs.jira-version-name || env.JIRA_VERSION_NAME }}" ]]; then
+          CURRENT_VERSION="${{ inputs.jira-version-name || env.JIRA_VERSION_NAME }}"
+        else
+          CURRENT_VERSION="${{ steps.get-jira-version.outputs.jira-version-name }}"
+        fi
+        echo "current-version-name=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+    - name: Determine New Jira Version
+      id: determine-new-version-name
+      shell: bash
+      run: |
+        if [[ -n "${{ inputs.jira-new-version-name }}" ]]; then
+          NEW_VERSION="${{ inputs.jira-new-version-name }}"
+        else
+          NEW_VERSION=$(echo "${{ steps.determine-current-version.outputs.current-version-name }}" | awk -F. '{$NF+=1; OFS="."; print $0}')
+        fi
+        echo "new-version-name=$NEW_VERSION" >> $GITHUB_OUTPUT
 
     - name: Create Jira Version
       id: run_python_script
@@ -70,6 +89,6 @@ runs:
 
         python ${{ github.action_path }}/create_jira_version.py \
           --project-key="$PROJECT_KEY" \
-          --version-name="${{ inputs.jira-version-name || env.JIRA_VERSION_NAME }}" \
-          --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" 
+          --version-name="${{ steps.determine-new-version-name.outputs.new-version-name }}" \
+          --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
           >> $GITHUB_OUTPUT
