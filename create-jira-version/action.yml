@@ -67,7 +67,7 @@ runs:
         if [[ -n "${{ inputs.jira-new-version-name }}" ]]; then
           NEW_VERSION="${{ inputs.jira-new-version-name }}"
         else
-          NEW_VERSION=$(echo "${{ steps.determine-current-version.outputs.current-version-name }}" | awk -F. '{$NF+=1; OFS="."; print $0}')
+          NEW_VERSION=$(echo "${{ steps.determine-current-version.outputs.current-version-name }}" | awk -F. '{$NF+=1; print}' OFS='.')
         fi
         echo "new-version-name=$NEW_VERSION" >> $GITHUB_OUTPUT
 

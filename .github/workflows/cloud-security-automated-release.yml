@@ -200,7 +200,8 @@ jobs:
         id: create-jira-version
         uses: SonarSource/release-github-actions/create-jira-version@934cb16fa3d59bdccb6dcccadbabc68d8fadfc17
         with:
-          jira-version-name: ${{ inputs.new-version }}
+          jira-version-name: ${{ needs.prepare-release.outputs.jira-version-name }}
+          jira-new-version-name: ${{ inputs.new-version }}
 
       - name: Move release ticket to done
         uses: SonarSource/release-github-actions/update-release-ticket-status@9b1c9f8f9a3ba07708451bcc30f68e120e80fad0
