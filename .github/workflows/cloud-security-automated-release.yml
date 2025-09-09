@@ -185,7 +185,7 @@ jobs:
       contents: read
       id-token: write
     outputs:
-      new-version: ${{ steps.create-jira-version.outputs.jira-version-name }}
+      new-version: ${{ steps.create-jira-version.outputs.jira-new-version-name }}
       sqc-ticket-key: ${{ steps.create-sc-ticket.outputs.ticket-key }}
       sqc-ticket-url: ${{ steps.create-sc-ticket.outputs.ticket-url }}
       sqs-ticket-key: ${{ steps.create-sonar-ticket.outputs.ticket-key }}
