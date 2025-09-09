@@ -19,12 +19,12 @@ This action depends on:
 
 ## Inputs
 
-| Input                   | Description                                                                                                               | Required | Default         |
-|-------------------------|---------------------------------------------------------------------------------------------------------------------------|----------|-----------------|
-| `jira-project-key`      | The key of the Jira project (e.g., SONARIAC). Can also be set via `JIRA_PROJECT_KEY` environment variable                 | No*      | -               |
-| `jira-version-name`     | The name of the current Jira version. Used to determine the next version if `jira-new-version-name` is not provided. Can also be set via `JIRA_VERSION_NAME` environment variable | No | Auto-determined |
-| `jira-new-version-name` | The name of the new Jira version to create (e.g., 1.2.3). If not provided, the next version will be automatically determined by incrementing the current version | No | Auto-determined |
-| `use-jira-sandbox`      | Use the sandbox server instead of the production Jira. Can also be controlled via `USE_JIRA_SANDBOX` environment variable | No       | -               |
+| Input                   | Description                                                                                                                                                                       | Required | Default         |
+|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|-----------------|
+| `jira-project-key`      | The key of the Jira project (e.g., SONARIAC). Can also be set via `JIRA_PROJECT_KEY` environment variable                                                                         | No*      | -               |
+| `jira-version-name`     | The name of the current Jira version. Used to determine the next version if `jira-new-version-name` is not provided. Can also be set via `JIRA_VERSION_NAME` environment variable | No       | Auto-determined |
+| `jira-new-version-name` | The name of the new Jira version to create (e.g., 1.2.3). If not provided, the next version will be automatically determined by incrementing the current version                  | No       | Auto-determined |
+| `use-jira-sandbox`      | Use the sandbox server instead of the production Jira. Can also be controlled via `USE_JIRA_SANDBOX` environment variable                                                         | No       | -               |
 
 *Either the input or corresponding environment variable must be provided for jira-project-key.
 
