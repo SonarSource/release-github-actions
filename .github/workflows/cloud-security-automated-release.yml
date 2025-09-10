@@ -228,7 +228,7 @@ jobs:
           jira-version-name: ${{ needs.prepare-release.outputs.jira-version-name }}
           jira-new-version-name: ${{ inputs.new-version }}
 
-      - name: Move release ticket to done
+      - name: Move release ticket to Technical release Done
         uses: SonarSource/release-github-actions/update-release-ticket-status@9b1c9f8f9a3ba07708451bcc30f68e120e80fad0
         with:
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
