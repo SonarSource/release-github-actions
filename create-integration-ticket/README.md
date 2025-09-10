@@ -30,6 +30,7 @@ This action requires:
 | `release-version`     | The release version (used to generate ticket summary if ticket-summary is not provided). If not set version will be retreived from build. | No       | -            |
 | `use-jira-sandbox`    | Use the sandbox Jira server instead of production. Can also be controlled via `USE_JIRA_SANDBOX` environment variable                     | No       | -            |
 | `link-type`           | The type of link to create (e.g., "relates to", "depends on")                                                                             | No       | `relates to` |
+| `jira-release-url`    | Jira release URL to append to ticket description                                                                                          | No       | -            |
 
 **Note:** Either `ticket-summary` must be provided, or both `plugin-name` and `release-version` must be provided. If `ticket-summary` is not provided, it will be automatically generated as "Update {plugin-name} to {release-version}".
 
@@ -75,6 +76,20 @@ This action requires:
   uses: ./create-integration-ticket
   with:
     ticket-summary: "Simple integration ticket"
+    release-ticket-key: "REL-456"
+    target-jira-project: "SQS"
+```
+
+### Example 4: Using with Jira release URL
+```yaml
+- name: Create Integration Ticket
+  id: create-ticket
+  uses: ./create-integration-ticket
+  with:
+    plugin-name: "SonarPython"
+    release-version: "5.8.0.24785"
+    ticket-description: "This release includes bug fixes and performance improvements."
+    jira-release-url: "https://sonarsource.atlassian.net/projects/SONARPY/versions/22345/tab/release-report-all-issues"
     release-ticket-key: "REL-456"
     target-jira-project: "SQS"
 ```
