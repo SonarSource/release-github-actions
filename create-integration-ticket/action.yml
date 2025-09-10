@@ -83,7 +83,10 @@ runs:
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
         JIRA_PROD_URL: "https://sonarsource.atlassian.net/"
         JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
-        TICKET_DESCRIPTION: ${{ inputs.ticket-description }}${{ inputs.jira-release-url && format('{0}{1}', inputs.ticket-description && '\n\n' || '', inputs.jira-release-url) || '' }}
+        TICKET_DESCRIPTION: |
+          ${{ inputs.ticket-description }}${{ inputs.jira-release-url && inputs.ticket-description && '
+
+          ' || '' }}${{ inputs.jira-release-url || '' }}
       run: |
         python ${{ github.action_path }}/create_integration_ticket.py \
           --ticket-summary "${{ steps.validate_inputs.outputs.ticket_summary }}" \
