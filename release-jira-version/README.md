@@ -36,7 +36,7 @@ No outputs are defined for this action, as it primarily performs operations with
 
 ```yaml
 - name: Release Jira Version
-  uses: SonarSource/release-github-actions/release-jira-version@master
+  uses: SonarSource/release-github-actions/release-jira-version@v1
   with:
     jira-project-key: 'SONARIAC'
     jira-version-name: '1.2.3'
@@ -46,7 +46,7 @@ No outputs are defined for this action, as it primarily performs operations with
 
 ```yaml
 - name: Release Current Jira Version
-  uses: SonarSource/release-github-actions/release-jira-version@master
+  uses: SonarSource/release-github-actions/release-jira-version@v1
   with:
     jira-project-key: 'SONARIAC'
     # jira-version-name is omitted - will auto-determine from the release version
@@ -56,7 +56,7 @@ No outputs are defined for this action, as it primarily performs operations with
 
 ```yaml
 - name: Release Jira Version
-  uses: SonarSource/release-github-actions/release-jira-version@master
+  uses: SonarSource/release-github-actions/release-jira-version@v1
   env:
     JIRA_PROJECT_KEY: 'SONARIAC'
     JIRA_VERSION_NAME: '1.2.3'
@@ -66,7 +66,7 @@ No outputs are defined for this action, as it primarily performs operations with
 
 ```yaml
 - name: Release Jira Version in Sandbox
-  uses: SonarSource/release-github-actions/release-jira-version@master
+  uses: SonarSource/release-github-actions/release-jira-version@v1
   with:
     jira-project-key: 'SONARIAC'
     jira-version-name: '1.2.3'

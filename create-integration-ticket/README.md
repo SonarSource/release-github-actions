@@ -47,7 +47,7 @@ This action requires:
 ```yaml
 - name: Create Integration Ticket
   id: create-ticket
-  uses: ./create-integration-ticket
+  uses: SonarSource/release-github-actions/create-integration-ticket@v1
   with:
     ticket-summary: "Update SonarPython analyzer to 5.8.0.24785"
     ticket-description: "This ticket tracks the integration of SonarPython analyzer version 5.8.0.24785 into our platform. Please ensure all tests pass before closing."
@@ -60,7 +60,7 @@ This action requires:
 ```yaml
 - name: Create Integration Ticket
   id: create-ticket
-  uses: ./create-integration-ticket
+  uses: SonarSource/release-github-actions/create-integration-ticket@v1
   with:
     plugin-name: "SonarPython"
     release-version: "5.8.0.24785"
@@ -73,7 +73,7 @@ This action requires:
 ```yaml
 - name: Create Integration Ticket
   id: create-ticket
-  uses: ./create-integration-ticket
+  uses: SonarSource/release-github-actions/create-integration-ticket@v1
   with:
     ticket-summary: "Simple integration ticket"
     release-ticket-key: "REL-456"
@@ -84,7 +84,7 @@ This action requires:
 ```yaml
 - name: Create Integration Ticket
   id: create-ticket
-  uses: ./create-integration-ticket
+  uses: SonarSource/release-github-actions/create-integration-ticket@v1
   with:
     plugin-name: "SonarPython"
     release-version: "5.8.0.24785"

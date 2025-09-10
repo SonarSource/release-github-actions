@@ -52,7 +52,7 @@ This action depends on:
 ```yaml
 - name: Get Jira Release Notes
   id: jira-notes
-  uses: SonarSource/release-github-actions/get-jira-release-notes@master
+  uses: SonarSource/release-github-actions/get-jira-release-notes@v1
   with:
     jira-project-key: 'SONARIAC'
     jira-version-name: '1.2.3'
@@ -71,7 +71,7 @@ This action depends on:
 ```yaml
 - name: Get Jira Release Notes with Custom Types
   id: jira-notes
-  uses: SonarSource/release-github-actions/get-jira-release-notes@master
+  uses: SonarSource/release-github-actions/get-jira-release-notes@v1
   with:
     jira-project-key: 'SONARIAC'
     jira-version-name: '1.2.3'
@@ -82,7 +82,7 @@ This action depends on:
 
 ```yaml
 - name: Get Jira Release Notes with Environment Variables
-  uses: SonarSource/release-github-actions/get-jira-release-notes@master
+  uses: SonarSource/release-github-actions/get-jira-release-notes@v1
   env:
     JIRA_PROJECT_KEY: 'SONARIAC'
     JIRA_VERSION_NAME: '1.2.3'
@@ -92,7 +92,7 @@ This action depends on:
 
 ```yaml
 - name: Get Jira Release Notes with Mixed Parameters
-  uses: SonarSource/release-github-actions/get-jira-release-notes@master
+  uses: SonarSource/release-github-actions/get-jira-release-notes@v1
   with:
     jira-project-key: 'OVERRIDE_PROJECT'  # This overrides JIRA_PROJECT_KEY
   env:
@@ -104,7 +104,7 @@ This action depends on:
 
 ```yaml
 - name: Get Jira Release Notes with Auto-Fetched Version
-  uses: SonarSource/release-github-actions/get-jira-release-notes@master
+  uses: SonarSource/release-github-actions/get-jira-release-notes@v1
   with:
     jira-project-key: 'SONARIAC'
 ```
@@ -113,7 +113,7 @@ This action depends on:
 
 ```yaml
 - name: Get Jira Release Notes from Sandbox
-  uses: SonarSource/release-github-actions/get-jira-release-notes@master
+  uses: SonarSource/release-github-actions/get-jira-release-notes@v1
   with:
     jira-project-key: 'TESTPROJECT'
     jira-version-name: '1.0.0-beta'

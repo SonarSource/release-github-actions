@@ -49,14 +49,14 @@ permissions:
 
 ```yaml
 - name: Update Rule Metadata
-  uses: SonarSource/release-github-actions/update-rule-metadata@master
+  uses: SonarSource/release-github-actions/update-rule-metadata@v1
 ```
 
 ### Update specific sonarpedia files
 
 ```yaml
 - name: Update Rule Metadata
-  uses: SonarSource/release-github-actions/update-rule-metadata@master
+  uses: SonarSource/release-github-actions/update-rule-metadata@v1
   with:
     sonarpedia-files: 'frontend/java/sonarpedia.json,frontend/python/sonarpedia.json'
 ```
@@ -65,7 +65,7 @@ permissions:
 
 ```yaml
 - name: Update Rule Metadata
-  uses: SonarSource/release-github-actions/update-rule-metadata@master
+  uses: SonarSource/release-github-actions/update-rule-metadata@v1
   with:
     rule-api-version: '2.16.0.5000'
 ```
@@ -82,7 +82,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Update Rule Metadata
-        uses: SonarSource/release-github-actions/update-rule-metadata@master
+        uses: SonarSource/release-github-actions/update-rule-metadata@v1
         with:
           rule-api-version: '2.16.0.5000'
           sonarpedia-files: 'frontend/java/sonarpedia.json,frontend/csharp/sonarpedia.json'
