@@ -22,6 +22,9 @@ inputs:
   link-type:
     description: 'The type of link to create (e.g., "relates to", "depends on")'
     default: 'relates to'
+  jira-release-url:
+    description: 'Jira release URL to append to ticket description'
+    required: false
 
 outputs:
   ticket-key:
@@ -53,7 +56,7 @@ runs:
         python -m pip install --upgrade pip
         pip install -r ${{ github.action_path }}/requirements.txt
 
-    - uses: ./get-release-version
+    - uses: SonarSource/release-github-actions/get-release-version@f450c1d5ec393371788f0ad9c889a82358da2b5e
       if: ${{ !inputs.ticket-summary && !inputs.release-version && !env.RELEASE_VERSION }}
 
     - name: Validate inputs and generate ticket summary
@@ -80,7 +83,10 @@ runs:
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
         JIRA_PROD_URL: "https://sonarsource.atlassian.net/"
         JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
-        TICKET_DESCRIPTION: ${{ inputs.ticket-description }}
+        TICKET_DESCRIPTION: |
+          ${{ inputs.ticket-description }}${{ inputs.jira-release-url && inputs.ticket-description && '
+
+          ' || '' }}${{ inputs.jira-release-url || '' }}
       run: |
         python ${{ github.action_path }}/create_integration_ticket.py \
           --ticket-summary "${{ steps.validate_inputs.outputs.ticket_summary }}" \

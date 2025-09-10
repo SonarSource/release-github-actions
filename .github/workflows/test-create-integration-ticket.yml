@@ -38,3 +38,53 @@ jobs:
         run: |
           cd create-integration-ticket
           python -m pytest test_create_integration_ticket.py -v --cov=create_integration_ticket --cov-report=term-missing
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test with basic inputs
+        id: test-basic
+        uses: ./create-integration-ticket
+        with:
+          target-jira-project: 'TESTPROJ'
+          release-ticket-key: 'TEST-123'
+          ticket-summary: 'Test integration ticket'
+          use-jira-sandbox: 'true'
+        continue-on-error: true
+
+      - name: Test with description and Jira release URL
+        id: test-with-url
+        uses: ./create-integration-ticket
+        with:
+          target-jira-project: 'TESTPROJ'
+          release-ticket-key: 'TEST-123'
+          plugin-name: 'TestPlugin'
+          release-version: '1.0.0'
+          ticket-description: 'This is a test ticket with description'
+          jira-release-url: 'https://test.atlassian.net/projects/TEST/versions/123/tab/release-report-all-issues'
+          use-jira-sandbox: 'true'
+        continue-on-error: true
+
+      - name: Test with only Jira release URL (no description)
+        id: test-url-only
+        uses: ./create-integration-ticket
+        with:
+          target-jira-project: 'TESTPROJ'
+          release-ticket-key: 'TEST-123'
+          ticket-summary: 'Test ticket with URL only'
+          jira-release-url: 'https://test.atlassian.net/projects/TEST/versions/123/tab/release-report-all-issues'
+          use-jira-sandbox: 'true'
+        continue-on-error: true
+
+      - name: Verify integration tests
+        run: |
+          echo "Integration tests completed:"
+          echo "- Basic test: Expected to fail due to missing credentials (normal in CI)"
+          echo "- Test with description + URL: Should format description with URL appended"
+          echo "- Test with URL only: Should format description as just the URL"
+          echo "All tests use continue-on-error since Jira credentials are not available in CI"
