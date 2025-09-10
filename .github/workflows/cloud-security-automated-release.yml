@@ -1,4 +1,4 @@
-name: Automate release
+name: Cloud Security Reusable Automate Release
 
 env:
   JIRA_PROJECT_KEY: ${{ inputs.jira-project-key }}
@@ -111,13 +111,13 @@ jobs:
       id-token: write
     steps:
       - name: Check Releasability Status
-        uses: SonarSource/release-github-actions/check-releasability-status@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
+        uses: SonarSource/release-github-actions/check-releasability-status@v1
         with:
           branch: ${{ inputs.branch }}
 
       - name: Update Rule Metadata
         id: update-rule-metadata
-        uses: SonarSource/release-github-actions/update-rule-metadata@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
+        uses: SonarSource/release-github-actions/update-rule-metadata@v1
 
       - name: Check Rule Metadata Changes
         if: steps.update-rule-metadata.outputs.has-changes == 'true'
@@ -144,18 +144,18 @@ jobs:
     steps:
       - name: Get Release Version
         id: get-release-version
-        uses: SonarSource/release-github-actions/get-release-version@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
+        uses: SonarSource/release-github-actions/get-release-version@v1
         with:
           branch: ${{ inputs.branch }}
 
       - name: Get Jira Version
         id: get-jira-version
-        uses: SonarSource/release-github-actions/get-jira-version@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
+        uses: SonarSource/release-github-actions/get-jira-version@v1
 
       - name: Get Jira Release Notes
         id: get-jira-release-notes
         if: inputs.release-notes == ''
-        uses: SonarSource/release-github-actions/get-jira-release-notes@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
+        uses: SonarSource/release-github-actions/get-jira-release-notes@v1
 
   create-release-ticket:
     name: Create release ticket
@@ -171,7 +171,7 @@ jobs:
     steps:
       - name: Create Jira Release Ticket
         id: create-ticket
-        uses: SonarSource/release-github-actions/create-jira-release-ticket@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
+        uses: SonarSource/release-github-actions/create-jira-release-ticket@v1
         with:
           project-name: ${{ inputs.project-name }}
           short-description: ${{ inputs.short-description }}
@@ -194,7 +194,7 @@ jobs:
     steps:
       - name: Publish GitHub Release
         id: publish-github-release
-        uses: SonarSource/release-github-actions/publish-github-release@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
+        uses: SonarSource/release-github-actions/publish-github-release@v1
         with:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           release-notes: ${{ inputs.release-notes != '' && inputs.release-notes || needs.prepare-release.outputs.release-notes }}
@@ -217,19 +217,19 @@ jobs:
       sqs-ticket-url: ${{ steps.create-sonar-ticket.outputs.ticket-url }}
     steps:
       - name: Release in Jira
-        uses: SonarSource/release-github-actions/release-jira-version@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
+        uses: SonarSource/release-github-actions/release-jira-version@v1
         with:
           jira-version-name: ${{ needs.prepare-release.outputs.jira-version-name }}
 
       - name: Create new release in jira
         id: create-jira-version
-        uses: SonarSource/release-github-actions/create-jira-version@7af904de065b0ab3c022af1a2a8754deb6c54e46
+        uses: SonarSource/release-github-actions/create-jira-version@v1
         with:
           jira-version-name: ${{ needs.prepare-release.outputs.jira-version-name }}
           jira-new-version-name: ${{ inputs.new-version }}
 
       - name: Move release ticket to Technical release Done
-        uses: SonarSource/release-github-actions/update-release-ticket-status@9b1c9f8f9a3ba07708451bcc30f68e120e80fad0
+        uses: SonarSource/release-github-actions/update-release-ticket-status@v1
         with:
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           status: "Technical Release Done"
@@ -237,7 +237,7 @@ jobs:
 
       - name: Create SLVS Ticket
         if: ${{ inputs.create-slvs-ticket }}
-        uses: SonarSource/release-github-actions/create-integration-ticket@0250fd8b48142fb46cf43d9ce85507a440f02471
+        uses: SonarSource/release-github-actions/create-integration-ticket@v1
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.release-version }}
@@ -248,7 +248,7 @@ jobs:
 
       - name: Create SLVSCODE Ticket
         if: ${{ inputs.create-slvscode-ticket }}
-        uses: SonarSource/release-github-actions/create-integration-ticket@0250fd8b48142fb46cf43d9ce85507a440f02471
+        uses: SonarSource/release-github-actions/create-integration-ticket@v1
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.release-version }}
@@ -259,7 +259,7 @@ jobs:
 
       - name: Create SLE Ticket
         if: ${{ inputs.create-sle-ticket }}
-        uses: SonarSource/release-github-actions/create-integration-ticket@0250fd8b48142fb46cf43d9ce85507a440f02471
+        uses: SonarSource/release-github-actions/create-integration-ticket@v1
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.release-version }}
@@ -270,7 +270,7 @@ jobs:
 
       - name: Create SLI Ticket
         if: ${{ inputs.create-sli-ticket }}
-        uses: SonarSource/release-github-actions/create-integration-ticket@0250fd8b48142fb46cf43d9ce85507a440f02471
+        uses: SonarSource/release-github-actions/create-integration-ticket@v1
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.release-version }}
@@ -281,7 +281,7 @@ jobs:
 
       - name: Create SC Ticket
         id: create-sc-ticket
-        uses: SonarSource/release-github-actions/create-integration-ticket@0250fd8b48142fb46cf43d9ce85507a440f02471
+        uses: SonarSource/release-github-actions/create-integration-ticket@v1
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.release-version }}
@@ -292,7 +292,7 @@ jobs:
 
       - name: Create SONAR Ticket
         id: create-sonar-ticket
-        uses: SonarSource/release-github-actions/create-integration-ticket@0250fd8b48142fb46cf43d9ce85507a440f02471
+        uses: SonarSource/release-github-actions/create-integration-ticket@v1
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.release-version }}
@@ -313,7 +313,7 @@ jobs:
     steps:
       - name: Update analyzer in SQS
         id: update-sqs
-        uses: SonarSource/release-github-actions/update-analyzer@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
+        uses: SonarSource/release-github-actions/update-analyzer@v1
         with:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           ticket-key: ${{ needs.release-in-jira.outputs.sqs-ticket-key }}
@@ -325,7 +325,7 @@ jobs:
 
       - name: Update analyzer in SQC
         id: update-sqc
-        uses: SonarSource/release-github-actions/update-analyzer@1a912fb37cba099b4b8ce46f3460e64eaf1f2fe0
+        uses: SonarSource/release-github-actions/update-analyzer@v1
         with:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           ticket-key: ${{ needs.release-in-jira.outputs.sqc-ticket-key }}

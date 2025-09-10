@@ -55,7 +55,7 @@ This action requires a GitHub token with `contents: write`, `id-token: write`, a
 
 ```yaml
 - name: Publish GitHub Release
-  uses: SonarSource/release-github-actions/publish-github-release@master
+  uses: SonarSource/release-github-actions/publish-github-release@v1
   with:
     release-version: 'v1.2.3'
     release-notes: |
@@ -72,7 +72,7 @@ This action requires a GitHub token with `contents: write`, `id-token: write`, a
 
 ```yaml
 - name: Publish GitHub Release
-  uses: SonarSource/release-github-actions/publish-github-release@master
+  uses: SonarSource/release-github-actions/publish-github-release@v1
   env:
     RELEASE_VERSION: 'v1.2.3'
   with:
@@ -86,7 +86,7 @@ This action requires a GitHub token with `contents: write`, `id-token: write`, a
 
 ```yaml
 - name: Publish GitHub Release
-  uses: SonarSource/release-github-actions/publish-github-release@master
+  uses: SonarSource/release-github-actions/publish-github-release@v1
   with:
     release-version: 'v1.2.3'
     release-notes: ${{ steps.generate-notes.outputs.notes }}

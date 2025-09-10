@@ -59,7 +59,7 @@ This action depends on:
 ```yaml
 - name: Create Jira Release Ticket
   id: create-ticket
-  uses: SonarSource/release-github-actions/create-jira-release-ticket@master
+  uses: SonarSource/release-github-actions/create-jira-release-ticket@v1
   with:
     jira-project-key: 'SONARIAC'
     project-name: 'SonarIaC'
@@ -78,7 +78,7 @@ This action depends on:
 
 ```yaml
 - name: Create Jira Release Ticket
-  uses: SonarSource/release-github-actions/create-jira-release-ticket@master
+  uses: SonarSource/release-github-actions/create-jira-release-ticket@v1
   env:
     JIRA_PROJECT_KEY: 'SONARIAC'
     JIRA_RELEASE_URL: 'https://sonarsource.atlassian.net/projects/SONARIAC/versions/12345'
@@ -94,7 +94,7 @@ This action depends on:
 
 ```yaml
 - name: Create Jira Release Ticket in Sandbox
-  uses: SonarSource/release-github-actions/create-jira-release-ticket@master
+  uses: SonarSource/release-github-actions/create-jira-release-ticket@v1
   with:
     project-name: 'Test Project'
     short-description: 'Beta release for testing'
@@ -106,7 +106,7 @@ This action depends on:
 
 ```yaml
 - name: Create and Start Release Ticket
-  uses: SonarSource/release-github-actions/create-jira-release-ticket@master
+  uses: SonarSource/release-github-actions/create-jira-release-ticket@v1
   with:
     project-name: 'SonarIaC'
     short-description: 'Quarterly release'
@@ -118,7 +118,7 @@ This action depends on:
 
 ```yaml
 - name: Create Jira Release Ticket
-  uses: SonarSource/release-github-actions/create-jira-release-ticket@master
+  uses: SonarSource/release-github-actions/create-jira-release-ticket@v1
   with:
     jira-project-key: 'SONARIAC'
     project-name: 'SonarIaC'

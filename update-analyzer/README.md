@@ -52,7 +52,7 @@ This action depends on:
 
 ```yaml
 - name: Update Analyzer
-  uses: SonarSource/release-github-actions/update-analyzer@master
+  uses: SonarSource/release-github-actions/update-analyzer@v1
   with:
     release-version: '1.12.0.12345'
     ticket-key: 'SONAR-12345'
@@ -64,7 +64,7 @@ This action depends on:
 
 ```yaml
 - name: Update Analyzer
-  uses: SonarSource/release-github-actions/update-analyzer@master
+  uses: SonarSource/release-github-actions/update-analyzer@v1
   with:
     release-version: '1.12.0.12345'
     ticket-key: 'SONAR-12345'
@@ -77,7 +77,7 @@ This action depends on:
 
 ```yaml
 - name: Update Analyzer
-  uses: SonarSource/release-github-actions/update-analyzer@master
+  uses: SonarSource/release-github-actions/update-analyzer@v1
   with:
     release-version: '1.12.0.12345'
     ticket-key: 'SC-67890'
@@ -92,7 +92,7 @@ This action depends on:
 
 ```yaml
 - name: Update Multiple Analyzers
-  uses: SonarSource/release-github-actions/update-analyzer@master
+  uses: SonarSource/release-github-actions/update-analyzer@v1
   with:
     release-version: '1.12.0.12345'
     ticket-key: 'SONAR-12345'

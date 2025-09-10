@@ -28,13 +28,13 @@ This action depends on the [SonarSource/release-github-actions/get-release-versi
 
 ```yaml
 - id: jira-version
-  uses: SonarSource/release-github-actions/get-jira-version@master
+  uses: SonarSource/release-github-actions/get-jira-version@v1
   
 - run: echo "Jira version is ${{ steps.jira-version.outputs.jira-version-name }}"
 
 # alternatively, you can access the version as an environment variable
 
-- uses: SonarSource/release-github-actions/get-jira-version@master
+- uses: SonarSource/release-github-actions/get-jira-version@v1
 - run: echo "Jira version is ${{ env.JIRA_VERSION_NAME }}"
 
 ```

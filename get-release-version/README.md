@@ -48,7 +48,7 @@ After successful execution, the following environment variable is set:
 ```yaml
 - name: Get Release Version
   id: get-version
-  uses: SonarSource/release-github-actions/get-release-version@master
+  uses: SonarSource/release-github-actions/get-release-version@v1
 
 - name: Use the release version
   run: |
@@ -61,7 +61,7 @@ After successful execution, the following environment variable is set:
 ```yaml
 - name: Get Release Version
   id: get-version
-  uses: SonarSource/release-github-actions/get-release-version@master
+  uses: SonarSource/release-github-actions/get-release-version@v1
   with:
     github-token: ${{ secrets.CUSTOM_GITHUB_TOKEN }}
 ```
@@ -71,7 +71,7 @@ After successful execution, the following environment variable is set:
 ```yaml
 - name: Get Release Version from specific branch
   id: get-version
-  uses: SonarSource/release-github-actions/get-release-version@master
+  uses: SonarSource/release-github-actions/get-release-version@v1
   with:
     branch: someone/some_new_feature
 ```

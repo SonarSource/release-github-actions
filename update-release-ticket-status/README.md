@@ -31,7 +31,7 @@ This action depends on:
 
 ```yaml
 - name: Update Release Ticket Status
-  uses: SonarSource/release-github-actions/update-release-ticket-status@master
+  uses: SonarSource/release-github-actions/update-release-ticket-status@v1
   with:
     release-ticket-key: 'REL-1234'
     status: 'Start Progress'
@@ -41,7 +41,7 @@ This action depends on:
 
 ```yaml
 - name: Update Release Ticket and Assign
-  uses: SonarSource/release-github-actions/update-release-ticket-status@master
+  uses: SonarSource/release-github-actions/update-release-ticket-status@v1
   with:
     release-ticket-key: 'REL-5678'
     status: 'Technical Release Done'
@@ -52,7 +52,7 @@ This action depends on:
 
 ```yaml
 - name: Update Release Ticket in Sandbox
-  uses: SonarSource/release-github-actions/update-release-ticket-status@master
+  uses: SonarSource/release-github-actions/update-release-ticket-status@v1
   with:
     release-ticket-key: 'REL-9999'
     status: 'Start Progress'
@@ -65,7 +65,7 @@ This action depends on:
 - name: Update Release Ticket with Environment Variables
   env:
     USE_JIRA_SANDBOX: 'true'
-  uses: SonarSource/release-github-actions/update-release-ticket-status@master
+  uses: SonarSource/release-github-actions/update-release-ticket-status@v1
   with:
     release-ticket-key: 'REL-1111'
     status: 'Technical Release Done'
