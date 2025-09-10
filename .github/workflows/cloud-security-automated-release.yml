@@ -66,9 +66,9 @@ on:
         description: "Release notes"
         required: true
         type: string
-      ide-release-notes:
-        description: "Release notes for SonarQube IDE extensions integration tickets."
-        required: false
+      sq-ide-short-description:
+        description: "Short summary of SQ IDE related changes."
+        required: true
         type: string
       new-version:
         description: "New version to release"
@@ -243,7 +243,8 @@ jobs:
           release-version: ${{ needs.prepare-release.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SLVS"
-          ticket-description: ${{ inputs.ide-release-notes != '' && inputs.ide-release-notes || needs.prepare-release.outputs.jira-release-notes }}
+          ticket-description: ${{ inputs.sq-ide-short-description != '' && inputs.sq-ide-short-description || inputs.short-description }}
+          jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
 
       - name: Create SLVSCODE Ticket
         if: ${{ inputs.create-slvscode-ticket }}
@@ -253,7 +254,8 @@ jobs:
           release-version: ${{ needs.prepare-release.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SLVSCODE"
-          ticket-description: ${{ inputs.ide-release-notes != '' && inputs.ide-release-notes || needs.prepare-release.outputs.jira-release-notes }}
+          ticket-description: ${{ inputs.sq-ide-short-description != '' && inputs.sq-ide-short-description || inputs.short-description }}
+          jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
 
       - name: Create SLE Ticket
         if: ${{ inputs.create-sle-ticket }}
@@ -263,7 +265,8 @@ jobs:
           release-version: ${{ needs.prepare-release.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SLE"
-          ticket-description: ${{ inputs.ide-release-notes != '' && inputs.ide-release-notes || needs.prepare-release.outputs.jira-release-notes }}
+          ticket-description: ${{ inputs.sq-ide-short-description != '' && inputs.sq-ide-short-description || inputs.short-description }}
+          jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
 
       - name: Create SLI Ticket
         if: ${{ inputs.create-sli-ticket }}
@@ -273,7 +276,8 @@ jobs:
           release-version: ${{ needs.prepare-release.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SLI"
-          ticket-description: ${{ inputs.ide-release-notes != '' && inputs.ide-release-notes || needs.prepare-release.outputs.jira-release-notes }}
+          ticket-description: ${{ inputs.sq-ide-short-description != '' && inputs.sq-ide-short-description || inputs.short-description }}
+          jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
 
       - name: Create SC Ticket
         id: create-sc-ticket
@@ -283,7 +287,8 @@ jobs:
           release-version: ${{ needs.prepare-release.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SC"
-          ticket-description: ${{ needs.prepare-release.outputs.jira-release-notes }}
+          ticket-description: ${{ inputs.short-description }}
+          jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
 
       - name: Create SONAR Ticket
         id: create-sonar-ticket
@@ -293,7 +298,8 @@ jobs:
           release-version: ${{ needs.prepare-release.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SONAR"
-          ticket-description: ${{ needs.prepare-release.outputs.jira-release-notes }}
+          ticket-description: ${{ inputs.short-description }}
+          jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
 
   update-analyzers:
     name: Update Analyzers in SQS and SQC
