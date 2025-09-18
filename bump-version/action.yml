@@ -1,0 +1,112 @@
+# Bump Version Action
+#
+# This action automates version management for projects by extracting the current version
+# from build files (gradle.properties or pom.xml), calculating the next version, and
+# optionally creating a Pull Request with the updated version files.
+#
+# The action supports both Gradle and Maven build systems and can either auto-increment
+# the minor version or use a specific version provided as input.
+
+name: 'Bump Version'
+description: 'Bump project version and optionally create a Pull Request.'
+
+inputs:
+    version:
+        description: |
+            Next Version to set (e.g., 1.2.0) or leave empty to auto-increment the minor version from the current version in gradle.properties.
+    create-pull-request:
+        description: |
+            Create a Pull Request (true) or just output the next version (false).
+        default: 'true'
+    pull-request-labels:
+        description: 'Labels to add to the pull request.'
+        default: ''
+    build-system:
+        description: 'The build system used in the project (maven or gradle).'
+        default: 'gradle'
+    maven-exclude-paths:
+        description: 'Paths to exclude when updating Maven pom.xml files (space-separated list).'
+        default: ''
+
+outputs:
+    current-version:
+        description: "The version of the current development iteration."
+        value: ${{ steps.get_versions.outputs.current-version }}
+    next-version:
+        description: "The version of the next development iteration."
+        value: ${{ steps.get_versions.outputs.next-version }}
+    pull-request-url:
+        description: "The URL of the created Pull Request."
+        value: ${{ steps.create_pr.outputs.pull-request-url }}
+    branch-name:
+        description: "The branch name of the created Pull Request."
+        value: ${{ steps.create_pr.outputs.branch-name }}
+
+runs:
+    using: 'composite'
+    steps:
+      # Checkout the repository to access build files and make changes
+      - uses: actions/checkout@v4
+
+      # Extract current version from build files and calculate next version
+      # This step uses an external bash script to handle version logic
+      - name: Get versions from Input, gradle.properties or pom.xml
+        shell: bash
+        id: get_versions
+        run: |
+          # Make the version script executable and run it with build system and version parameters
+          chmod +x ${{ github.action_path }}/get_versions.sh
+          ${{ github.action_path }}/get_versions.sh "${{ inputs.build-system }}" "${{ inputs.version }}"
+
+      # Update Maven pom.xml files with the new snapshot version
+      # Only runs when creating a PR and using Maven build system
+      # The script respects exclude paths provided in the inputs
+      - name: Update Version in pom.xml
+        if: "${{ inputs.create-pull-request == 'true' && inputs.build-system == 'maven' }}"
+        shell: bash
+        run: |
+          # Convert the space-separated exclude paths input into an array
+          IFS=' ' read -r -a EXCLUDE_PATHS_ARRAY <<< "${{ inputs.maven-exclude-paths }}"
+
+          # Build the find command with exclusions
+          FIND_COMMAND="find . -type f -name \"pom.xml\""
+          for PATH in "${EXCLUDE_PATHS_ARRAY[@]}"; do
+            FIND_COMMAND+=" ! -path \"$PATH\""
+          done
+          FIND_COMMAND+=" -exec sed -i \"s/<version>.*-SNAPSHOT<\/version>/<version>${{ env.SNAPSHOT_VERSION }}<\/version>/\" {} +"
+
+          # Execute the constructed find command
+          eval $FIND_COMMAND
+
+      # Update Gradle properties file with the new snapshot version
+      # Only runs when creating a PR and using Gradle build system
+      - name: Update Version in gradle.properties
+        if: "${{ inputs.create-pull-request == 'true' && inputs.build-system == 'gradle' }}"
+        shell: bash
+        run: |
+          # Update gradle.properties to the new snapshot version
+          sed -i "s/version=.*-SNAPSHOT/version=${{ env.SNAPSHOT_VERSION }}/" gradle.properties
+
+      # Create a Pull Request with the version changes
+      # Uses peter-evans/create-pull-request action to automate PR creation
+      # Only runs when create-pull-request input is true
+      - name: Create Pull Request for Version Bump
+        id: create_pr
+        if: "${{ inputs.create-pull-request == 'true' }}"
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+        env:
+          # Set the PR title and commit message to include the next version
+          TITLE_MESSAGE: Prepare next development iteration ${{ steps.get_versions.outputs.next-version }}
+        with:
+          # Use the triggering user as the author
+          author: ${{ github.actor }} <${{ github.actor }}>
+          commit-message: ${{ env.TITLE_MESSAGE }}
+          title: ${{ env.TITLE_MESSAGE }}
+          # Target the master branch for the PR
+          base: master
+          # Create a descriptive branch name with the version number
+          branch: bot/prepare-next-development-iteration-${{ steps.get_versions.outputs.next-version }}
+          # Apply any specified labels to the PR
+          labels: ${{ inputs.pull-request-labels }}
+          # Assign the triggering user as a reviewer
+          reviewers: ${{ github.actor }}
