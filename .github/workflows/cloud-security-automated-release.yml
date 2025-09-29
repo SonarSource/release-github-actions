@@ -124,7 +124,7 @@ jobs:
         run: |
           echo "::error::Rule metadata changes detected. The generated PR needs to be merged first before continuing with the release."
           echo "::error::Pull Request URL: ${{ steps.update-rule-metadata.outputs.pull-request-url }}"
-          echo "::error::Please merge the PR and run this workflow again (Start a new run instead of reruning failed actions)."
+          echo "::error::Please merge the PR and run this workflow again (Start a new run instead of re-runing failed jobs in the current one)."
           exit 1
 
   prepare-release:
