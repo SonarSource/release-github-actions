@@ -25,10 +25,8 @@ This action depends on:
 |------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|---------|
 | `project-name`         | The display name of the project (e.g., SonarIaC). Used as the prefix for the release ticket summary                                                                                                             | Yes      | -       |
 | `short-description`    | A short description for the release                                                                                                                                                                             | Yes      | -       |
-| `sq-compatibility`     | SonarQube compatibility version (e.g., 2025.3)                                                                                                                                                                  | Yes      | -       |
 | `jira-project-key`     | The key of the Jira project (e.g., SONARIAC). Can also be set via `JIRA_PROJECT_KEY` environment variable                                                                                                       | No*      | -       |
 | `version`              | The version being released (e.g., 11.44.2), or leave empty to use the release version                                                                                                                           | No       | -       |
-| `targeted-product`     | The targeted product version (e.g., 11.0)                                                                                                                                                                       | No       | -       |
 | `use-jira-sandbox`     | Use the sandbox server instead of the production Jira. Can also be controlled via `USE_JIRA_SANDBOX` environment variable                                                                                       | No       | `false` |
 | `documentation-status` | Status of the documentation                                                                                                                                                                                     | No       | `N/A`   |
 | `rule-props-changed`   | Whether rule properties have changed (`Yes` or `No`)                                                                                                                                                            | No       | `No`    |
@@ -65,7 +63,6 @@ This action depends on:
     project-name: 'SonarIaC'
     version: '11.44.2'
     short-description: 'Bug fixes and performance improvements'
-    sq-compatibility: '2025.3'
     jira-release-url: 'https://sonarsource.atlassian.net/projects/SONARIAC/versions/12345'
 
 - name: Use created ticket
@@ -85,8 +82,6 @@ This action depends on:
   with:
     project-name: 'SonarIaC'
     short-description: 'Major release with new features'
-    sq-compatibility: '2025.3'
-    targeted-product: '11.0'
     rule-props-changed: 'Yes'
 ```
 
@@ -98,7 +93,6 @@ This action depends on:
   with:
     project-name: 'Test Project'
     short-description: 'Beta release for testing'
-    sq-compatibility: '2025.3'
     use-jira-sandbox: 'true'
 ```
 
@@ -110,7 +104,6 @@ This action depends on:
   with:
     project-name: 'SonarIaC'
     short-description: 'Quarterly release'
-    sq-compatibility: '2025.3'
     start-progress: 'true'
 ```
 
@@ -123,7 +116,6 @@ This action depends on:
     jira-project-key: 'SONARIAC'
     project-name: 'SonarIaC'
     short-description: 'Release with environment variable usage'
-    sq-compatibility: '2025.3'
     jira-release-url: 'https://sonarsource.atlassian.net/projects/SONARIAC/versions/12345'
 
 - name: Post to Slack
@@ -156,8 +148,6 @@ The action populates the following Jira custom fields:
 | Field                   | Custom Field ID   | Source Input           |
 |-------------------------|-------------------|------------------------|
 | Short Description       | customfield_10146 | `short-description`    |
-| SonarQube Compatibility | customfield_10148 | `sq-compatibility`     |
-| Targeted Product        | customfield_10163 | `targeted-product`     |
 | Link to Release Notes   | customfield_10145 | `jira-release-url`     |
 | Documentation Status    | customfield_10147 | `documentation-status` |
 | Rule Properties Changed | customfield_11263 | `rule-props-changed`   |

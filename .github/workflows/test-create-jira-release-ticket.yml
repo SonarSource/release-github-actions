@@ -61,7 +61,6 @@ jobs:
           project-name: "Test Project"
           version: "1.0.0"
           short-description: "Test release for integration testing"
-          sq-compatibility: "2025.1"
           use-jira-sandbox: true
         continue-on-error: true
 
@@ -101,7 +100,6 @@ jobs:
           project-name: "Test Project"
           version: "1.0.0"
           short-description: "Test release"
-          sq-compatibility: "2025.1"
           jira-release-url: "https://test.jira.com/release/notes"
         continue-on-error: true
 
@@ -124,7 +122,6 @@ jobs:
           project-name: "Test Project"
           version: "1.0.0"
           short-description: "Test release"
-          sq-compatibility: "2025.1"
         continue-on-error: true
 
       - name: Verify Missing Release URL Failure
@@ -147,7 +144,6 @@ jobs:
           project-name: "Test Project"
           version: "1.0.0"
           short-description: "Test release"
-          sq-compatibility: "2025.1"
           jira-release-url: "https://test.jira.com/release/notes"
         continue-on-error: true
 
@@ -173,7 +169,6 @@ jobs:
           project-name: "Test Project"
           version: "1.0.0"
           short-description: "Test release"
-          sq-compatibility: "2025.1"
         continue-on-error: true
 
       - name: Verify Release URL Environment Variable Works
@@ -198,7 +193,6 @@ jobs:
           project-name: "Test Project"
           version: "1.0.0"
           short-description: "Test release"
-          sq-compatibility: "2025.1"
           jira-release-url: "https://input.jira.com/release"
         continue-on-error: true
 
