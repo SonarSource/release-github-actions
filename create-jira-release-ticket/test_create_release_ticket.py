@@ -69,11 +69,9 @@ class TestCreateReleaseTicket(unittest.TestCase):
         args.project_name = 'TestProject'
         args.version = '1.2.3'
         args.short_description = 'Test release'
-        args.sq_compatibility = '2025.1'
         args.documentation_status = 'Ready'
         args.rule_props_changed = 'Yes'
         args.sonarlint_changelog = 'Test changelog'
-        args.targeted_product = '11.0'
 
         release_url = 'https://jira.com/release/notes'
 
@@ -88,42 +86,10 @@ class TestCreateReleaseTicket(unittest.TestCase):
         self.assertEqual(call_args['issuetype'], 'Ask for release')
         self.assertEqual(call_args['summary'], 'TestProject 1.2.3')
         self.assertEqual(call_args['customfield_10146'], 'Test release')  # SHORT_DESCRIPTION
-        self.assertEqual(call_args['customfield_10148'], '2025.1')  # SQ_COMPATIBILITY
         self.assertEqual(call_args['customfield_10145'], release_url)  # LINK_TO_RELEASE_NOTES
         self.assertEqual(call_args['customfield_10147'], 'Ready')  # DOCUMENTATION_STATUS
         self.assertEqual(call_args['customfield_11263'], {'value': 'Yes'})  # RULE_PROPS_CHANGED
         self.assertEqual(call_args['customfield_11264'], 'Test changelog')  # SONARLINT_CHANGELOG
-        self.assertEqual(call_args['customfield_10163'], {'value': '11.0'})  # TARGETED_PRODUCT
-
-    def test_create_release_ticket_without_optional_fields(self):
-        """Test creating release ticket without optional fields."""
-        mock_jira = Mock()
-        mock_ticket = Mock()
-        mock_ticket.key = 'REL-124'
-        mock_ticket.permalink.return_value = 'https://jira.com/REL-124'
-        mock_jira.create_issue.return_value = mock_ticket
-
-        # Mock args
-        args = Mock()
-        args.project_name = 'TestProject'
-        args.version = '1.2.3'
-        args.short_description = 'Test release'
-        args.sq_compatibility = '2025.1'
-        args.documentation_status = 'N/A'
-        args.rule_props_changed = 'No'
-        args.sonarlint_changelog = ''
-        args.targeted_product = None
-
-        release_url = 'https://jira.com/release/notes'
-
-        result = create_release_ticket(mock_jira, args, release_url)
-
-        self.assertEqual(result, mock_ticket)
-        mock_jira.create_issue.assert_called_once()
-
-        # Verify the issue creation call - should not include targeted_product
-        call_args = mock_jira.create_issue.call_args[1]['fields']
-        self.assertNotIn('customfield_10163', call_args)  # TARGETED_PRODUCT should not be set
 
     # noinspection DuplicatedCode,PyUnusedLocal
     @patch('create_release_ticket.eprint')
@@ -138,11 +104,9 @@ class TestCreateReleaseTicket(unittest.TestCase):
         args.project_name = 'TestProject'
         args.version = '1.2.3'
         args.short_description = 'Test release'
-        args.sq_compatibility = '2025.1'
         args.documentation_status = 'N/A'
         args.rule_props_changed = 'No'
         args.sonarlint_changelog = ''
-        args.targeted_product = None
 
         with self.assertRaises(SystemExit) as cm:
             create_release_ticket(mock_jira, args, 'https://release.url')
@@ -155,7 +119,6 @@ class TestCreateReleaseTicket(unittest.TestCase):
         '--project-name', 'Test Project',
         '--version', '1.0.0',
         '--short-description', 'Test release',
-        '--sq-compatibility', '2025.1',
         '--jira-url', 'https://test.jira.com',
         '--jira-release-url', 'https://jira.com/release/notes'
     ])
@@ -200,8 +163,6 @@ class TestCreateReleaseTicket(unittest.TestCase):
         '--project-name', 'Test Project',
         '--version', '1.0.0',
         '--short-description', 'Test release',
-        '--sq-compatibility', '2025.1',
-        '--targeted-product', '11.0',
         '--jira-url', 'https://sandbox.jira.com',
         '--jira-release-url', 'https://sandbox.jira.com/release/notes',
         '--documentation-status', 'Ready',
@@ -235,8 +196,6 @@ class TestCreateReleaseTicket(unittest.TestCase):
         self.assertEqual(args.project_name, 'Test Project')
         self.assertEqual(args.version, '1.0.0')
         self.assertEqual(args.short_description, 'Test release')
-        self.assertEqual(args.sq_compatibility, '2025.1')
-        self.assertEqual(args.targeted_product, '11.0')
         self.assertEqual(args.jira_url, 'https://sandbox.jira.com')
         self.assertEqual(args.jira_release_url, 'https://sandbox.jira.com/release/notes')
         self.assertEqual(args.documentation_status, 'Ready')

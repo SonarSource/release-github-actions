@@ -13,8 +13,6 @@ from jira.exceptions import JIRAError
 
 CUSTOM_FIELDS = {
     'SHORT_DESCRIPTION': 'customfield_10146',
-    'SQ_COMPATIBILITY': 'customfield_10148',
-    'TARGETED_PRODUCT': 'customfield_10163',
     'LINK_TO_RELEASE_NOTES': 'customfield_10145',
     'DOCUMENTATION_STATUS': 'customfield_10147',
     'RULE_PROPS_CHANGED': 'customfield_11263',
@@ -75,15 +73,11 @@ def create_release_ticket(jira_client, args, link_to_release_notes):
         'issuetype': 'Ask for release',
         'summary': f'{args.project_name} {args.version}',
         CUSTOM_FIELDS['SHORT_DESCRIPTION']: args.short_description,
-        CUSTOM_FIELDS['SQ_COMPATIBILITY']: args.sq_compatibility,
         CUSTOM_FIELDS['LINK_TO_RELEASE_NOTES']: link_to_release_notes,
         CUSTOM_FIELDS['DOCUMENTATION_STATUS']: args.documentation_status,
         CUSTOM_FIELDS['RULE_PROPS_CHANGED']: {'value': args.rule_props_changed},
         CUSTOM_FIELDS['SONARLINT_CHANGELOG']: args.sonarlint_changelog
     }
-
-    if args.targeted_product:
-        ticket_details[CUSTOM_FIELDS['TARGETED_PRODUCT']] = {'value': args.targeted_product}
 
     try:
         new_ticket = jira_client.create_issue(fields=ticket_details)
@@ -107,8 +101,6 @@ def main():
     parser.add_argument("--project-name", required=True, help="The display name of the project (e.g., SonarIaC).")
     parser.add_argument("--version", required=True, help="The version being released (e.g., 11.44.2).")
     parser.add_argument("--short-description", required=True, help="A short description for the release.")
-    parser.add_argument("--sq-compatibility", required=True, help="SonarQube compatibility version (e.g., 2025.3).")
-    parser.add_argument("--targeted-product", help="The targeted product version (e.g., 11.0).")
     parser.add_argument("--jira-url", required=True, help="The Jira server URL to connect to.")
     parser.add_argument("--documentation-status", default="N/A", help="Status of the documentation.")
     parser.add_argument("--rule-props-changed", default="No", choices=['Yes', 'No'],

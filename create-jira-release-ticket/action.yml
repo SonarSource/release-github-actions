@@ -9,13 +9,8 @@ inputs:
   short-description:
     description: 'A short description for the release'
     required: true
-  sq-compatibility:
-    description: 'SonarQube compatibility version (e.g., 2025.3)'
-    required: true
   jira-project-key:
     description: 'The key of the project (e.g., SONARIAC). Required if JIRA_PROJECT_KEY env var is not set.'
-  targeted-product:
-    description: 'The targeted product version (e.g., 11.0)'
   version:
     description: 'The version being released (e.g., 11.44.2), or leave empty to use the release version.'
   use-jira-sandbox:
@@ -93,8 +88,6 @@ runs:
           --project-name="${{ inputs.project-name }}" \
           --version="${{ inputs.version || env.RELEASE_VERSION }}" \
           --short-description="${{ inputs.short-description }}" \
-          --targeted-product="${{ inputs.targeted-product }}" \
-          --sq-compatibility="${{ inputs.sq-compatibility }}" \
           --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
           --documentation-status="${{ inputs.documentation-status }}" \
           --rule-props-changed="${{ inputs.rule-props-changed }}" \

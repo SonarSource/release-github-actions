@@ -53,10 +53,6 @@ on:
         description: "Did any rule properties change in this release"
         required: true
         type: string
-      sq-compatibility:
-        description: "SonarQube compatibility"
-        required: true
-        type: string
       branch:
         description: "Branch from which to do the release"
         required: true
@@ -124,7 +120,7 @@ jobs:
         run: |
           echo "::error::Rule metadata changes detected. The generated PR needs to be merged first before continuing with the release."
           echo "::error::Pull Request URL: ${{ steps.update-rule-metadata.outputs.pull-request-url }}"
-          echo "::error::Please merge the PR and restart this workflow."
+          echo "::error::Please merge the PR and run this workflow again (Start a new run instead of re-runing failed jobs in the current one)."
           exit 1
 
   prepare-release:
@@ -175,7 +171,6 @@ jobs:
         with:
           project-name: ${{ inputs.project-name }}
           short-description: ${{ inputs.short-description }}
-          sq-compatibility: ${{ inputs.sq-compatibility }}
           rule-props-changed: ${{ inputs.rule-props-changed }}
           jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
           start-progress: true
@@ -372,5 +367,12 @@ jobs:
           
           if [[ "$ALL_SUCCESS" == "true" ]]; then
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "PS: Don't forget to review and merge the bump version, SQS and SQC PRs!" >> $GITHUB_STEP_SUMMARY
+            echo "PS: Don't forget to review and merge the bump version, SQS and SQC!" >> $GITHUB_STEP_SUMMARY
+            echo "You should also update the relevant integration ticket statuses (don't forget to set the SQS ticket fix versions!)" >> $GITHUB_STEP_SUMMARY
+            echo "For more information please check the release instructions at:" >> $GITHUB_STEP_SUMMARY
+            echo "https://xtranet-sonarsource.atlassian.net/wiki/spaces/CSD/pages/4325048388/Release+Instructions+-+Cloud+Security" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "For fixes to common issues and other useful information please check the release instructions at:" >> $GITHUB_STEP_SUMMARY
+            echo "https://xtranet-sonarsource.atlassian.net/wiki/spaces/CSD/pages/4325048388/Release+Instructions+-+Cloud+Security" >> $GITHUB_STEP_SUMMARY
           fi
