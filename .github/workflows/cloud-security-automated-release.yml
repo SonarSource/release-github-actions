@@ -53,10 +53,6 @@ on:
         description: "Did any rule properties change in this release"
         required: true
         type: string
-      sq-compatibility:
-        description: "SonarQube compatibility"
-        required: true
-        type: string
       branch:
         description: "Branch from which to do the release"
         required: true
@@ -175,7 +171,6 @@ jobs:
         with:
           project-name: ${{ inputs.project-name }}
           short-description: ${{ inputs.short-description }}
-          sq-compatibility: ${{ inputs.sq-compatibility }}
           rule-props-changed: ${{ inputs.rule-props-changed }}
           jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
           start-progress: true
