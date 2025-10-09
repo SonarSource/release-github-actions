@@ -1,5 +1,10 @@
 name: ABD Reusable Release Automations
 
+# This workflow automates most of the DBD release process as described in dbd-release-instructions.md
+# KNOWN LIMITATIONS - Steps not yet automated:
+#   - Posting artifact links comment to Jira release ticket (see TODO in release-in-jira job)
+#   - Creating version bump PR for next development iteration (see TODO after update-analyzers job)
+
 env:
   JIRA_PROJECT_KEY: ${{ inputs.jira-project-key }}
   USE_JIRA_SANDBOX: ${{ inputs.use-jira-sandbox }}
@@ -202,6 +207,15 @@ jobs:
           status: "Technical Release Done"
           assignee: ${{ inputs.pm-email }}
 
+      # TODO: Add step to post artifact links comment to Jira release ticket
+      # Per DBD release instructions: "For clarity, add a comment in the Jira REL ticket with links
+      # pointing to the three artifacts in JFrog"
+      # Required artifacts:
+      #   - sonar-dbd-java-frontend-plugin
+      #   - sonar-dbd-python-frontend-plugin
+      #   - sonar-dbd-plugin
+      # See manual ABD/DBD release instructions on Xtranet
+
       - name: Create SC Ticket
         id: create-sc-ticket
         uses: SonarSource/release-github-actions/create-integration-ticket@v1
@@ -257,6 +271,16 @@ jobs:
           plugin-artifacts: ${{inputs.plugin-artifacts }}
           draft: ${{ inputs.is-draft-release }}
           reviewers: ${{ github.actor }}
+
+  # TODO: Add job to create version bump PR for next development iteration
+  # Per DBD release instructions: "Prepare next development iteration (bump version in POM files)"
+  # Should:
+  #   1. Checkout new branch: prepare-next-iteration
+  #   2. Run: mvn versions:set -DgenerateBackupPoms=false -DnewVersion=<X.Y-SNAPSHOT>
+  #   3. Copy performance report files to docs/performancereports/<language>/<version>
+  #   4. Git add, commit, and push
+  #   5. Create PR with assignee/reviewer
+  # Note: The summary currently reminds users to manually merge this PR
 
   summarize_release:
     name: Release
