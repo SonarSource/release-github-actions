@@ -1,5 +1,18 @@
 name: ABD Reusable Release Automations
 
+# This workflow automates most of the DBD release process as described at https://xtranet-sonarsource.atlassian.net/wiki/spaces/CodeQualit/pages/2824634385/DBD+Release+Instructions
+#
+# KNOWN LIMITATIONS
+#
+# Steps not yet automated:
+#   - Checking if there are relevant RSPEC pull requests that still need to be merged
+#   - Verify that all analyses on Peach are successful
+#   - Verify that performance is under control
+#   - Posting artifact links comment to Jira release ticket (see TODO in release-in-jira job)
+# All of this is currently handled by manual instructions.
+#
+# Also, this has not yet been tested with the COBOL and JCL analyzers.
+
 env:
   JIRA_PROJECT_KEY: ${{ inputs.jira-project-key }}
   USE_JIRA_SANDBOX: ${{ inputs.use-jira-sandbox }}
@@ -74,6 +87,10 @@ jobs:
       pull-requests: write
       id-token: write
     steps:
+      # TODO: Add step to check whether all relevant RSPEC changes have been merged
+      # TODO: Verify that all analyses on Peach are successful
+      # TODO: Verify that performance on Peach is under control
+
       - name: Check Releasability Status
         uses: SonarSource/release-github-actions/check-releasability-status@v1
         with:
@@ -198,6 +215,15 @@ jobs:
           status: "Technical Release Done"
           assignee: ${{ inputs.pm-email }}
 
+      # TODO: Add step to post artifact links comment to Jira release ticket
+      # Per DBD release instructions: "For clarity, add a comment in the Jira REL ticket with links
+      # pointing to the three artifacts in JFrog"
+      # Required artifacts:
+      #   - sonar-dbd-java-frontend-plugin
+      #   - sonar-dbd-python-frontend-plugin
+      #   - sonar-dbd-plugin
+      # See manual ABD/DBD release instructions on Xtranet
+
       - name: Create SC Ticket
         id: create-sc-ticket
         uses: SonarSource/release-github-actions/create-integration-ticket@v1
@@ -253,6 +279,7 @@ jobs:
           plugin-artifacts: ${{inputs.plugin-artifacts }}
           draft: ${{ inputs.is-draft-release }}
           reviewers: ${{ github.actor }}
+
 
   summarize_release:
     name: Release
