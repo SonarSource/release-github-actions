@@ -15,10 +15,6 @@ on:
         description: "Project name"
         required: true
         type: string
-      plugin-name:
-        description: "Plugin name"
-        required: true
-        type: string
       plugin-artifacts:
         description: "Plugin artifacts"
         required: true
@@ -206,7 +202,7 @@ jobs:
         id: create-sc-ticket
         uses: SonarSource/release-github-actions/create-integration-ticket@v1
         with:
-          plugin-name: ${{ inputs.plugin-name }}
+          plugin-name: ${{ inputs.project-name }}
           release-version: ${{ needs.prepare-release.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SC"
@@ -217,7 +213,7 @@ jobs:
         id: create-sonar-ticket
         uses: SonarSource/release-github-actions/create-integration-ticket@v1
         with:
-          plugin-name: ${{ inputs.plugin-name }}
+          plugin-name: ${{ inputs.project-name }}
           release-version: ${{ needs.prepare-release.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SONAR"
@@ -240,7 +236,7 @@ jobs:
         with:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           ticket-key: ${{ needs.release-in-jira.outputs.sqs-ticket-key }}
-          plugin-name: ${{ inputs.plugin-name }}
+          plugin-name: ${{ inputs.project-name }}
           secret-name: ${{ inputs.release-automation-secret-name }}
           plugin-artifacts: ${{inputs.plugin-artifacts }}
           draft: ${{ inputs.is-draft-release }}
@@ -252,7 +248,7 @@ jobs:
         with:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           ticket-key: ${{ needs.release-in-jira.outputs.sqc-ticket-key }}
-          plugin-name: ${{ inputs.plugin-name }}
+          plugin-name: ${{ inputs.project-name }}
           secret-name: ${{ inputs.release-automation-secret-name }}
           plugin-artifacts: ${{inputs.plugin-artifacts }}
           draft: ${{ inputs.is-draft-release }}
