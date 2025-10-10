@@ -2,6 +2,9 @@ name: ABD Reusable Release Automations
 
 # This workflow automates most of the DBD release process as described in dbd-release-instructions.md
 # KNOWN LIMITATIONS - Steps not yet automated:
+#   - Checking if there are relevant RSPEC pull requests that still need to be merged
+#   - Verify that all analyses on Peach are successful
+#   - Verify that performance is under control
 #   - Posting artifact links comment to Jira release ticket (see TODO in release-in-jira job)
 #   - Creating version bump PR for next development iteration (see TODO after update-analyzers job)
 
@@ -83,6 +86,10 @@ jobs:
       pull-requests: write
       id-token: write
     steps:
+      # TODO: Add step to check whether all relevant RSPEC changes have been merged
+      # TODO: Verify that all analyses on Peach are successful
+      # TODO: Verify that performance on Peach is under control
+
       - name: Check Releasability Status
         uses: SonarSource/release-github-actions/check-releasability-status@v1
         with:
