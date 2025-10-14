@@ -27,7 +27,7 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
         # Execute the gh CLI command to get the release version
-        RELEASE_VERSION=$(gh api "/repos/${{ github.repository }}/commits/${{ inputs.branch }}/status" --jq ".statuses[] | select(.context | startswith(\"repox\")) | .description | split(\"'\")[1]")
+        RELEASE_VERSION=$(gh api "/repos/${{ github.repository }}/commits/${{ inputs.branch }}/status" --jq ".statuses[] | select(.context | startswith(\"repox-${{ inputs.branch }}\")) | .description | split(\"'\")[1]")
         
         if [ -z "$RELEASE_VERSION" ]; then
           echo "❌ Could not extract release version from repox status"
