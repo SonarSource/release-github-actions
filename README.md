@@ -7,6 +7,10 @@ or coordinating cross-repository tasks, these actions help teams back away from 
 Pick and combine the automations best suited for your analyzer’s unique release requirements, and easily extend the toolbox to cover new
 scenarios as they arise.
 
+## Automated Releases for Your Repository
+
+See [here](docs/automated-releases-how-to.md).
+
 ## Available Actions
 
 * [**Check Releasability Status**](check-releasability-status/README.md):
