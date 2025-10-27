@@ -13,6 +13,8 @@ inputs:
     description: 'The key of the project (e.g., SONARIAC). Required if JIRA_PROJECT_KEY env var is not set.'
   version:
     description: 'The version being released (e.g., 11.44.2), or leave empty to use the release version.'
+  due-date:
+    description: 'Due date of the release.'
   use-jira-sandbox:
     description: "Use the sandbox server instead of the production Jira."
   documentation-status:
@@ -73,8 +75,15 @@ runs:
       env:
         JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
-        JIRA_PROD_URL: "https://sonarsource.atlassian.net/"
-        JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
+        PROJECT_NAME: ${{ inputs.project-name }}
+        RELEASE_VERSION: ${{ inputs.version || env.RELEASE_VERSION }}
+        SHORT_DESCRIPTION: ${{ inputs.short-description }}
+        DUE_DATE: ${{ inputs.due-date }}
+        JIRA_URL: ${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && 'https://sonarsource-sandbox-608.atlassian.net/' || 'https://sonarsource.atlassian.net/' }}
+        DOCUMENTATION_STATUS: ${{ inputs.documentation-status }}
+        RULE_PROPS_CHANGED: ${{ inputs.rule-props-changed }}
+        JIRA_RELEASE_URL: ${{ inputs.jira-release-url || env.JIRA_RELEASE_URL }}
+        SONARLINT_CHANGELOG: ${{ inputs.sonarlint-changelog }}
       run: |
         PROJECT_KEY="${{ inputs.jira-project-key || env.JIRA_PROJECT_KEY }}"
         
@@ -85,14 +94,15 @@ runs:
 
         python ${{ github.action_path }}/create_release_ticket.py \
           --project-key="$PROJECT_KEY" \
-          --project-name="${{ inputs.project-name }}" \
-          --version="${{ inputs.version || env.RELEASE_VERSION }}" \
-          --short-description="${{ inputs.short-description }}" \
-          --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
-          --documentation-status="${{ inputs.documentation-status }}" \
-          --rule-props-changed="${{ inputs.rule-props-changed }}" \
-          --jira-release-url="${{ inputs.jira-release-url || env.JIRA_RELEASE_URL }}" \
-          --sonarlint-changelog="${{ inputs.sonarlint-changelog }}" >> $GITHUB_OUTPUT
+          --project-name="$PROJECT_NAME" \
+          --version="$RELEASE_VERSION" \
+          --due-date="$DUE_DATE" \
+          --short-description="$SHORT_DESCRIPTION" \
+          --jira-url="$JIRA_URL" \
+          --documentation-status="$DOCUMENTATION_STATUS" \
+          --rule-props-changed="$RULE_PROPS_CHANGED" \
+          --jira-release-url="$JIRA_RELEASE_URL" \
+          --sonarlint-changelog="$SONARLINT_CHANGELOG" >> $GITHUB_OUTPUT
 
     - name: Start Progress on Release Ticket
       if: ${{ inputs.start-progress == 'true' }}
