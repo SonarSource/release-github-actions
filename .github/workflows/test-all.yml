@@ -38,3 +38,6 @@ jobs:
 
   test-update-analyzer:
     uses: ./.github/workflows/test-update-analyzer.yml
+
+  test-update-rule-metadata:
+    uses: ./.github/workflows/test-update-rule-metadata.yml
