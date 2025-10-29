@@ -237,7 +237,7 @@ jobs:
         uses: SonarSource/release-github-actions/create-integration-ticket@v1
         with:
           plugin-name: ${{ inputs.plugin-name }}
-          release-version: ${{ needs.prepare-release.release-version }}
+          release-version: ${{ needs.prepare-release.outputs.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SLVS"
           ticket-description: ${{ inputs.sq-ide-short-description != '' && inputs.sq-ide-short-description || inputs.short-description }}
@@ -248,7 +248,7 @@ jobs:
         uses: SonarSource/release-github-actions/create-integration-ticket@v1
         with:
           plugin-name: ${{ inputs.plugin-name }}
-          release-version: ${{ needs.prepare-release.release-version }}
+          release-version: ${{ needs.prepare-release.outputs.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SLVSCODE"
           ticket-description: ${{ inputs.sq-ide-short-description != '' && inputs.sq-ide-short-description || inputs.short-description }}
@@ -259,7 +259,7 @@ jobs:
         uses: SonarSource/release-github-actions/create-integration-ticket@v1
         with:
           plugin-name: ${{ inputs.plugin-name }}
-          release-version: ${{ needs.prepare-release.release-version }}
+          release-version: ${{ needs.prepare-release.outputs.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SLE"
           ticket-description: ${{ inputs.sq-ide-short-description != '' && inputs.sq-ide-short-description || inputs.short-description }}
@@ -270,7 +270,7 @@ jobs:
         uses: SonarSource/release-github-actions/create-integration-ticket@v1
         with:
           plugin-name: ${{ inputs.plugin-name }}
-          release-version: ${{ needs.prepare-release.release-version }}
+          release-version: ${{ needs.prepare-release.outputs.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SLI"
           ticket-description: ${{ inputs.sq-ide-short-description != '' && inputs.sq-ide-short-description || inputs.short-description }}
@@ -281,7 +281,7 @@ jobs:
         uses: SonarSource/release-github-actions/create-integration-ticket@v1
         with:
           plugin-name: ${{ inputs.plugin-name }}
-          release-version: ${{ needs.prepare-release.release-version }}
+          release-version: ${{ needs.prepare-release.outputs.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SC"
           ticket-description: ${{ inputs.short-description }}
@@ -292,7 +292,7 @@ jobs:
         uses: SonarSource/release-github-actions/create-integration-ticket@v1
         with:
           plugin-name: ${{ inputs.plugin-name }}
-          release-version: ${{ needs.prepare-release.release-version }}
+          release-version: ${{ needs.prepare-release.outputs.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SONAR"
           ticket-description: ${{ inputs.short-description }}
