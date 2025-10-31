@@ -126,6 +126,7 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_REF: ${{ inputs.branch }}
       run: |
         # Set release ID based on draft status
         if [[ "${{ inputs.draft }}" == "true" ]]; then
@@ -139,6 +140,7 @@ runs:
         # Trigger the workflow
         gh workflow run "${{ inputs.release-workflow }}" \
           --repo "${{ github.repository }}" \
+          --ref $GITHUB_REF \
           -f "version=$VALIDATED_VERSION" \
           -f "releaseId=$RELEASE_ID_VALUE" \
           -f "dryRun=${{ inputs.draft }}"
