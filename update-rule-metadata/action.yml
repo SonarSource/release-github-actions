@@ -141,6 +141,11 @@ runs:
           fi
         done <<< "$sonarpedia_dirs"
 
+    - name: Remove rule-api jar
+      shell: bash
+      run: |
+        rm rule-api.jar
+      
     - name: Generate summary
       id: generate-summary
       shell: bash
