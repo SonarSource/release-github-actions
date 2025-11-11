@@ -40,19 +40,23 @@ runs:
     - name: Run Python Script to Update Ticket
       id: run_python_script
       shell: bash
-      run: |
-        ASSIGNEE_FLAG=""
-        if [[ -n "${{ inputs.assignee }}" ]]; then
-          ASSIGNEE_FLAG="--assignee=${{ inputs.assignee }}"
-        fi
-
-        python ${{ github.action_path }}/update_release_ticket.py \
-          --ticket-key="${{ inputs.release-ticket-key }}" \
-          --status="${{ inputs.status }}" \
-          ${ASSIGNEE_FLAG} \
-          --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}"
       env:
         JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
         JIRA_PROD_URL: "https://sonarsource.atlassian.net/"
         JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
+        ASSIGNEE_INPUT: ${{ inputs.assignee }}
+        TICKET_KEY: ${{ inputs.release-ticket-key }}
+        STATUS: ${{ inputs.status }}
+        JIRA_URL: ${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}
+      run: |
+        ASSIGNEE_FLAG=""
+        if [[ -n "$ASSIGNEE_INPUT" ]]; then
+          ASSIGNEE_FLAG="--assignee=$ASSIGNEE_INPUT"
+        fi
+
+        python ${{ github.action_path }}/update_release_ticket.py \
+          --ticket-key="$TICKET_KEY" \
+          --status="$STATUS" \
+          ${ASSIGNEE_FLAG} \
+          --jira-url="$JIRA_URL"

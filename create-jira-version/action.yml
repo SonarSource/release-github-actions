@@ -52,22 +52,28 @@ runs:
       id: determine-current-version
       if: ${{ !inputs.jira-new-version-name }}
       shell: bash
+      env:
+        INPUT_VERSION: ${{ inputs.jira-version-name || env.JIRA_VERSION_NAME }}
+        FETCHED_VERSION: ${{ steps.get-jira-version.outputs.jira-version-name }}
       run: |
-        if [[ -n "${{ inputs.jira-version-name || env.JIRA_VERSION_NAME }}" ]]; then
-          CURRENT_VERSION="${{ inputs.jira-version-name || env.JIRA_VERSION_NAME }}"
+        if [[ -n "$INPUT_VERSION" ]]; then
+          CURRENT_VERSION="$INPUT_VERSION"
         else
-          CURRENT_VERSION="${{ steps.get-jira-version.outputs.jira-version-name }}"
+          CURRENT_VERSION="$FETCHED_VERSION"
         fi
         echo "current-version-name=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
     - name: Determine New Jira Version
       id: determine-new-version-name
       shell: bash
+      env:
+        NEW_VERSION_INPUT: ${{ inputs.jira-new-version-name }}
+        CURRENT_VERSION_OUTPUT: ${{ steps.determine-current-version.outputs.current-version-name }}
       run: |
-        if [[ -n "${{ inputs.jira-new-version-name }}" ]]; then
-          NEW_VERSION="${{ inputs.jira-new-version-name }}"
+        if [[ -n "$NEW_VERSION_INPUT" ]]; then
+          NEW_VERSION="$NEW_VERSION_INPUT"
         else
-          NEW_VERSION=$(echo "${{ steps.determine-current-version.outputs.current-version-name }}" | awk -F. '{$NF+=1; print}' OFS='.')
+          NEW_VERSION=$(echo "$CURRENT_VERSION_OUTPUT" | awk -F. '{$NF+=1; print}' OFS='.')
         fi
         echo "new-version-name=$NEW_VERSION" >> $GITHUB_OUTPUT
 
@@ -79,16 +85,17 @@ runs:
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
         JIRA_PROD_URL: "https://sonarsource.atlassian.net/"
         JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
+        PROJECT_KEY_INPUT: ${{ inputs.jira-project-key || env.JIRA_PROJECT_KEY }}
+        VERSION_NAME: ${{ steps.determine-new-version-name.outputs.new-version-name }}
+        JIRA_URL: ${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}
       run: |
-        PROJECT_KEY="${{ inputs.jira-project-key || env.JIRA_PROJECT_KEY }}"
-        
-        if [[ -z "$PROJECT_KEY" ]]; then
+        if [[ -z "$PROJECT_KEY_INPUT" ]]; then
           echo "::error::Both jira-project-key input and JIRA_PROJECT_KEY environment variable are missing. One must be provided."
           exit 1
         fi
 
         python ${{ github.action_path }}/create_jira_version.py \
-          --project-key="$PROJECT_KEY" \
-          --version-name="${{ steps.determine-new-version-name.outputs.new-version-name }}" \
-          --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
+          --project-key="$PROJECT_KEY_INPUT" \
+          --version-name="$VERSION_NAME" \
+          --jira-url="$JIRA_URL" \
           >> $GITHUB_OUTPUT
