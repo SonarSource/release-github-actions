@@ -48,21 +48,25 @@ runs:
         echo "VALIDATED_VERSION=$VERSION" >> $GITHUB_ENV
 
     - name: Prepare Release Notes
+      if: ${{ inputs.release-notes != '' }}
       shell: bash
       run: |
-        if [[ -n "${RELEASE_NOTES}" ]]; then
-          echo "${RELEASE_NOTES}" > release-notes.md
-        else
-          echo "" > release-notes.md
-        fi
+        echo "${RELEASE_NOTES}" > release-notes.md
       env:
         RELEASE_NOTES: ${{ inputs.release-notes }}
+
+    - name: Prepare Empty Release Notes
+      if: ${{ inputs.release-notes == '' }}
+      shell: bash
+      run: |
+        echo "" > release-notes.md
 
     - name: Create Release with GitHub CLI
       id: create-release
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
+        HAS_RELEASE_NOTES: ${{ inputs.release-notes != '' }}
       run: |
         # Check if a release with the same title already exists
         EXPECTED_TITLE="$VALIDATED_VERSION"
@@ -104,7 +108,7 @@ runs:
 
         # Build the gh release create command
         NOTES_FLAG=""
-        if [[ -n "${{ inputs.release-notes }}" ]]; then
+        if [[ "$HAS_RELEASE_NOTES" == "true" ]]; then
           NOTES_FLAG="--notes-file release-notes.md"
         fi
 

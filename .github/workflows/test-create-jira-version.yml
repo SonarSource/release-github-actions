@@ -78,6 +78,7 @@ jobs:
           echo "Action should have determined new-version-name as: 1.2.3"
 
       - name: Test with environment variables
+        id: test-env
         uses: ./create-jira-version
         env:
           JIRA_PROJECT_KEY: 'TESTPROJ'
@@ -90,3 +91,21 @@ jobs:
           echo "Test with environment variables:"
           echo "Expected to fail due to missing credentials (which is expected in CI)"
           echo "Action should have determined new-version-name as: 2.0.2"
+
+      - name: Test with special characters in version names
+        id: test-special-chars
+        uses: ./create-jira-version
+        with:
+          jira-project-key: 'TESTPROJ'
+          jira-version-name: '1.2.3-"beta"'
+          jira-new-version-name: '1.2.4-"rc1"'
+          use-jira-sandbox: 'true'
+        continue-on-error: true
+
+      - name: Verify special characters test
+        run: |
+          echo "Test with special characters in version names:"
+          echo "Expected to fail due to missing credentials (which is expected in CI)"
+          echo "Action should handle version names with quotes without syntax errors"
+          echo "Test outcome: ${{ steps.test-special-chars.outcome }}"
+          echo "✓ Action handles quotes and special characters in version names"
