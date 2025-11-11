@@ -23,41 +23,43 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
+        BRANCH_NAME: ${{ inputs.branch }}
+        WITH_OPTIONAL_CHECKS: ${{ inputs.with-optional-checks }}
       run: |
-        echo "Checking Releasability status on ${{ inputs.branch }} branch..."
-        
+        echo "Checking Releasability status on $BRANCH_NAME branch..."
+
         # Get the status for the specified branch
-        STATUS_RESPONSE=$(gh api "/repos/${{ github.repository }}/commits/${{ inputs.branch }}/status" 2>/dev/null)
-        
+        STATUS_RESPONSE=$(gh api "/repos/${{ github.repository }}/commits/$BRANCH_NAME/status" 2>/dev/null)
+
         if [ $? -ne 0 ]; then
-          echo "❌ Failed to get status information for ${{ inputs.branch }} branch"
+          echo "❌ Failed to get status information for $BRANCH_NAME branch"
           exit 1
         fi
-        
+
         # Find the Releasability status
         RELEASABILITY_STATE=$(echo "$STATUS_RESPONSE" | jq -r '.statuses[] | select(.context == "Releasability") | .state')
         RELEASABILITY_DESCRIPTION=$(echo "$STATUS_RESPONSE" | jq -r '.statuses[] | select(.context == "Releasability") | .description')
-        
+
         if [ -z "$RELEASABILITY_STATE" ] || [ "$RELEASABILITY_STATE" = "null" ]; then
-          echo "❌ Could not find Releasability status on ${{ inputs.branch }} branch"
+          echo "❌ Could not find Releasability status on $BRANCH_NAME branch"
           exit 1
         fi
-        
+
         echo "Found Releasability status: $RELEASABILITY_STATE"
         echo "Description: $RELEASABILITY_DESCRIPTION"
-        
+
         # Check if state is success
         if [ "$RELEASABILITY_STATE" != "success" ]; then
           echo "❌ Releasability status is not success: $RELEASABILITY_STATE"
           exit 1
         fi
-        
+
         # Check optional failures if requested
-        if [ "${{ inputs.with-optional-checks }}" = "true" ]; then
+        if [ "$WITH_OPTIONAL_CHECKS" = "true" ]; then
           if echo "$RELEASABILITY_DESCRIPTION" | grep -i "failed optional checks" > /dev/null; then
             echo "❌ Releasability status contains 'failed optional checks' in description"
             exit 1
           fi
         fi
-        
+
         echo "✅ Releasability status check passed"

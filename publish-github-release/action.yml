@@ -67,6 +67,8 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         HAS_RELEASE_NOTES: ${{ inputs.release-notes != '' }}
+        BRANCH_NAME: ${{ inputs.branch }}
+        DRAFT_MODE: ${{ inputs.draft }}
       run: |
         # Check if a release with the same title already exists
         EXPECTED_TITLE="$VALIDATED_VERSION"
@@ -77,8 +79,8 @@ runs:
           EXISTING_TAG=$(echo "$EXISTING_RELEASE" | jq -r '.tag_name')
           EXISTING_URL=$(echo "$EXISTING_RELEASE" | jq -r '.html_url')
           EXISTING_ID=$(echo "$EXISTING_RELEASE" | jq -r '.id')
-          
-          if [[ "${{ inputs.draft }}" == "true" ]]; then
+
+          if [[ "$DRAFT_MODE" == "true" ]]; then
             # If draft=true and release exists, log warning and do nothing
             echo "::warning::A release with title '$EXPECTED_TITLE' already exists. Skipping creation since draft=true."
             echo "release-url=${EXISTING_URL}" >> $GITHUB_OUTPUT
@@ -102,7 +104,7 @@ runs:
 
         # No existing release found, proceed with normal creation
         DRAFT_FLAG=""
-        if [[ "${{ inputs.draft }}" == "true" ]]; then
+        if [[ "$DRAFT_MODE" == "true" ]]; then
           DRAFT_FLAG="--draft"
         fi
 
@@ -113,7 +115,7 @@ runs:
         fi
 
         RELEASE_URL=$(gh release create "$VALIDATED_VERSION" \
-          --target "${{ inputs.branch }}" \
+          --target "$BRANCH_NAME" \
           --title "$VALIDATED_VERSION" \
           $NOTES_FLAG \
           $DRAFT_FLAG)
@@ -121,7 +123,7 @@ runs:
         echo "release-url=${RELEASE_URL}" >> $GITHUB_OUTPUT
 
         # Get the release ID only for published releases
-        if [[ "${{ inputs.draft }}" != "true" ]]; then
+        if [[ "$DRAFT_MODE" != "true" ]]; then
           RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/$VALIDATED_VERSION --jq '.id')
           echo "release-id=${RELEASE_ID}" >> $GITHUB_OUTPUT
         fi
@@ -131,32 +133,35 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         GITHUB_REF: ${{ inputs.branch }}
+        DRAFT_MODE: ${{ inputs.draft }}
+        RELEASE_WORKFLOW: ${{ inputs.release-workflow }}
+        RELEASE_ID_OUTPUT: ${{ steps.create-release.outputs.release-id }}
       run: |
         # Set release ID based on draft status
-        if [[ "${{ inputs.draft }}" == "true" ]]; then
+        if [[ "$DRAFT_MODE" == "true" ]]; then
           RELEASE_ID_VALUE="N/A"
         else
-          RELEASE_ID_VALUE="${{ steps.create-release.outputs.release-id }}"
+          RELEASE_ID_VALUE="$RELEASE_ID_OUTPUT"
         fi
-        
-        echo "Triggering release workflow '${{ inputs.release-workflow }}' with tag '$VALIDATED_VERSION', release ID '$RELEASE_ID_VALUE', and dryRun=${{ inputs.draft }}..."
-        
+
+        echo "Triggering release workflow '$RELEASE_WORKFLOW' with tag '$VALIDATED_VERSION', release ID '$RELEASE_ID_VALUE', and dryRun=$DRAFT_MODE..."
+
         # Trigger the workflow
-        gh workflow run "${{ inputs.release-workflow }}" \
+        gh workflow run "$RELEASE_WORKFLOW" \
           --repo "${{ github.repository }}" \
           --ref $GITHUB_REF \
           -f "version=$VALIDATED_VERSION" \
           -f "releaseId=$RELEASE_ID_VALUE" \
-          -f "dryRun=${{ inputs.draft }}"
-        
+          -f "dryRun=$DRAFT_MODE"
+
         echo "Workflow triggered successfully"
-        
+
         # Wait a moment for the workflow to start, then get the run ID
         sleep 30
-        
+
         RUN_ID=$(gh run list \
           --repo "${{ github.repository }}" \
-          --workflow "${{ inputs.release-workflow }}" \
+          --workflow "$RELEASE_WORKFLOW" \
           --limit 1 \
           --created ">=$(date -u -d '5 minutes ago' +%Y-%m-%dT%H:%M:%SZ)" \
           --json databaseId \

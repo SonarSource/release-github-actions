@@ -25,19 +25,20 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
+        BRANCH_NAME: ${{ inputs.branch }}
       run: |
         # Execute the gh CLI command to get the release version
-        RELEASE_VERSION=$(gh api "/repos/${{ github.repository }}/commits/${{ inputs.branch }}/status" --jq ".statuses[] | select(.context | startswith(\"repox-${{ inputs.branch }}\")) | .description | split(\"'\")[1]")
-        
+        RELEASE_VERSION=$(gh api "/repos/${{ github.repository }}/commits/$BRANCH_NAME/status" --jq ".statuses[] | select(.context | startswith(\"repox-$BRANCH_NAME\")) | .description | split(\"'\")[1]")
+
         if [ -z "$RELEASE_VERSION" ]; then
           echo "❌ Could not extract release version from repox status"
           exit 1
         fi
-        
+
         echo "✅ Extracted release version: $RELEASE_VERSION"
-        
+
         # Set as output
         echo "release-version=$RELEASE_VERSION" >> $GITHUB_OUTPUT
-        
+
         # Set as environment variable
         echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
