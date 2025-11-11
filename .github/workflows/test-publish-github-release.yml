@@ -136,6 +136,7 @@ jobs:
             [SONARIAC-2354](https://example.com) Exclude line separators from "shell" text ranges
             [TEST-123](https://example.com) Fix issue with "quotes" in title
             [TEST-456](https://example.com) Handle 'single quotes' and "double quotes" correctly
+            [TEST-789](https://example.com) Test with "command -f" in title
           draft: "true"
         continue-on-error: true
 
