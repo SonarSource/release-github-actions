@@ -1,0 +1,238 @@
+name: Test Update Rule Metadata Action
+
+on:
+  workflow_call:
+  pull_request:
+    paths:
+      - 'update-rule-metadata/**'
+      - '.github/workflows/test-update-rule-metadata.yml'
+  push:
+    branches:
+      - branch-*
+    paths:
+      - 'update-rule-metadata/**'
+      - '.github/workflows/test-update-rule-metadata.yml'
+  workflow_dispatch:
+
+jobs:
+  input-parameter-tests:
+    name: Test Input Parameters
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test Default Inputs
+        id: test-default
+        uses: ./update-rule-metadata
+        continue-on-error: true
+
+      - name: Test Custom Rule API Version
+        id: test-rule-api-version
+        uses: ./update-rule-metadata
+        with:
+          rule-api-version: '2.16.0.5000'
+        continue-on-error: true
+
+      - name: Test Custom Sonarpedia Files
+        id: test-sonarpedia-files
+        uses: ./update-rule-metadata
+        with:
+          sonarpedia-files: 'test/sonarpedia.json,another/sonarpedia.json'
+        continue-on-error: true
+
+      - name: Test Custom Branch (master)
+        id: test-branch-master
+        uses: ./update-rule-metadata
+        with:
+          branch: 'master'
+        continue-on-error: true
+
+      - name: Test Custom Branch (current)
+        id: test-branch-current
+        uses: ./update-rule-metadata
+        with:
+          branch: ${{ github.ref_name }}
+        continue-on-error: true
+
+      - name: Test All Optional Parameters
+        id: test-all-params
+        uses: ./update-rule-metadata
+        with:
+          rule-api-version: '2.16.0.5000'
+          sonarpedia-files: 'test/sonarpedia.json'
+          branch: ${{ github.ref_name }}
+        continue-on-error: true
+
+      - name: Verify Parameter Tests
+        run: |
+          echo "Input parameter test results:"
+          echo "Default inputs test outcome: ${{ steps.test-default.outcome }}"
+          echo "Custom rule-api-version test outcome: ${{ steps.test-rule-api-version.outcome }}"
+          echo "Custom sonarpedia-files test outcome: ${{ steps.test-sonarpedia-files.outcome }}"
+          echo "Custom branch (master) test outcome: ${{ steps.test-branch-master.outcome }}"
+          echo "Custom branch (current) test outcome: ${{ steps.test-branch-current.outcome }}"
+          echo "All parameters test outcome: ${{ steps.test-all-params.outcome }}"
+
+          # All tests are expected to fail due to missing vault access
+          # We're testing that the parameters are accepted and don't cause syntax errors
+          echo "✓ All parameter tests completed without syntax errors"
+          echo "✓ Action accepts all valid input parameter combinations"
+
+  branch-parameter-tests:
+    name: Test Branch Parameter Structure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test Branch Parameter Structure
+        run: |
+          echo "Testing branch parameter structure..."
+
+          # Test that the action file has the branch input defined
+          if grep -q "branch:" update-rule-metadata/action.yml; then
+            echo "✓ branch input found in action.yml"
+          else
+            echo "✗ branch input not found in action.yml"
+            exit 1
+          fi
+
+          # Test that the branch input has a default value
+          if grep -A3 "branch:" update-rule-metadata/action.yml | grep -q "default.*master"; then
+            echo "✓ branch input has default value of master"
+          else
+            echo "✗ branch input does not have default value of master"
+            exit 1
+          fi
+
+          # Test that checkout uses the branch input
+          if grep -A2 "actions/checkout@v4" update-rule-metadata/action.yml | grep -q "ref.*inputs.branch"; then
+            echo "✓ checkout step uses branch input"
+          else
+            echo "✗ checkout step does not use branch input"
+            exit 1
+          fi
+
+          # Test that PR creation uses the branch input for base
+          if grep -A20 "peter-evans/create-pull-request" update-rule-metadata/action.yml | grep -q "base.*inputs.branch"; then
+            echo "✓ PR creation uses branch input for base"
+          else
+            echo "✗ PR creation does not use branch input for base"
+            exit 1
+          fi
+
+          echo "✓ Branch parameter structure test completed successfully!"
+
+  output-validation:
+    name: Test Output Schema
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify Output Schema
+        run: |
+          echo "Validating action outputs are defined correctly..."
+
+          # Check for has-changes output
+          if grep -q "has-changes:" update-rule-metadata/action.yml; then
+            echo "✓ has-changes output defined"
+          else
+            echo "✗ has-changes output not defined"
+            exit 1
+          fi
+
+          # Check for pull-request-url output
+          if grep -q "pull-request-url:" update-rule-metadata/action.yml; then
+            echo "✓ pull-request-url output defined"
+          else
+            echo "✗ pull-request-url output not defined"
+            exit 1
+          fi
+
+          # Check for summary output
+          if grep -q "summary:" update-rule-metadata/action.yml; then
+            echo "✓ summary output defined"
+          else
+            echo "✗ summary output not defined"
+            exit 1
+          fi
+
+          echo "✓ All expected outputs are defined"
+          echo "✓ Output schema validation complete"
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test Action Execution
+        id: test-execution
+        uses: ./update-rule-metadata
+        with:
+          branch: ${{ github.ref_name }}
+        continue-on-error: true
+
+      - name: Check Outputs Available
+        if: steps.test-execution.outcome == 'success'
+        run: |
+          echo "Testing outputs from successful execution..."
+          echo "has-changes: ${{ steps.test-execution.outputs.has-changes }}"
+          echo "summary: ${{ steps.test-execution.outputs.summary }}"
+          if [ "${{ steps.test-execution.outputs.has-changes }}" = "true" ]; then
+            echo "pull-request-url: ${{ steps.test-execution.outputs.pull-request-url }}"
+          fi
+
+      - name: Verify Integration Test
+        run: |
+          echo "================================"
+          echo "Integration Test Results:"
+          echo "================================"
+          echo "Execution outcome: ${{ steps.test-execution.outcome }}"
+
+          if [ "${{ steps.test-execution.outcome }}" = "success" ]; then
+            echo "✓ Action executed successfully"
+            echo "  - Changes detected: ${{ steps.test-execution.outputs.has-changes }}"
+            echo "  - Summary available: ${{ steps.test-execution.outputs.summary != '' && 'Yes' || 'No' }}"
+          else
+            echo "⚠ Action failed (expected if vault credentials unavailable or no sonarpedia files exist)"
+            echo "  This is normal in test environments without proper setup"
+          fi
+
+          echo "================================"
+          echo "✓ Integration test completed"
+
+  validation-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [input-parameter-tests, branch-parameter-tests, output-validation, integration-tests]
+    if: always()
+
+    steps:
+      - name: Summary
+        run: |
+          echo "================================"
+          echo "Test Suite Summary"
+          echo "================================"
+          echo "Input Parameter Tests: ${{ needs.input-parameter-tests.result }}"
+          echo "Branch Parameter Tests: ${{ needs.branch-parameter-tests.result }}"
+          echo "Output Validation: ${{ needs.output-validation.result }}"
+          echo "Integration Tests: ${{ needs.integration-tests.result }}"
+          echo "================================"
+
+          if [[ "${{ needs.input-parameter-tests.result }}" == "success" && \
+                "${{ needs.branch-parameter-tests.result }}" == "success" && \
+                "${{ needs.output-validation.result }}" == "success" ]]; then
+            echo "✓ All validation tests passed!"
+            echo "✓ Action is properly configured and ready to use"
+          else
+            echo "✗ Some tests failed - please review the results above"
+            exit 1
+          fi

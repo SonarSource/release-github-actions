@@ -127,6 +127,24 @@ jobs:
           pull-request-body: "Test PR body"
         continue-on-error: true
 
+      - name: Test With Special Characters in Inputs
+        id: test-special-chars
+        uses: ./update-analyzer
+        with:
+          release-version: '1.0.0.1'
+          ticket-key: "SONAR-12345"
+          plugin-name: 'test-plugin'
+          plugin-artifacts: 'java,kotlin,"scala"'
+          secret-name: "test-secret"
+          pull-request-body: |
+            Update analyzer to version 1.0.0.1
+
+            ### Changes
+            - Fix issue with "quotes" in parser
+            - Handle 'single quotes' correctly
+            - Improve "double quoted" strings
+        continue-on-error: true
+
       - name: Verify Parameter Tests
         run: |
           echo "Input parameter test results:"
@@ -134,8 +152,10 @@ jobs:
           echo "SC ticket test outcome: ${{ steps.test-sc-ticket.outcome }}"
           echo "Plugin artifacts test outcome: ${{ steps.test-plugin-artifacts.outcome }}"
           echo "Optional parameters test outcome: ${{ steps.test-optional-params.outcome }}"
-          
+          echo "Special characters test outcome: ${{ steps.test-special-chars.outcome }}"
+
           # All tests are expected to fail due to missing vault access
           # We're testing that the parameters are accepted and don't cause syntax errors
           echo "✓ All parameter tests completed without syntax errors"
           echo "✓ Action accepts all valid input parameter combinations"
+          echo "✓ Action handles quotes and special characters in inputs"

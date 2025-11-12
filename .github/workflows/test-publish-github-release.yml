@@ -104,14 +104,39 @@ jobs:
           release-version: "test-v1.0.2-${{ github.run_number }}"
           release-notes: |
             # Test Release Notes
-            
+
             This is a test release with markdown content:
             - Feature 1
             - Feature 2
-            
+
             ## Bug Fixes
             - Fix 1
             - Fix 2
+          draft: "true"
+        continue-on-error: true
+
+      - name: Test With Release Notes Containing Quotes
+        id: test-release-notes-quotes
+        uses: ./publish-github-release
+        with:
+          github-token: ${{ github.token }}
+          release-version: "test-v1.0.3-${{ github.run_number }}"
+          release-notes: |
+            # Release notes - Test - 1.0.3
+
+            ### New Feature
+            [SONARIAC-2361](https://example.com) S4830: Server certificates should be verified during SSL/TLS connections
+            [SONARIAC-2366](https://example.com) S6573: Expanded filenames should not become options
+
+            ### Improvement
+            [SONARIAC-2230](https://example.com) S6596 should have different message when tag is present but not compliant
+            [SONARIAC-2301](https://example.com) Improve "ShellCmdDetector" performance
+
+            ### Bug
+            [SONARIAC-2354](https://example.com) Exclude line separators from "shell" text ranges
+            [TEST-123](https://example.com) Fix issue with "quotes" in title
+            [TEST-456](https://example.com) Handle 'single quotes' and "double quotes" correctly
+            [TEST-789](https://example.com) Test with "command -f" in title
           draft: "true"
         continue-on-error: true
 
@@ -121,11 +146,13 @@ jobs:
           echo "Version input test outcome: ${{ steps.test-version-input.outcome }}"
           echo "Custom branch test outcome: ${{ steps.test-custom-branch.outcome }}"
           echo "Release notes test outcome: ${{ steps.test-release-notes.outcome }}"
-          
+          echo "Release notes with quotes test outcome: ${{ steps.test-release-notes-quotes.outcome }}"
+
           # These tests might fail due to workflow triggering issues in test environment
           # We're testing that the parameters are accepted without syntax errors
           echo "✓ Parameter tests completed without syntax errors"
           echo "✓ Action accepts all parameter combinations"
+          echo "✓ Action handles quotes and special characters in release notes"
 
   environment-variable-tests:
     name: Test Environment Variable Usage

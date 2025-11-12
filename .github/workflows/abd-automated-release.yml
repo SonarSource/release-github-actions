@@ -99,6 +99,8 @@ jobs:
       - name: Update Rule Metadata
         id: update-rule-metadata
         uses: SonarSource/release-github-actions/update-rule-metadata@v1
+        with:
+          branch: ${{ inputs.branch }}
 
       - name: Check Rule Metadata Changes
         if: steps.update-rule-metadata.outputs.has-changes == 'true'
@@ -229,7 +231,7 @@ jobs:
         uses: SonarSource/release-github-actions/create-integration-ticket@v1
         with:
           plugin-name: ${{ inputs.project-name }}
-          release-version: ${{ needs.prepare-release.release-version }}
+          release-version: ${{ needs.prepare-release.outputs.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SC"
           ticket-description: ${{ inputs.short-description }}
@@ -240,7 +242,7 @@ jobs:
         uses: SonarSource/release-github-actions/create-integration-ticket@v1
         with:
           plugin-name: ${{ inputs.project-name }}
-          release-version: ${{ needs.prepare-release.release-version }}
+          release-version: ${{ needs.prepare-release.outputs.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SONAR"
           ticket-description: ${{ inputs.short-description }}

@@ -25,6 +25,7 @@ This action depends on:
 |--------------------|----------------------------------------------------------------------------------------------------------------------------|----------|-----------------|
 | `rule-api-version` | Version of the rule-api tooling to be used for the workflow.                                                               | No       | `2.15.0.4476`   |
 | `sonarpedia-files` | Comma-separated list of sonarpedia files to be updated. By default, it will update all Sonarpedia files in the repository. | No       | Auto-discovered |
+| `branch`           | Branch to run the check against and create the PR for. By default, it will use master.                                     | No       | `master`        |
 
 ## Outputs
 
@@ -70,6 +71,15 @@ permissions:
     rule-api-version: '2.16.0.5000'
 ```
 
+### Run against a specific branch
+
+```yaml
+- name: Update Rule Metadata
+  uses: SonarSource/release-github-actions/update-rule-metadata@v1
+  with:
+    branch: 'develop'
+```
+
 ### Complete example with all inputs
 
 ```yaml
@@ -86,6 +96,7 @@ jobs:
         with:
           rule-api-version: '2.16.0.5000'
           sonarpedia-files: 'frontend/java/sonarpedia.json,frontend/csharp/sonarpedia.json'
+          branch: 'develop'
 ```
 
 ## Implementation Details
@@ -112,7 +123,7 @@ The repository must have:
 
 - This action requires access to SonarSource's HashiCorp Vault for Artifactory credentials
 - The action automatically discovers all sonarpedia.json files unless specific files are provided
-- Pull requests are created with the label `skip-qa` and target the `master` branch
+- Pull requests are created with the label `skip-qa` and target the specified branch (defaults to `master`)
 - The rule-api JAR is cached to improve performance on subsequent runs
 - Changes to sonarpedia.json files themselves are excluded when detecting metadata changes
 - The action will fail if no sonarpedia.json files are found to process

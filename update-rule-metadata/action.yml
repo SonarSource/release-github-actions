@@ -10,6 +10,10 @@ inputs:
     description: |
       Comma-separated list of sonarpedia files to be updated.
       By default, it will update all Sonarpedia files in the repository.
+  branch:
+    description: |
+      Branch to run the check against and create the PR for.
+    default: master
 
 outputs:
   has-changes:
@@ -26,6 +30,8 @@ runs:
   using: "composite"
   steps:
     - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch }}
     - name: Get vault secrets
       id: secrets
       uses: SonarSource/vault-action-wrapper@320bd31b03e5dacaac6be51bbbb15adf7caccc32 # v3.1
@@ -135,6 +141,11 @@ runs:
           fi
         done <<< "$sonarpedia_dirs"
 
+    - name: Remove rule-api jar
+      shell: bash
+      run: |
+        rm rule-api.jar
+      
     - name: Generate summary
       id: generate-summary
       shell: bash
@@ -200,11 +211,11 @@ runs:
         title: Update rule metadata
         body: |
           ## Rule Metadata Update Summary
-          
+
           ${{ steps.pr-summary.outputs.summary }}
-          
+
           This PR was automatically generated to update rule metadata across all supported languages.
-        base: master
+        base: ${{ inputs.branch }}
         branch: bot/update-rule-metadata
         branch-suffix: timestamp
         labels: skip-qa

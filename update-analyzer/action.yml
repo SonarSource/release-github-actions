@@ -75,24 +75,28 @@ runs:
 
     - name: Update analyzer version in build file
       shell: bash
+      env:
+        PLUGIN_ARTIFACTS: ${{ inputs.plugin-artifacts }}
+        PLUGIN_NAME: ${{ inputs.plugin-name }}
+        RELEASE_VERSION: ${{ inputs.release-version }}
       run: |
         set -euo pipefail
         # Prepare the list of plugins to update
-        if [[ -n "${{ inputs.plugin-artifacts }}" ]]; then
-          echo "Using plugin-artifacts: ${{ inputs.plugin-artifacts }}"
-          IFS=',' read -ra PLUGINS <<< "${{ inputs.plugin-artifacts }}"
+        if [[ -n "$PLUGIN_ARTIFACTS" ]]; then
+          echo "Using plugin-artifacts: $PLUGIN_ARTIFACTS"
+          IFS=',' read -ra PLUGINS <<< "$PLUGIN_ARTIFACTS"
         else
-          echo "Using plugin-name: ${{ inputs.plugin-name }}"
-          PLUGINS=("${{ inputs.plugin-name }}")
+          echo "Using plugin-name: $PLUGIN_NAME"
+          PLUGINS=("$PLUGIN_NAME")
         fi
-        
+
         # Update each plugin
         for plugin in "${PLUGINS[@]}"; do
           plugin=$(echo "$plugin" | xargs)
           echo "Updating analyzer version in ${{ env.BUILD_GRADLE_FILE }} for plugin $plugin"
-          sed -i "s/\(:sonar-$plugin.*-plugin:\)[0-9.]*/\1${{ inputs.release-version }}/g" ${{ env.BUILD_GRADLE_FILE }}
+          sed -i "s/\(:sonar-$plugin.*-plugin:\)[0-9.]*/\1$RELEASE_VERSION/g" ${{ env.BUILD_GRADLE_FILE }}
         done
-        
+
         echo "Showing diff:"
         git --no-pager diff ${{ env.BUILD_GRADLE_FILE }}
 
