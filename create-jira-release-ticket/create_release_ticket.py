@@ -72,6 +72,7 @@ def create_release_ticket(jira_client, args, link_to_release_notes):
         'project': 'REL',
         'issuetype': 'Ask for release',
         'summary': f'{args.project_name} {args.version}',
+        'duedate': args.due_date,
         CUSTOM_FIELDS['SHORT_DESCRIPTION']: args.short_description,
         CUSTOM_FIELDS['LINK_TO_RELEASE_NOTES']: link_to_release_notes,
         CUSTOM_FIELDS['DOCUMENTATION_STATUS']: args.documentation_status,
@@ -107,6 +108,7 @@ def main():
                         help="Whether rule properties have changed.")
     parser.add_argument("--jira-release-url", default="", help="The URL to the Jira release notes page.")
     parser.add_argument("--sonarlint-changelog", default="", help="The SonarLint changelog content.")
+    parser.add_argument("--due-date", default="", help="Due date of the release")
 
     args = parser.parse_args()
 
