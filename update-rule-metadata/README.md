@@ -26,6 +26,7 @@ This action depends on:
 | `rule-api-version` | Version of the rule-api tooling to be used for the workflow.                                                               | No       | `2.15.0.4476`   |
 | `sonarpedia-files` | Comma-separated list of sonarpedia files to be updated. By default, it will update all Sonarpedia files in the repository. | No       | Auto-discovered |
 | `branch`           | Branch to run the check against and create the PR for. By default, it will use master.                                     | No       | `master`        |
+| `rspec-branch`     | Branch of the rspec repository to be used. If not specified, the `master` branch will be used by default.                  | No       | `master`        |
 
 ## Outputs
 
@@ -97,6 +98,7 @@ jobs:
           rule-api-version: '2.16.0.5000'
           sonarpedia-files: 'frontend/java/sonarpedia.json,frontend/csharp/sonarpedia.json'
           branch: 'develop'
+          rspec-branch: 'feature/my-rspec-branch'
 ```
 
 ## Implementation Details
