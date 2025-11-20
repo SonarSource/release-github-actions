@@ -140,8 +140,14 @@ runs:
             
             from_branch="${{ inputs.rspec-branch }}"
             
-            # Run rule-api update in the current directory
-            java -jar "$rel_path" update -branch "$from_branch" 2>&1 | tee -a $log_file
+            # Run rule-api generate if rspec-branch is set and not master, else run update
+            if [[ "$from_branch" != "" && "$from_branch" != "master" ]]; then
+              echo "Running rule-api generate from branch '$from_branch'" >> $log_file
+              java -jar "$rel_path" generate -branch "$from_branch" 2>&1 | tee -a $log_file
+            else
+              echo "Running rule-api update" >> $log_file
+              java -jar "$rel_path" update 2>&1 | tee -a $log_file
+            fi
             
             # Return to the original directory
             cd "$original_dir"
