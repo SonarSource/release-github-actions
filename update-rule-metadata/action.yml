@@ -14,6 +14,11 @@ inputs:
     description: |
       Branch to run the check against and create the PR for.
     default: master
+  rspec-branch:
+    description: |
+      Branch of the rspec repository to be used.
+      If not specified, the 'master' branch of the rspec repository will be used.
+    default: master
 
 outputs:
   has-changes:
@@ -133,8 +138,16 @@ runs:
             # Calculate relative path to rule-api.jar from current directory
             rel_path=$(realpath --relative-to="$PWD" "$original_dir/rule-api.jar")
             
-            # Run rule-api update in the current directory
-            java -jar "$rel_path" update 2>&1 | tee -a $log_file
+            from_branch="${{ inputs.rspec-branch }}"
+            
+            # Run rule-api generate if rspec-branch is set and not master, else run update
+            if [[ "$from_branch" != "" && "$from_branch" != "master" ]]; then
+              echo "Running rule-api generate from branch '$from_branch'" >> $log_file
+              java -jar "$rel_path" generate -branch "$from_branch" 2>&1 | tee -a $log_file
+            else
+              echo "Running rule-api update" >> $log_file
+              java -jar "$rel_path" update 2>&1 | tee -a $log_file
+            fi
             
             # Return to the original directory
             cd "$original_dir"
