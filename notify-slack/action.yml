@@ -13,7 +13,7 @@ inputs:
     description: 'The Slack channel to send the notification to.'
     required: true
   jobs:
-    description: 'A comma-separated list of jobs.'
+    description: 'A GitHub needs-like object string of jobs and their results (e.g., from toJSON(needs)).'
     required: true
 
 runs:
@@ -25,7 +25,13 @@ runs:
       run: |
         JOBS="${{ inputs.jobs }}"
         echo "Checking Jobs: $JOBS"
-        FAILED_JOBS=$(echo "$JOBS" | jq -r 'to_entries | map(select(.value.result == "failure")) | map(.key) | join(", ")')
+        # Parse the provided jobs mapping string without relying on strict JSON. Extract keys where result == failure.
+        # This handles inputs like: { build: { result: failure, outputs: {} }, qa_tests: { result: skipped, outputs: {} } }
+        FAILED_JOBS=$(echo "$JOBS" | awk '
+          /[[:alnum:]_.-]+:[[:space:]]*\{/{ key=$1; sub(/:$/, "", key) }
+          /result[[:space:]]*:[[:space:]]*failure/{ fails=(fails?fails", ":"") key }
+          END{ print fails }
+        ')
         echo "Failed Jobs: $FAILED_JOBS"
         echo "failed-jobs=$FAILED_JOBS" >> $GITHUB_OUTPUT
     - name: Vault Secrets
