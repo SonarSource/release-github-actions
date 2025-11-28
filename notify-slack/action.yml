@@ -23,7 +23,9 @@ runs:
       shell: bash
       id: collect_failed_jobs
       run: |
-        FAILED_JOBS=$(echo "${{ inputs.needs }}" | jq -r 'to_entries | map(select(.value.result == "failure")) | map(.key) | join(", ")')
+        JOBS="${{ inputs.jobs }}"
+        echo "Checking Jobs: $JOBS"
+        FAILED_JOBS=$(echo "$JOBS" | jq -r 'to_entries | map(select(.value.result == "failure")) | map(.key) | join(", ")')
         echo "Failed Jobs: $FAILED_JOBS"
         echo "failed-jobs=$FAILED_JOBS" >> $GITHUB_OUTPUT
     - name: Vault Secrets
