@@ -22,8 +22,9 @@ runs:
     - name: Collect Failed Jobs
       shell: bash
       id: collect_failed_jobs
+      env:
+        JOBS: ${{ inputs.jobs }}
       run: |
-        JOBS="${{ inputs.jobs }}"
         echo "Checking Jobs: $JOBS"
         # Parse the provided jobs mapping string without relying on strict JSON. Extract keys where result == failure.
         # This handles inputs like: { build: { result: failure, outputs: {} }, qa_tests: { result: skipped, outputs: {} } }
