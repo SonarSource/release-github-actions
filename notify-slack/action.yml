@@ -26,13 +26,8 @@ runs:
         JOBS: ${{ inputs.jobs }}
       run: |
         echo "Checking Jobs: $JOBS"
-        # Parse the provided jobs mapping string without relying on strict JSON. Extract keys where result == failure.
-        # This handles inputs like: { build: { result: failure, outputs: {} }, qa_tests: { result: skipped, outputs: {} } }
-        FAILED_JOBS=$(echo "$JOBS" | awk '
-          /[[:alnum:]_.-]+:[[:space:]]*\{/{ key=$1; sub(/:$/, "", key) }
-          /result[[:space:]]*:[[:space:]]*failure/{ fails=(fails?fails", ":"") key }
-          END{ print fails }
-        ')
+        # Parse the provided jobs JSON and extract keys where result == "failure".
+        FAILED_JOBS=$(echo "$JOBS" | jq -r 'to_entries | map(select(.value.result == "failure") | .key) | join(", ")')
         echo "Failed Jobs: $FAILED_JOBS"
         echo "failed-jobs=$FAILED_JOBS" >> $GITHUB_OUTPUT
     - name: Vault Secrets
