@@ -298,7 +298,7 @@ jobs:
   update-analyzers:
     name: Update Analyzers in SQS and SQC
     runs-on: ${{ inputs.runner-environment }}
-    needs: [ prepare-release, release-in-jira ]
+    needs: [ create-integration-tickets ]
     permissions:
       id-token: write
     outputs:
@@ -311,7 +311,7 @@ jobs:
         uses: SonarSource/release-github-actions/update-analyzer@v1
         with:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
-          ticket-key: ${{ needs.release-in-jira.outputs.sqs-ticket-key }}
+          ticket-key: ${{ needs.create-integration-tickets.outputs.sqs-ticket-key }}
           plugin-name: ${{ inputs.plugin-name }}
           secret-name: ${{ inputs.release-automation-secret-name }}
           plugin-artifacts: ${{inputs.plugin-artifacts-sqs }}
@@ -324,7 +324,7 @@ jobs:
         uses: SonarSource/release-github-actions/update-analyzer@v1
         with:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
-          ticket-key: ${{ needs.release-in-jira.outputs.sqc-ticket-key }}
+          ticket-key: ${{ needs.release-create-integration-tickets.outputs.sqc-ticket-key }}
           plugin-name: ${{ inputs.plugin-name }}
           secret-name: ${{ inputs.release-automation-secret-name }}
           plugin-artifacts: ${{inputs.plugin-artifacts-sqc }}
@@ -335,18 +335,13 @@ jobs:
     name: Release Results
     runs-on: ${{ inputs.runner-environment }}
     if: always()
-    needs: [ prepare-release, publish-github-release, create-release-ticket, release-in-jira, update-analyzers ]
+    needs: [ prepare-release, publish-github-release, create-release-ticket, release-in-jira, create-integration-tickets, update-analyzers ]
     env:
         RELEASE_PROCESS: ${{ inputs.release-process != '' && inputs.release-process || 'https://xtranet-sonarsource.atlassian.net/wiki/spaces/CSD/pages/4325048388/Release+Instructions+-+Cloud+Security' }}
     steps:
       - name: Post Summary to Workflow
         run: |
-          ALL_SUCCESS=$([[ "${{ needs.pre-release-checks.result }}" == "success" && \
-                          "${{ needs.prepare-release.result }}" == "success" && \
-                          "${{ needs.publish-github-release.result }}" == "success" && \
-                          "${{ needs.create-release-ticket.result }}" == "success" && \
-                          "${{ needs.release-in-jira.result }}" == "success" && \
-                          "${{ needs.update-analyzers.result }}" == "success" ]] && echo "true" || echo "false")
+          ALL_SUCCESS=$(echo '${{ toJson(needs) }}' | jq -r 'to_entries | all(.value.result == "success")')
           
           if [[ "$ALL_SUCCESS" == "true" ]]; then
             echo "### 🎉🚀 Congratulations! Release Successful! 🚀🎉" >> $GITHUB_STEP_SUMMARY
@@ -376,6 +371,5 @@ jobs:
           else
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "For fixes to common issues and other useful information please check the release instructions at:" >> $GITHUB_STEP_SUMMARY
-            
           fi
           echo $RELEASE_PROCESS >> $GITHUB_STEP_SUMMARY
