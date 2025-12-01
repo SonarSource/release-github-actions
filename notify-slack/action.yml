@@ -1,0 +1,59 @@
+name: 'Notify Slack on Failure'
+description: 'Sends a Slack notification when a job fails.'
+
+inputs:
+  project-name:
+    description: 'The name of the project.'
+    required: true
+  icon:
+    description: 'The icon for the Slack notification.'
+    required: false
+    default: ':alert:'
+  slack-channel:
+    description: 'The Slack channel to send the notification to.'
+    required: true
+  jobs:
+    description: 'A GitHub needs-like object string of jobs and their results (e.g., from toJSON(needs)).'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Collect Failed Jobs
+      shell: bash
+      id: collect_failed_jobs
+      env:
+        JOBS: ${{ inputs.jobs }}
+      run: |
+        echo "Checking Jobs: $JOBS"
+        # Parse the provided jobs mapping string without relying on strict JSON. Extract keys where result == failure.
+        # This handles inputs like: { build: { result: failure, outputs: {} }, qa_tests: { result: skipped, outputs: {} } }
+        FAILED_JOBS=$(echo "$JOBS" | awk '
+          /[[:alnum:]_.-]+:[[:space:]]*\{/{ key=$1; sub(/:$/, "", key) }
+          /result[[:space:]]*:[[:space:]]*failure/{ fails=(fails?fails", ":"") key }
+          END{ print fails }
+        ')
+        echo "Failed Jobs: $FAILED_JOBS"
+        echo "failed-jobs=$FAILED_JOBS" >> $GITHUB_OUTPUT
+    - name: Vault Secrets
+      id: secrets
+      uses: SonarSource/vault-action-wrapper@v3
+      with:
+        secrets: |
+          development/kv/data/slack token | SLACK_TOKEN;
+    - name: Send Slack Notification
+      uses: rtCamp/action-slack-notify@e31e87e03dd19038e411e38ae27cbad084a90661 # v2.3.3
+      env:
+        SLACK_CHANNEL: ${{ inputs.slack-channel }}
+        SLACK_MSG_AUTHOR: " "
+        SLACK_TITLE: " "
+        SLACK_FOOTER: " "
+        SLACK_COLOR: danger
+        MSG_MINIMAL: true
+        SLACK_MESSAGE: |
+          *Run:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          *Failed Jobs:* ${{ steps.collect_failed_jobs.outputs.failed-jobs }}
+        SLACK_TOKEN: "${{ fromJSON(steps.secrets.outputs.vault).SLACK_TOKEN }}"
+        SLACK_ICON_EMOJI: "${{ inputs.icon }}"
+        SLACK_USERNAME: "${{ inputs.project-name }} CI Notifier"
+
