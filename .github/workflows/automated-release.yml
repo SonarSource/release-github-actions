@@ -42,7 +42,7 @@ on:
         required: false
         type: string
       short-description:
-        description: "A brief summary of what the release contains"
+        description: "A brief summary of what the release contains. This description will be used for the release ticket and integration tickets."
         required: true
         type: string
       rule-props-changed:
@@ -55,8 +55,8 @@ on:
         type: string
         default: "master"
       release-notes:
-        description: "Release notes"
-        required: true
+        description: "Release notes for the Jira Release Version. If blank, release notes will be generated from the Jira Release."
+        required: false
         type: string
       sq-ide-short-description:
         description: "Short summary of SQ IDE related changes."
