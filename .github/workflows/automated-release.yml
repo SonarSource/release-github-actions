@@ -17,11 +17,11 @@ on:
         type: string
       plugin-artifacts-sqs:
         description: "SQS Plugin artifacts"
-        required: true
+        required: false
         type: string
       plugin-artifacts-sqc:
         description: "SQC Plugin artifacts"
-        required: true
+        required: false
         type: string
       use-jira-sandbox:
         description: "Use Jira sandbox"
@@ -341,7 +341,7 @@ jobs:
           ticket-key: ${{ needs.create-integration-tickets.outputs.sqs-ticket-key }}
           plugin-name: ${{ inputs.plugin-name }}
           secret-name: ${{ inputs.release-automation-secret-name }}
-          plugin-artifacts: ${{inputs.plugin-artifacts-sqs }}
+          plugin-artifacts: ${{inputs.plugin-artifacts-sqs || inputs.plugin-name }}
           draft: ${{ inputs.is-draft-release }}
           reviewers: ${{ github.actor }}
 
@@ -354,7 +354,7 @@ jobs:
           ticket-key: ${{ needs.create-integration-tickets.outputs.sqc-ticket-key }}
           plugin-name: ${{ inputs.plugin-name }}
           secret-name: ${{ inputs.release-automation-secret-name }}
-          plugin-artifacts: ${{inputs.plugin-artifacts-sqc }}
+          plugin-artifacts: ${{inputs.plugin-artifacts-sqc || inputs.plugin-name }}
           draft: ${{ inputs.is-draft-release }}
           reviewers: ${{ github.actor }}
 
