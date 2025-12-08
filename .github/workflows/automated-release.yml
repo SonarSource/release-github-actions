@@ -38,8 +38,8 @@ on:
         required: true
         type: string
       release-automation-secret-name:
-        description: "Release automation secret name"
-        required: true
+        description: "Release automation secret name to create integration PRs in SQS and SQC"
+        required: false
         type: string
       short-description:
         description: "A brief summary of what the release contains"
@@ -116,6 +116,10 @@ env:
   USE_JIRA_SANDBOX: ${{ inputs.use-jira-sandbox }}
 
 jobs:
+  # Step 1: Prepare Release
+  # This step determines the release version, Jira version name, and gathers release notes.
+  # It sets up the necessary outputs for subsequent steps.
+  # These outputs include the release version, Jira version name, release notes, Jira release notes, and Jira release URL.
   prepare-release:
     name: Prepare Release
     runs-on: ${{ inputs.runner-environment }}
@@ -145,6 +149,9 @@ jobs:
         if: inputs.release-notes == ''
         uses: SonarSource/release-github-actions/get-jira-release-notes@v1
 
+  # Step 2: Create Release Ticket
+  # This step creates a Jira release ticket using the prepared release information.
+  # It outputs the release ticket key and URL for further use.
   create-release-ticket:
     name: Create Release Ticket
     runs-on: ${{ inputs.runner-environment }}
@@ -168,6 +175,9 @@ jobs:
           start-progress: true
           version: ${{ needs.prepare-release.outputs.release-version }}
 
+  # Step 3: Publish GitHub Release
+  # This step publishes the GitHub release using the prepared release information and the created Jira release ticket.
+  # It outputs the GitHub release URL for further use.
   publish-github-release:
     name: Publish Github Release
     runs-on: ${{ inputs.runner-environment }}
@@ -188,6 +198,9 @@ jobs:
           draft: ${{ inputs.is-draft-release }}
           branch: ${{ inputs.branch }}
 
+  # Step 4: Release in Jira
+  # This step releases the version in Jira and moves the release ticket to the "Technical Release Done" status.
+  # It outputs the new version name and integration ticket keys and URLs.
   release-in-jira:
     name: Release Version In Jira
     runs-on: ${{ inputs.runner-environment }}
@@ -220,13 +233,21 @@ jobs:
           status: "Technical Release Done"
           assignee: ${{ inputs.pm-email }}
 
+  # Step 5: Create Integration Tickets
+  # This step creates integration tickets in various Jira projects based on the inputs provided.
+  # It creates tickets for SLVS, SLVSCODE, SLE, SLI, SQC, and SQS as specified.
+  # It outputs the integration ticket keys for SQC and SQS for further use.
   create-integration-tickets:
     name: Create Integration Tickets
     needs: [ prepare-release, publish-github-release, create-release-ticket ]
+    if: ${{ inputs.create-slvs-ticket || inputs.create-slvscode-ticket || inputs.create-sle-ticket || inputs.create-sli-ticket || inputs.sqc-integration || inputs.sqs-integration }}
     permissions:
       statuses: read
       contents: read
       id-token: write
+    outputs:
+      sqc-ticket-key: ${{ steps.create-sqc-ticket.outputs.ticket-key }}
+      sqs-ticket-key: ${{ steps.create-sqs-ticket.outputs.ticket-key }}
     runs-on: ${{ inputs.runner-environment }}
     steps:
       - name: Create SLVS Ticket
@@ -274,7 +295,8 @@ jobs:
           jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
 
       - name: Create SQC Ticket
-        id: create-sc-ticket
+        if: ${{ inputs.sqc-integration }}
+        id: create-sqc-ticket
         uses: SonarSource/release-github-actions/create-integration-ticket@v1
         with:
           plugin-name: ${{ inputs.plugin-name }}
@@ -285,7 +307,8 @@ jobs:
           jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
 
       - name: Create SQS Ticket
-        id: create-sonar-ticket
+        if: ${{ inputs.sqs-integration }}
+        id: create-sqs-ticket
         uses: SonarSource/release-github-actions/create-integration-ticket@v1
         with:
           plugin-name: ${{ inputs.plugin-name }}
@@ -295,10 +318,14 @@ jobs:
           ticket-description: ${{ inputs.short-description }}
           jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
 
+  # Step 6: Update Analyzers in SQS and SQC
+  # This step updates the analyzers in SQS and SQC by creating pull requests based on the integration tickets created in the previous step.
+  # It outputs the pull request URLs for SQS and SQC for further use.
   update-analyzers:
     name: Update Analyzers in SQS and SQC
     runs-on: ${{ inputs.runner-environment }}
     needs: [ create-integration-tickets ]
+    if: ${{ (inputs.sqs-integration || inputs.sqc-integration) && inputs.release-automation-secret-name != '' }}
     permissions:
       id-token: write
     outputs:
@@ -324,13 +351,17 @@ jobs:
         uses: SonarSource/release-github-actions/update-analyzer@v1
         with:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
-          ticket-key: ${{ needs.release-create-integration-tickets.outputs.sqc-ticket-key }}
+          ticket-key: ${{ needs.create-integration-tickets.outputs.sqc-ticket-key }}
           plugin-name: ${{ inputs.plugin-name }}
           secret-name: ${{ inputs.release-automation-secret-name }}
           plugin-artifacts: ${{inputs.plugin-artifacts-sqc }}
           draft: ${{ inputs.is-draft-release }}
           reviewers: ${{ github.actor }}
 
+  # Step 7: Summarize Release
+  # This step summarizes the results of the entire release process.
+  # It checks the outcomes of all previous steps and generates a summary indicating whether the release was
+  # successful or failed, along with relevant links and information.
   summarize_release:
     name: Release Results
     runs-on: ${{ inputs.runner-environment }}
