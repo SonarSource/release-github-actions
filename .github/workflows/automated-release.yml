@@ -70,22 +70,22 @@ on:
         description: "Create SLVS integration ticket"
         required: false
         type: boolean
-        default: true
+        default: false
       create-slvscode-ticket:
         description: "Create SLVSCODE integration ticket"
         required: false
         type: boolean
-        default: true
+        default: false
       create-sle-ticket:
         description: "Create SLE integration ticket"
         required: false
         type: boolean
-        default: true
+        default: false
       create-sli-ticket:
         description: "Create SLI integration ticket"
         required: false
         type: boolean
-        default: true
+        default: false
       sqs-integration:
         description: "Creat SQS integration ticket and PR"
         required: false
