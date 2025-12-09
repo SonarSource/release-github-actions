@@ -269,7 +269,7 @@ jobs:
           jira-version-name: ${{ needs.prepare-release.outputs.jira-version-name }}
       - name: Create new release in jira
         id: create-jira-version
-        uses: SonarSource/release-github-actions/create-jira-version@v1
+        uses: SonarSource/release-github-actions/create-jira-version@nw/fix-create-jira-version-action
         with:
           jira-version-name: ${{ needs.prepare-release.outputs.jira-version-name }}
           jira-new-version-name: ${{ inputs.new-version }}
