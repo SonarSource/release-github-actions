@@ -1,0 +1,535 @@
+name: Automate Release
+
+on:
+  workflow_call:
+    inputs:
+      jira-project-key:
+        description: "Jira project key"
+        required: true
+        type: string
+      project-name:
+        description: "Project name"
+        required: true
+        type: string
+      plugin-name:
+        description: "Plugin name"
+        required: true
+        type: string
+      plugin-artifacts-sqs:
+        description: "SQS Plugin artifacts"
+        required: false
+        type: string
+      plugin-artifacts-sqc:
+        description: "SQC Plugin artifacts"
+        required: false
+        type: string
+      use-jira-sandbox:
+        description: "Use Jira sandbox"
+        required: false
+        type: boolean
+        default: true
+      is-draft-release:
+        description: "Create draft release"
+        required: false
+        type: boolean
+        default: true
+      pm-email:
+        description: "Product manager email"
+        required: true
+        type: string
+      release-automation-secret-name:
+        description: "Release automation secret name to create integration PRs in SQS and SQC"
+        required: false
+        type: string
+      short-description:
+        description: "A brief summary of what the release contains. This description will be used for the release ticket and integration tickets."
+        required: true
+        type: string
+      rule-props-changed:
+        description: "Did any rule properties change in this release"
+        required: true
+        type: string
+      branch:
+        description: "Branch from which to do the release"
+        required: true
+        type: string
+        default: "master"
+      release-notes:
+        description: "Release notes for the Jira Release Version. If blank, release notes will be generated from the Jira Release."
+        required: false
+        type: string
+      sq-ide-short-description:
+        description: "Short summary of SQ IDE related changes."
+        required: false
+        type: string
+      new-version:
+        description: "New version to release"
+        required: true
+        type: string
+      create-slvs-ticket:
+        description: "Create SLVS integration ticket"
+        required: false
+        type: boolean
+        default: false
+      create-slvscode-ticket:
+        description: "Create SLVSCODE integration ticket"
+        required: false
+        type: boolean
+        default: false
+      create-sle-ticket:
+        description: "Create SLE integration ticket"
+        required: false
+        type: boolean
+        default: false
+      create-sli-ticket:
+        description: "Create SLI integration ticket"
+        required: false
+        type: boolean
+        default: false
+      sqs-integration:
+        description: "Creat SQS integration ticket and PR"
+        required: false
+        type: boolean
+        default: true
+      sqc-integration:
+        description: "Creat SQC integration ticket and PR"
+        required: false
+        type: boolean
+        default: true
+      runner-environment:
+        description: "Environment where the workflow will run"
+        required: false
+        type: string
+        default: "sonar-m"
+      release-process:
+        description: "Release process documentation URL"
+        required: false
+        type: string
+        default: "https://xtranet-sonarsource.atlassian.net/wiki/x/YtoL" # general Release Procedures page
+      verbose:
+        description: "Emit job summaries"
+        required: false
+        type: boolean
+        default: false
+
+    outputs:
+      new-version:
+        description: "New version to release"
+        value: ${{ jobs.release-in-jira.outputs.new-version }}
+env:
+  JIRA_PROJECT_KEY: ${{ inputs.jira-project-key }}
+  USE_JIRA_SANDBOX: ${{ inputs.use-jira-sandbox == true && 'true' || 'false' }}
+
+jobs:
+  # Step 1: Prepare Release
+  # This step determines the release version, Jira version name, and gathers release notes.
+  # It sets up the necessary outputs for subsequent steps.
+  # These outputs include the release version, Jira version name, release notes, Jira release notes, and Jira release URL.
+  prepare-release:
+    name: Prepare Release
+    runs-on: ${{ inputs.runner-environment }}
+    permissions:
+      statuses: read
+      contents: read
+      id-token: write
+    outputs:
+      release-version: ${{ steps.get-release-version.outputs.release-version }}
+      jira-version-name: ${{ steps.get-jira-version.outputs.jira-version-name }}
+      release-notes: ${{ inputs.release-notes != '' && inputs.release-notes || steps.get-jira-release-notes.outputs.release-notes }}
+      jira-release-notes: ${{ inputs.release-notes != '' && inputs.release-notes || steps.get-jira-release-notes.outputs.jira-release-notes }}
+      jira-release-url: ${{ steps.get-jira-release-notes.outputs.jira-release-url }}
+    steps:
+      - name: Get Release Version
+        id: get-release-version
+        uses: SonarSource/release-github-actions/get-release-version@v1
+        with:
+          branch: ${{ inputs.branch }}
+
+      - name: Get Jira Version
+        id: get-jira-version
+        uses: SonarSource/release-github-actions/get-jira-version@v1
+
+      - name: Get Jira Release Notes
+        id: get-jira-release-notes
+        if: inputs.release-notes == ''
+        uses: SonarSource/release-github-actions/get-jira-release-notes@v1
+
+      - name: Summary
+        if: ${{ inputs.verbose }}
+        shell: bash
+        env:
+          BRANCH: ${{ inputs.branch }}
+          JIRA_PROJECT_KEY: ${{ inputs.jira-project-key }}
+          USE_JIRA_SANDBOX: ${{ inputs.use-jira-sandbox == true && 'true' || 'false' }}
+          RELEASE_NOTES: ${{ inputs.release-notes }}
+        run: |
+          echo "## 🆗 Prepare Release" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### What happened" >> $GITHUB_STEP_SUMMARY
+          echo "- Determined the release version from branch \`$BRANCH\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Retrieved the Jira version name for project \`$JIRA_PROJECT_KEY\` (sandbox: \`$USE_JIRA_SANDBOX\`)." >> $GITHUB_STEP_SUMMARY
+          if [ "$RELEASE_NOTES" != "" ]; then
+            echo "- Used release notes provided by the caller." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Generated release notes from Jira." >> $GITHUB_STEP_SUMMARY
+            echo "  - See Jira release: ${{ steps.get-jira-release-notes.outputs.jira-release-url }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Release version: \`${{ steps.get-release-version.outputs.release-version }}\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Jira version name: \`${{ steps.get-jira-version.outputs.jira-version-name }}\`." >> $GITHUB_STEP_SUMMARY
+
+  # Step 2: Create Release Ticket
+  # This step creates a Jira release ticket using the prepared release information.
+  # It outputs the release ticket key and URL for further use.
+  create-release-ticket:
+    name: Create Release Ticket
+    runs-on: ${{ inputs.runner-environment }}
+    needs: prepare-release
+    permissions:
+      statuses: read
+      contents: read
+      id-token: write
+    outputs:
+      release-ticket-key: ${{ steps.create-ticket.outputs.release-ticket-key }}
+      release-ticket-url: ${{ steps.create-ticket.outputs.release-ticket-url }}
+    steps:
+      - name: Create Jira Release Ticket
+        id: create-ticket
+        uses: SonarSource/release-github-actions/create-jira-release-ticket@v1
+        with:
+          project-name: ${{ inputs.project-name }}
+          short-description: ${{ inputs.short-description }}
+          rule-props-changed: ${{ inputs.rule-props-changed == 'true' && 'Yes' || 'No' }}
+          jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
+          start-progress: true
+          version: ${{ needs.prepare-release.outputs.release-version }}
+
+      - name: Summary
+        if: ${{ inputs.verbose }}
+        shell: bash
+        env:
+          PROJECT_NAME: ${{ inputs.project-name }}
+          RULE_PROPS_CHANGED: ${{ inputs.rule-props-changed }}
+        run: |
+          echo "## 🧾 Create Release Ticket" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### What happened" >> $GITHUB_STEP_SUMMARY
+          echo "- Created a Jira release ticket for project \`$PROJECT_NAME\` using version \`${{ needs.prepare-release.outputs.release-version }}\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Rule properties changed: \`$RULE_PROPS_CHANGED\`." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Ticket key: \`${{ steps.create-ticket.outputs.release-ticket-key }}\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Ticket link: ${{ steps.create-ticket.outputs.release-ticket-url }}" >> $GITHUB_STEP_SUMMARY
+
+  # Step 3: Publish GitHub Release
+  # This step publishes the GitHub release using the prepared release information and the created Jira release ticket.
+  # It outputs the GitHub release URL for further use.
+  publish-github-release:
+    name: Publish Github Release
+    runs-on: ${{ inputs.runner-environment }}
+    needs: [ prepare-release, create-release-ticket ]
+    permissions:
+      id-token: write
+      contents: write
+      actions: write
+    outputs:
+      github-release-url: ${{ steps.publish-github-release.outputs.release-url}}
+    steps:
+      - name: Publish GitHub Release
+        id: publish-github-release
+        uses: SonarSource/release-github-actions/publish-github-release@v1
+        with:
+          release-version: ${{ needs.prepare-release.outputs.release-version }}
+          release-notes: ${{ inputs.release-notes != '' && inputs.release-notes || needs.prepare-release.outputs.release-notes }}
+          draft: ${{ inputs.is-draft-release }}
+          branch: ${{ inputs.branch }}
+
+      - name: Summary
+        if: ${{ inputs.verbose }}
+        shell: bash
+        env:
+          BRANCH: ${{ inputs.branch }}
+          IS_DRAFT_RELEASE: ${{ inputs.is-draft-release == true && 'true' || 'false' }}
+        run: |
+          echo "## 📦 Publish GitHub Release" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### What happened" >> $GITHUB_STEP_SUMMARY
+          echo "- Published a GitHub release for version \`${{ needs.prepare-release.outputs.release-version }}\` from branch \`$BRANCH\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Draft release: \`$IS_DRAFT_RELEASE\`." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Release page: ${{ steps.publish-github-release.outputs.release-url }}" >> $GITHUB_STEP_SUMMARY
+
+  # Step 4: Release in Jira
+  # This step releases the version in Jira and moves the release ticket to the "Technical Release Done" status.
+  # It outputs the new version name and integration ticket keys and URLs.
+  release-in-jira:
+    name: Release Version In Jira
+    runs-on: ${{ inputs.runner-environment }}
+    needs: [ prepare-release, publish-github-release, create-release-ticket ]
+    permissions:
+      statuses: read
+      contents: read
+      id-token: write
+    outputs:
+      new-version: ${{ steps.create-jira-version.outputs.jira-new-version-name }}
+      sqc-ticket-key: ${{ steps.create-sc-ticket.outputs.ticket-key }}
+      sqc-ticket-url: ${{ steps.create-sc-ticket.outputs.ticket-url }}
+      sqs-ticket-key: ${{ steps.create-sonar-ticket.outputs.ticket-key }}
+      sqs-ticket-url: ${{ steps.create-sonar-ticket.outputs.ticket-url }}
+    steps:
+      - name: Release in Jira
+        uses: SonarSource/release-github-actions/release-jira-version@v1
+        with:
+          jira-version-name: ${{ needs.prepare-release.outputs.jira-version-name }}
+      - name: Create new release in jira
+        id: create-jira-version
+        uses: SonarSource/release-github-actions/create-jira-version@v1
+        with:
+          jira-version-name: ${{ needs.prepare-release.outputs.jira-version-name }}
+          jira-new-version-name: ${{ inputs.new-version }}
+      - name: Move release ticket to Technical release Done
+        uses: SonarSource/release-github-actions/update-release-ticket-status@v1
+        with:
+          release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
+          status: "Technical Release Done"
+          assignee: ${{ inputs.pm-email }}
+
+      - name: Summary
+        if: ${{ inputs.verbose }}
+        shell: bash
+        env:
+          NEW_VERSION: ${{ inputs.new-version }}
+          PM_EMAIL: ${{ inputs.pm-email }}
+        run: |
+          echo "## 🗂️ Release in Jira" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### What happened" >> $GITHUB_STEP_SUMMARY
+          echo "- Released current Jira version \`${{ needs.prepare-release.outputs.jira-version-name }}\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Created new Jira version named \`$NEW_VERSION\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Moved the release ticket to \"Technical Release Done\" and assigned it to \`$PM_EMAIL\`." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Results" >> $GITHUB_STEP_SUMMARY
+          echo "- New Jira version: \`${{ steps.create-jira-version.outputs.jira-new-version-name }}\`." >> $GITHUB_STEP_SUMMARY
+
+  # Step 5: Create Integration Tickets
+  # This step creates integration tickets in various Jira projects based on the inputs provided.
+  # It creates tickets for SLVS, SLVSCODE, SLE, SLI, SQC, and SQS as specified.
+  # It outputs the integration ticket keys for SQC and SQS for further use.
+  create-integration-tickets:
+    name: Create Integration Tickets
+    needs: [ prepare-release, publish-github-release, create-release-ticket ]
+    if: ${{ inputs.create-slvs-ticket || inputs.create-slvscode-ticket || inputs.create-sle-ticket || inputs.create-sli-ticket || inputs.sqc-integration || inputs.sqs-integration }}
+    permissions:
+      statuses: read
+      contents: read
+      id-token: write
+    outputs:
+      sqc-ticket-key: ${{ steps.create-sqc-ticket.outputs.ticket-key }}
+      sqs-ticket-key: ${{ steps.create-sqs-ticket.outputs.ticket-key }}
+    runs-on: ${{ inputs.runner-environment }}
+    steps:
+      - name: Create SLVS Ticket
+        if: ${{ inputs.create-slvs-ticket }}
+        uses: SonarSource/release-github-actions/create-integration-ticket@v1
+        with:
+          plugin-name: ${{ inputs.plugin-name }}
+          release-version: ${{ needs.prepare-release.outputs.release-version }}
+          release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
+          target-jira-project: "SLVS"
+          ticket-description: ${{ inputs.sq-ide-short-description != '' && inputs.sq-ide-short-description || inputs.short-description }}
+          jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
+
+      - name: Create SLVSCODE Ticket
+        if: ${{ inputs.create-slvscode-ticket }}
+        uses: SonarSource/release-github-actions/create-integration-ticket@v1
+        with:
+          plugin-name: ${{ inputs.plugin-name }}
+          release-version: ${{ needs.prepare-release.outputs.release-version }}
+          release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
+          target-jira-project: "SLVSCODE"
+          ticket-description: ${{ inputs.sq-ide-short-description != '' && inputs.sq-ide-short-description || inputs.short-description }}
+          jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
+
+      - name: Create SLE Ticket
+        if: ${{ inputs.create-sle-ticket }}
+        uses: SonarSource/release-github-actions/create-integration-ticket@v1
+        with:
+          plugin-name: ${{ inputs.plugin-name }}
+          release-version: ${{ needs.prepare-release.outputs.release-version }}
+          release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
+          target-jira-project: "SLE"
+          ticket-description: ${{ inputs.sq-ide-short-description != '' && inputs.sq-ide-short-description || inputs.short-description }}
+          jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
+
+      - name: Create SLI Ticket
+        if: ${{ inputs.create-sli-ticket }}
+        uses: SonarSource/release-github-actions/create-integration-ticket@v1
+        with:
+          plugin-name: ${{ inputs.plugin-name }}
+          release-version: ${{ needs.prepare-release.outputs.release-version }}
+          release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
+          target-jira-project: "SLI"
+          ticket-description: ${{ inputs.sq-ide-short-description != '' && inputs.sq-ide-short-description || inputs.short-description }}
+          jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
+
+      - name: Create SQC Ticket
+        if: ${{ inputs.sqc-integration }}
+        id: create-sqc-ticket
+        uses: SonarSource/release-github-actions/create-integration-ticket@v1
+        with:
+          plugin-name: ${{ inputs.plugin-name }}
+          release-version: ${{ needs.prepare-release.outputs.release-version }}
+          release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
+          target-jira-project: "SC"
+          ticket-description: ${{ inputs.short-description }}
+          jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
+
+      - name: Create SQS Ticket
+        if: ${{ inputs.sqs-integration }}
+        id: create-sqs-ticket
+        uses: SonarSource/release-github-actions/create-integration-ticket@v1
+        with:
+          plugin-name: ${{ inputs.plugin-name }}
+          release-version: ${{ needs.prepare-release.outputs.release-version }}
+          release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
+          target-jira-project: "SONAR"
+          ticket-description: ${{ inputs.short-description }}
+          jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
+
+      - name: Summary
+        if: ${{ inputs.verbose }}
+        shell: bash
+        env:
+          PLUGIN_NAME: ${{ inputs.plugin-name }}
+          CREATE_SLVS_TICKET: ${{ inputs.create-slvs-ticket == true && 'true' || 'false' }}
+          CREATE_SLVSCODE_TICKET: ${{ inputs.create-slvscode-ticket == true && 'true' || 'false' }}
+          CREATE_SLE_TICKET: ${{ inputs.create-sle-ticket == true && 'true' || 'false' }}
+          CREATE_SLI_TICKET: ${{ inputs.create-sli-ticket == true && 'true' || 'false' }}
+          SQC_INTEGRATION: ${{ inputs.sqc-integration == true && 'true' || 'false' }}
+          SQS_INTEGRATION: ${{ inputs.sqs-integration == true && 'true' || 'false' }}
+        run: |
+          echo "## 🔗 Create Integration Tickets" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### What happened" >> $GITHUB_STEP_SUMMARY
+          echo "- Based on flags, created integration tickets for selected projects." >> $GITHUB_STEP_SUMMARY
+          echo "- Plugin: \`$PLUGIN_NAME\`, Release ticket: \`${{ needs.create-release-ticket.outputs.release-ticket-key }}\`." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Results" >> $GITHUB_STEP_SUMMARY
+          if [ "$CREATE_SLVS_TICKET" = "true" ]; then echo "- SLVS ticket created." >> $GITHUB_STEP_SUMMARY; fi
+          if [ "$CREATE_SLVSCODE_TICKET" = "true" ]; then echo "- SLVSCODE ticket created." >> $GITHUB_STEP_SUMMARY; fi
+          if [ "$CREATE_SLE_TICKET" = "true" ]; then echo "- SLE ticket created." >> $GITHUB_STEP_SUMMARY; fi
+          if [ "$CREATE_SLI_TICKET" = "true" ]; then echo "- SLI ticket created." >> $GITHUB_STEP_SUMMARY; fi
+          if [ "$SQC_INTEGRATION" = "true" ]; then echo "- SQC ticket \`${{ steps.create-sqc-ticket.outputs.ticket-key }}\` — ${{ steps.create-sqc-ticket.outputs.ticket-url }}" >> $GITHUB_STEP_SUMMARY; fi
+          if [ "$SQS_INTEGRATION" = "true" ]; then echo "- SQS ticket \`${{ steps.create-sqs-ticket.outputs.ticket-key }}\` — ${{ steps.create-sqs-ticket.outputs.ticket-url }}" >> $GITHUB_STEP_SUMMARY; fi
+
+  # Step 6: Update Analyzers in SQS and SQC
+  # This step updates the analyzers in SQS and SQC by creating pull requests based on the integration tickets created in the previous step.
+  # It outputs the pull request URLs for SQS and SQC for further use.
+  update-analyzers:
+    name: Update Analyzers in SQS and SQC
+    runs-on: ${{ inputs.runner-environment }}
+    needs: [ create-integration-tickets ]
+    if: ${{ (inputs.sqs-integration || inputs.sqc-integration) && inputs.release-automation-secret-name != '' }}
+    permissions:
+      id-token: write
+    outputs:
+      sqs-pull-request-url: ${{ steps.update-sqs.outputs.pull-request-url }}
+      sqc-pull-request-url: ${{ steps.update-sqc.outputs.pull-request-url }}
+    steps:
+      - name: Update analyzer in SQS
+        id: update-sqs
+        if: ${{ inputs.sqs-integration }}
+        uses: SonarSource/release-github-actions/update-analyzer@v1
+        with:
+          release-version: ${{ needs.prepare-release.outputs.release-version }}
+          ticket-key: ${{ needs.create-integration-tickets.outputs.sqs-ticket-key }}
+          plugin-name: ${{ inputs.plugin-name }}
+          secret-name: ${{ inputs.release-automation-secret-name }}
+          plugin-artifacts: ${{inputs.plugin-artifacts-sqs || inputs.plugin-name }}
+          draft: ${{ inputs.is-draft-release }}
+          reviewers: ${{ github.actor }}
+
+      - name: Update analyzer in SQC
+        id: update-sqc
+        if: ${{ inputs.sqc-integration }}
+        uses: SonarSource/release-github-actions/update-analyzer@v1
+        with:
+          release-version: ${{ needs.prepare-release.outputs.release-version }}
+          ticket-key: ${{ needs.create-integration-tickets.outputs.sqc-ticket-key }}
+          plugin-name: ${{ inputs.plugin-name }}
+          secret-name: ${{ inputs.release-automation-secret-name }}
+          plugin-artifacts: ${{inputs.plugin-artifacts-sqc || inputs.plugin-name }}
+          draft: ${{ inputs.is-draft-release }}
+          reviewers: ${{ github.actor }}
+
+      - name: Summary
+        if: ${{ inputs.verbose }}
+        shell: bash
+        env:
+          PLUGIN_NAME: ${{ inputs.plugin-name }}
+          PLUGIN_ARTIFACTS_SQS: ${{ inputs.plugin-artifacts-sqs }}
+          PLUGIN_ARTIFACTS_SQC: ${{ inputs.plugin-artifacts-sqc }}
+          IS_DRAFT_RELEASE: ${{ inputs.is-draft-release == true && 'true' || 'false' }}
+          RELEASE_AUTOMATION_SECRET_NAME: ${{ inputs.release-automation-secret-name }}
+          SQS_INTEGRATION: ${{ inputs.sqs-integration == true && 'true' || 'false' }}
+          SQC_INTEGRATION: ${{ inputs.sqc-integration == true && 'true' || 'false' }}
+        run: |
+          echo "## 🔄 Update Analyzers" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### What happened" >> $GITHUB_STEP_SUMMARY
+          echo "- Prepared analyzer updates and opened PRs where requested." >> $GITHUB_STEP_SUMMARY
+          echo "- Artifacts SQS: \`$([ -n "$PLUGIN_ARTIFACTS_SQS" ] && echo "$PLUGIN_ARTIFACTS_SQS" || echo "$PLUGIN_NAME" )\`, Artifacts SQC: \`$([ -n "$PLUGIN_ARTIFACTS_SQC" ] && echo "$PLUGIN_ARTIFACTS_SQC" || echo "$PLUGIN_NAME" )\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Draft PRs: \`$IS_DRAFT_RELEASE\`, Secret present: \`$([ -n "$RELEASE_AUTOMATION_SECRET_NAME" ] && echo true || echo false)\`." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Results" >> $GITHUB_STEP_SUMMARY
+          if [ "$SQS_INTEGRATION" = "true" ]; then echo "- SQS PR: ${{ steps.update-sqs.outputs.pull-request-url }}" >> $GITHUB_STEP_SUMMARY; fi
+          if [ "$SQC_INTEGRATION" = "true" ]; then echo "- SQC PR: ${{ steps.update-sqc.outputs.pull-request-url }}" >> $GITHUB_STEP_SUMMARY; fi
+
+  # Step 7: Summarize Release
+  # This step summarizes the results of the entire release process.
+  # It checks the outcomes of all previous steps and generates a summary indicating whether the release was
+  # successful or failed, along with relevant links and information.
+  summarize_release:
+    name: Release Results
+    runs-on: ${{ inputs.runner-environment }}
+    if: always()
+    needs: [ prepare-release, publish-github-release, create-release-ticket, release-in-jira, create-integration-tickets, update-analyzers ]
+    env:
+        RELEASE_PROCESS: ${{ inputs.release-process != '' && inputs.release-process || 'https://xtranet-sonarsource.atlassian.net/wiki/spaces/CSD/pages/4325048388/Release+Instructions+-+Cloud+Security' }}
+    steps:
+      - name: Post Summary to Workflow
+        shell: bash
+        run: |
+          ALL_SUCCESS=$(echo '${{ toJson(needs) }}' | jq -r 'to_entries | all(.value.result == "success")')
+          
+          if [[ "$ALL_SUCCESS" == "true" ]]; then
+            echo "# 🎉 Release Successful" >> $GITHUB_STEP_SUMMARY
+            echo "The automated release completed without errors. Below is a consolidated overview of the run." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "# ❌ Release Failed" >> $GITHUB_STEP_SUMMARY
+            echo "One or more jobs failed. Review the job logs and links below." >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "## Key Links" >> $GITHUB_STEP_SUMMARY
+          echo "- Released Version: \`${{ needs.prepare-release.outputs.release-version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- New Version: \`${{ needs.release-in-jira.outputs.new-version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Jira Release: ${{ needs.prepare-release.outputs.jira-release-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Release Ticket: ${{ needs.create-release-ticket.outputs.release-ticket-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- GitHub Release: ${{ needs.publish-github-release.outputs.github-release-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- SQS Integration Ticket: ${{ needs.release-in-jira.outputs.sqs-ticket-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- SQC Integration Ticket: ${{ needs.release-in-jira.outputs.sqc-ticket-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- SQS Analyzer PR: ${{ needs.update-analyzers.outputs.sqs-pull-request-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- SQC Analyzer PR: ${{ needs.update-analyzers.outputs.sqc-pull-request-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "## Guidance" >> $GITHUB_STEP_SUMMARY
+          if [[ "$ALL_SUCCESS" == "true" ]]; then
+            echo "- Review and merge the bump version, SQS and SQC PRs." >> $GITHUB_STEP_SUMMARY
+            echo "- Update integration ticket statuses (ensure SQS ticket fix versions are set)." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Check failed jobs for error messages and re-run as needed." >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- Reference: $RELEASE_PROCESS" >> $GITHUB_STEP_SUMMARY

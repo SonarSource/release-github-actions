@@ -17,6 +17,7 @@ A centralized collection of reusable GitHub Actions designed to streamline and a
 * [**Update Analyzer**](update-analyzer/README.md): Updates an analyzer version in SonarQube or SonarCloud and creates a pull request.
 * [**Update Release Ticket Status**](update-release-ticket-status/README.md): Updates the status of a Jira release ticket and can change its assignee.
 * [**Update Rule Metadata**](update-rule-metadata/README.md): Automates updating rule metadata across all supported languages using the rule-api tooling.
+* [**Automated Release Workflow**](docs/AUTOMATED_RELEASE.md): Orchestrates the end-to-end release across Jira and GitHub, with optional integration tickets and analyzer PRs.
 
 ## Development
 
