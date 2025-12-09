@@ -153,7 +153,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          echo "## ✅ Prepare Release" >> $GITHUB_STEP_SUMMARY
+          echo "## 🆗 Prepare Release" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### What happened" >> $GITHUB_STEP_SUMMARY
           echo "- Determined the release version from branch \`${{ inputs.branch }}\`." >> $GITHUB_STEP_SUMMARY
