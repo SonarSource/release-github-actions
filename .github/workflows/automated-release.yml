@@ -100,7 +100,7 @@ on:
         description: "Environment where the workflow will run"
         required: false
         type: string
-        default: "sonar-xs"
+        default: "sonar-m"
       release-process:
         description: "Release process documentation URL"
         required: false
