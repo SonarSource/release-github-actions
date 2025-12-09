@@ -87,7 +87,7 @@ runs:
         JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
         PROJECT_KEY_INPUT: ${{ inputs.jira-project-key || env.JIRA_PROJECT_KEY }}
         VERSION_NAME: ${{ steps.determine-new-version-name.outputs.new-version-name }}
-        JIRA_URL: ${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}
+        JIRA_URL: "https://sonarsource${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && '-sandbox-608' }}.atlassian.net/"
       run: |
         if [[ -z "$PROJECT_KEY_INPUT" ]]; then
           echo "::error::Both jira-project-key input and JIRA_PROJECT_KEY environment variable are missing. One must be provided."
