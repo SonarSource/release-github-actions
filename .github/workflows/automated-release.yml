@@ -113,7 +113,7 @@ on:
         value: ${{ jobs.release-in-jira.outputs.new-version }}
 env:
   JIRA_PROJECT_KEY: ${{ inputs.jira-project-key }}
-  USE_JIRA_SANDBOX: ${{ inputs.use-jira-sandbox }}
+  USE_JIRA_SANDBOX: ${{ inputs.use-jira-sandbox == true && 'true' || 'false' }}
 
 jobs:
   # Step 1: Prepare Release
