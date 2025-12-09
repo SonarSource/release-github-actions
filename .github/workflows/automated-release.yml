@@ -274,7 +274,7 @@ jobs:
           jira-version-name: ${{ needs.prepare-release.outputs.jira-version-name }}
           jira-new-version-name: ${{ inputs.new-version }}
       - name: Move release ticket to Technical release Done
-        uses: SonarSource/release-github-actions/update-release-ticket-status@v1
+        uses: SonarSource/release-github-actions/update-release-ticket-status@nw/fix-update-release-ticket-status-workflow
         with:
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           status: "Technical Release Done"
