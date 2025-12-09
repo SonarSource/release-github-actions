@@ -96,7 +96,7 @@ runs:
 
     - name: Start Progress on Release Ticket
       if: ${{ inputs.start-progress == 'true' }}
-      uses: SonarSource/release-github-actions/update-release-ticket-status@v1
+      uses: SonarSource/release-github-actions/update-release-ticket-status@nw/fix-update-release-ticket-status-workflow
       with:
         release-ticket-key: ${{ steps.run_python_script.outputs.ticket_key }}
         status: "Start Progress"
