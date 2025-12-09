@@ -106,6 +106,11 @@ on:
         required: false
         type: string
         default: "https://xtranet-sonarsource.atlassian.net/wiki/x/YtoL" # general Release Procedures page
+      verbose:
+        description: "Emit job summaries"
+        required: false
+        type: boolean
+        default: false
 
     outputs:
       new-version:
@@ -150,15 +155,20 @@ jobs:
         uses: SonarSource/release-github-actions/get-jira-release-notes@v1
 
       - name: Summary
-        if: always()
+        if: ${{ inputs.verbose }}
         shell: bash
+        env:
+          BRANCH: ${{ inputs.branch }}
+          JIRA_PROJECT_KEY: ${{ inputs.jira-project-key }}
+          USE_JIRA_SANDBOX: ${{ inputs.use-jira-sandbox == true && 'true' || 'false' }}
+          RELEASE_NOTES: ${{ inputs.release-notes }}
         run: |
           echo "## 🆗 Prepare Release" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### What happened" >> $GITHUB_STEP_SUMMARY
-          echo "- Determined the release version from branch \`${{ inputs.branch }}\`." >> $GITHUB_STEP_SUMMARY
-          echo "- Retrieved the Jira version name for project \`${{ inputs.jira-project-key }}\` (sandbox: \`${{ inputs.use-jira-sandbox }}\`)." >> $GITHUB_STEP_SUMMARY
-          if [ "${{ inputs.release-notes }}" != "" ]; then
+          echo "- Determined the release version from branch \`$BRANCH\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Retrieved the Jira version name for project \`$JIRA_PROJECT_KEY\` (sandbox: \`$USE_JIRA_SANDBOX\`)." >> $GITHUB_STEP_SUMMARY
+          if [ "$RELEASE_NOTES" != "" ]; then
             echo "- Used release notes provided by the caller." >> $GITHUB_STEP_SUMMARY
           else
             echo "- Generated release notes from Jira." >> $GITHUB_STEP_SUMMARY
@@ -186,7 +196,7 @@ jobs:
     steps:
       - name: Create Jira Release Ticket
         id: create-ticket
-        uses: SonarSource/release-github-actions/create-jira-release-ticket@nw/create-common-release-workflow
+        uses: SonarSource/release-github-actions/create-jira-release-ticket@v1
         with:
           project-name: ${{ inputs.project-name }}
           short-description: ${{ inputs.short-description }}
@@ -196,14 +206,17 @@ jobs:
           version: ${{ needs.prepare-release.outputs.release-version }}
 
       - name: Summary
-        if: always()
+        if: ${{ inputs.verbose }}
         shell: bash
+        env:
+          PROJECT_NAME: ${{ inputs.project-name }}
+          RULE_PROPS_CHANGED: ${{ inputs.rule-props-changed }}
         run: |
           echo "## 🧾 Create Release Ticket" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### What happened" >> $GITHUB_STEP_SUMMARY
-          echo "- Created a Jira release ticket for project \`${{ inputs.project-name }}\` using version \`${{ needs.prepare-release.outputs.release-version }}\`." >> $GITHUB_STEP_SUMMARY
-          echo "- Rule properties changed: \`${{ inputs.rule-props-changed }}\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Created a Jira release ticket for project \`$PROJECT_NAME\` using version \`${{ needs.prepare-release.outputs.release-version }}\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Rule properties changed: \`$RULE_PROPS_CHANGED\`." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Results" >> $GITHUB_STEP_SUMMARY
           echo "- Ticket key: \`${{ steps.create-ticket.outputs.release-ticket-key }}\`." >> $GITHUB_STEP_SUMMARY
@@ -233,14 +246,17 @@ jobs:
           branch: ${{ inputs.branch }}
 
       - name: Summary
-        if: always()
+        if: ${{ inputs.verbose }}
         shell: bash
+        env:
+          BRANCH: ${{ inputs.branch }}
+          IS_DRAFT_RELEASE: ${{ inputs.is-draft-release == true && 'true' || 'false' }}
         run: |
           echo "## 📦 Publish GitHub Release" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### What happened" >> $GITHUB_STEP_SUMMARY
-          echo "- Published a GitHub release for version \`${{ needs.prepare-release.outputs.release-version }}\` from branch \`${{ inputs.branch }}\`." >> $GITHUB_STEP_SUMMARY
-          echo "- Draft release: \`${{ inputs.is-draft-release }}\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Published a GitHub release for version \`${{ needs.prepare-release.outputs.release-version }}\` from branch \`$BRANCH\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Draft release: \`$IS_DRAFT_RELEASE\`." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Results" >> $GITHUB_STEP_SUMMARY
           echo "- Release page: ${{ steps.publish-github-release.outputs.release-url }}" >> $GITHUB_STEP_SUMMARY
@@ -269,27 +285,30 @@ jobs:
           jira-version-name: ${{ needs.prepare-release.outputs.jira-version-name }}
       - name: Create new release in jira
         id: create-jira-version
-        uses: SonarSource/release-github-actions/create-jira-version@nw/fix-create-jira-version-action
+        uses: SonarSource/release-github-actions/create-jira-version@v1
         with:
           jira-version-name: ${{ needs.prepare-release.outputs.jira-version-name }}
           jira-new-version-name: ${{ inputs.new-version }}
       - name: Move release ticket to Technical release Done
-        uses: SonarSource/release-github-actions/update-release-ticket-status@nw/fix-update-release-ticket-status-workflow
+        uses: SonarSource/release-github-actions/update-release-ticket-status@v1
         with:
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           status: "Technical Release Done"
           assignee: ${{ inputs.pm-email }}
 
       - name: Summary
-        if: always()
+        if: ${{ inputs.verbose }}
         shell: bash
+        env:
+          NEW_VERSION: ${{ inputs.new-version }}
+          PM_EMAIL: ${{ inputs.pm-email }}
         run: |
           echo "## 🗂️ Release in Jira" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### What happened" >> $GITHUB_STEP_SUMMARY
           echo "- Released current Jira version \`${{ needs.prepare-release.outputs.jira-version-name }}\`." >> $GITHUB_STEP_SUMMARY
-          echo "- Created new Jira version named \`${{ inputs.new-version }}\`." >> $GITHUB_STEP_SUMMARY
-          echo "- Moved the release ticket to \"Technical Release Done\" and assigned it to \`${{ inputs.pm-email }}\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Created new Jira version named \`$NEW_VERSION\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Moved the release ticket to \"Technical Release Done\" and assigned it to \`$PM_EMAIL\`." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Results" >> $GITHUB_STEP_SUMMARY
           echo "- New Jira version: \`${{ steps.create-jira-version.outputs.jira-new-version-name }}\`." >> $GITHUB_STEP_SUMMARY
@@ -380,22 +399,30 @@ jobs:
           jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
 
       - name: Summary
-        if: always()
+        if: ${{ inputs.verbose }}
         shell: bash
+        env:
+          PLUGIN_NAME: ${{ inputs.plugin-name }}
+          CREATE_SLVS_TICKET: ${{ inputs.create-slvs-ticket == true && 'true' || 'false' }}
+          CREATE_SLVSCODE_TICKET: ${{ inputs.create-slvscode-ticket == true && 'true' || 'false' }}
+          CREATE_SLE_TICKET: ${{ inputs.create-sle-ticket == true && 'true' || 'false' }}
+          CREATE_SLI_TICKET: ${{ inputs.create-sli-ticket == true && 'true' || 'false' }}
+          SQC_INTEGRATION: ${{ inputs.sqc-integration == true && 'true' || 'false' }}
+          SQS_INTEGRATION: ${{ inputs.sqs-integration == true && 'true' || 'false' }}
         run: |
           echo "## 🔗 Create Integration Tickets" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### What happened" >> $GITHUB_STEP_SUMMARY
           echo "- Based on flags, created integration tickets for selected projects." >> $GITHUB_STEP_SUMMARY
-          echo "- Plugin: \`${{ inputs.plugin-name }}\`, Release ticket: \`${{ needs.create-release-ticket.outputs.release-ticket-key }}\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Plugin: \`$PLUGIN_NAME\`, Release ticket: \`${{ needs.create-release-ticket.outputs.release-ticket-key }}\`." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Results" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ inputs.create-slvs-ticket }}" = "true" ]; then echo "- SLVS ticket created." >> $GITHUB_STEP_SUMMARY; fi
-          if [ "${{ inputs.create-slvscode-ticket }}" = "true" ]; then echo "- SLVSCODE ticket created." >> $GITHUB_STEP_SUMMARY; fi
-          if [ "${{ inputs.create-sle-ticket }}" = "true" ]; then echo "- SLE ticket created." >> $GITHUB_STEP_SUMMARY; fi
-          if [ "${{ inputs.create-sli-ticket }}" = "true" ]; then echo "- SLI ticket created." >> $GITHUB_STEP_SUMMARY; fi
-          if [ "${{ inputs.sqc-integration }}" = "true" ]; then echo "- SQC ticket \`${{ steps.create-sqc-ticket.outputs.ticket-key }}\` — ${{ steps.create-sqc-ticket.outputs.ticket-url }}" >> $GITHUB_STEP_SUMMARY; fi
-          if [ "${{ inputs.sqs-integration }}" = "true" ]; then echo "- SQS ticket \`${{ steps.create-sqs-ticket.outputs.ticket-key }}\` — ${{ steps.create-sqs-ticket.outputs.ticket-url }}" >> $GITHUB_STEP_SUMMARY; fi
+          if [ "$CREATE_SLVS_TICKET" = "true" ]; then echo "- SLVS ticket created." >> $GITHUB_STEP_SUMMARY; fi
+          if [ "$CREATE_SLVSCODE_TICKET" = "true" ]; then echo "- SLVSCODE ticket created." >> $GITHUB_STEP_SUMMARY; fi
+          if [ "$CREATE_SLE_TICKET" = "true" ]; then echo "- SLE ticket created." >> $GITHUB_STEP_SUMMARY; fi
+          if [ "$CREATE_SLI_TICKET" = "true" ]; then echo "- SLI ticket created." >> $GITHUB_STEP_SUMMARY; fi
+          if [ "$SQC_INTEGRATION" = "true" ]; then echo "- SQC ticket \`${{ steps.create-sqc-ticket.outputs.ticket-key }}\` — ${{ steps.create-sqc-ticket.outputs.ticket-url }}" >> $GITHUB_STEP_SUMMARY; fi
+          if [ "$SQS_INTEGRATION" = "true" ]; then echo "- SQS ticket \`${{ steps.create-sqs-ticket.outputs.ticket-key }}\` — ${{ steps.create-sqs-ticket.outputs.ticket-url }}" >> $GITHUB_STEP_SUMMARY; fi
 
   # Step 6: Update Analyzers in SQS and SQC
   # This step updates the analyzers in SQS and SQC by creating pull requests based on the integration tickets created in the previous step.
@@ -438,19 +465,27 @@ jobs:
           reviewers: ${{ github.actor }}
 
       - name: Summary
-        if: always()
+        if: ${{ inputs.verbose }}
         shell: bash
+        env:
+          PLUGIN_NAME: ${{ inputs.plugin-name }}
+          PLUGIN_ARTIFACTS_SQS: ${{ inputs.plugin-artifacts-sqs }}
+          PLUGIN_ARTIFACTS_SQC: ${{ inputs.plugin-artifacts-sqc }}
+          IS_DRAFT_RELEASE: ${{ inputs.is-draft-release == true && 'true' || 'false' }}
+          RELEASE_AUTOMATION_SECRET_NAME: ${{ inputs.release-automation-secret-name }}
+          SQS_INTEGRATION: ${{ inputs.sqs-integration == true && 'true' || 'false' }}
+          SQC_INTEGRATION: ${{ inputs.sqc-integration == true && 'true' || 'false' }}
         run: |
           echo "## 🔄 Update Analyzers" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### What happened" >> $GITHUB_STEP_SUMMARY
           echo "- Prepared analyzer updates and opened PRs where requested." >> $GITHUB_STEP_SUMMARY
-          echo "- Artifacts SQS: \`${{ inputs.plugin-artifacts-sqs != '' && inputs.plugin-artifacts-sqs || inputs.plugin-name }}\`, Artifacts SQC: \`${{ inputs.plugin-artifacts-sqc != '' && inputs.plugin-artifacts-sqc || inputs.plugin-name }}\`." >> $GITHUB_STEP_SUMMARY
-          echo "- Draft PRs: \`${{ inputs.is-draft-release }}\`, Secret present: \`${{ inputs.release-automation-secret-name != '' }}\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Artifacts SQS: \`$([ -n "$PLUGIN_ARTIFACTS_SQS" ] && echo "$PLUGIN_ARTIFACTS_SQS" || echo "$PLUGIN_NAME" )\`, Artifacts SQC: \`$([ -n "$PLUGIN_ARTIFACTS_SQC" ] && echo "$PLUGIN_ARTIFACTS_SQC" || echo "$PLUGIN_NAME" )\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Draft PRs: \`$IS_DRAFT_RELEASE\`, Secret present: \`$([ -n "$RELEASE_AUTOMATION_SECRET_NAME" ] && echo true || echo false)\`." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Results" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ inputs.sqs-integration }}" = "true" ]; then echo "- SQS PR: ${{ steps.update-sqs.outputs.pull-request-url }}" >> $GITHUB_STEP_SUMMARY; fi
-          if [ "${{ inputs.sqc-integration }}" = "true" ]; then echo "- SQC PR: ${{ steps.update-sqc.outputs.pull-request-url }}" >> $GITHUB_STEP_SUMMARY; fi
+          if [ "$SQS_INTEGRATION" = "true" ]; then echo "- SQS PR: ${{ steps.update-sqs.outputs.pull-request-url }}" >> $GITHUB_STEP_SUMMARY; fi
+          if [ "$SQC_INTEGRATION" = "true" ]; then echo "- SQC PR: ${{ steps.update-sqc.outputs.pull-request-url }}" >> $GITHUB_STEP_SUMMARY; fi
 
   # Step 7: Summarize Release
   # This step summarizes the results of the entire release process.
@@ -497,4 +532,4 @@ jobs:
           else
             echo "- Check failed jobs for error messages and re-run as needed." >> $GITHUB_STEP_SUMMARY
           fi
-          echo "- Reference: ${{ inputs.release-process != '' && inputs.release-process || 'https://xtranet-sonarsource.atlassian.net/wiki/spaces/CSD/pages/4325048388/Release+Instructions+-+Cloud+Security' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Reference: $RELEASE_PROCESS" >> $GITHUB_STEP_SUMMARY

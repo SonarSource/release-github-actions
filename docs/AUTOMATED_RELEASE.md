@@ -1,0 +1,131 @@
+# Automated Release Workflow
+
+This reusable GitHub Actions workflow automates the end-to-end release process across Jira and GitHub, and optionally creates integration tickets and analyzer update PRs. It is designed to be invoked via `workflow_call` from other repositories.
+
+## Description
+
+The workflow orchestrates these steps:
+
+1. Determine the release version and Jira version name
+2. Optionally generate Jira release notes if not provided
+3. Create a Jira release ticket
+4. Publish a GitHub release (draft or final)
+5. Release the current Jira version and create the next version in Jira
+6. Optionally create integration tickets (SLVS, SLVSCODE, SLE, SLI, SQC, SQS)
+7. Optionally open analyzer update PRs in SQS and SQC
+8. Optionally post per-job and final workflow summaries when `verbose` is enabled
+
+## Dependencies
+
+This workflow composes several actions from this repository:
+
+- `SonarSource/release-github-actions/get-release-version`
+- `SonarSource/release-github-actions/get-jira-version`
+- `SonarSource/release-github-actions/get-jira-release-notes`
+- `SonarSource/release-github-actions/create-jira-release-ticket`
+- `SonarSource/release-github-actions/publish-github-release`
+- `SonarSource/release-github-actions/release-jira-version`
+- `SonarSource/release-github-actions/create-integration-ticket`
+- `SonarSource/release-github-actions/update-analyzer`
+- `SonarSource/release-github-actions/update-release-ticket-status`
+
+## Inputs
+
+| Input                         | Description                                                                                                     | Required | Default      |
+|------------------------------|-----------------------------------------------------------------------------------------------------------------|----------|--------------|
+| `jira-project-key`           | Jira project key                                                                                                | Yes      | -            |
+| `project-name`               | Display name of the project                                                                                     | Yes      | -            |
+| `plugin-name`                | Plugin name                                                                                                     | Yes      | -            |
+| `plugin-artifacts-sqs`       | Artifact identifier(s) for SQS; falls back to `plugin-name`                                                     | No       | -            |
+| `plugin-artifacts-sqc`       | Artifact identifier(s) for SQC; falls back to `plugin-name`                                                     | No       | -            |
+| `use-jira-sandbox`           | Use Jira sandbox                                                                                                | No       | `true`       |
+| `is-draft-release`           | Create the GitHub release as a draft                                                                            | No       | `true`       |
+| `pm-email`                   | Product manager email to assign the release ticket after technical release                                      | Yes      | -            |
+| `release-automation-secret-name` | Secret name used to create analyzer update PRs                                                              | No       | -            |
+| `short-description`          | Brief summary for release and integration tickets                                                               | Yes      | -            |
+| `rule-props-changed`         | Whether rule properties changed (`true`/`false`); mapped to Yes/No in the release ticket                        | Yes      | -            |
+| `branch`                     | Branch to release from                                                                                          | Yes      | `master`     |
+| `release-notes`              | Explicit release notes; if empty, Jira release notes are generated                                              | No       | -            |
+| `sq-ide-short-description`   | Short summary of SQ IDE related changes                                                                         | No       | -            |
+| `new-version`                | Next version to create in Jira                                                                                  | Yes      | -            |
+| `create-slvs-ticket`         | Create SLVS integration ticket                                                                                  | No       | `false`      |
+| `create-slvscode-ticket`     | Create SLVSCODE integration ticket                                                                              | No       | `false`      |
+| `create-sle-ticket`          | Create SLE integration ticket                                                                                   | No       | `false`      |
+| `create-sli-ticket`          | Create SLI integration ticket                                                                                   | No       | `false`      |
+| `sqs-integration`            | Create SQS integration ticket and PR                                                                            | No       | `true`       |
+| `sqc-integration`            | Create SQC integration ticket and PR                                                                            | No       | `true`       |
+| `runner-environment`         | Runner labels/environment                                                                                        | No       | `sonar-m`    |
+| `release-process`            | Release process documentation URL                                                                               | No       | General page |
+| `verbose`                    | When `true`, posts per-job summaries and a final run summary                                                    | No       | `false`      |
+
+## Outputs
+
+| Output        | Description                                                |
+|---------------|------------------------------------------------------------|
+| `new-version` | The newly created Jira version name (from the Jira release job) |
+
+## Environment Variables
+
+The workflow sets the following environment variables for composed actions:
+
+| Variable           | Description                                 |
+|--------------------|---------------------------------------------|
+| `JIRA_PROJECT_KEY` | Propagates the Jira project key to actions  |
+| `USE_JIRA_SANDBOX` | Propagates sandbox selection to actions     |
+
+## Usage
+
+### Basic usage via workflow_call
+
+```yaml
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      new-version:
+        description: "Next version to create in Jira"
+        required: true
+        type: string
+      short-description:
+        description: "Brief summary for release and integration tickets"
+        required: true
+        type: string
+      verbose:
+        description: "Emit job summaries"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  automated-release:
+    uses: SonarSource/release-github-actions/.github/workflows/automated-release.yml@v1
+    with:
+      jira-project-key: CSD
+      project-name: "Cloud Security"
+      plugin-name: "sonar-secrets"
+      pm-email: "pm@example.com"
+      short-description: ${{ inputs.short-description }}
+      rule-props-changed: "false"
+      branch: "master"
+      new-version: ${{ inputs.new-version }}
+      sqs-integration: true
+      sqc-integration: true
+      release-automation-secret-name: "sonar-csd-release-automation"
+      verbose: ${{ inputs.verbose }}
+```
+
+## Notes
+
+- When `release-notes` is empty, Jira release notes are fetched and used.
+- Integration tickets and analyzer update PRs are created only if their respective flags are enabled and prerequisites are met (e.g., secret name for PR creation).
+- Summaries:
+  - Each job includes a "Summary" step that writes to `$GITHUB_STEP_SUMMARY` only when `verbose: true`.
+- Permissions and environments are scoped per job to minimize required privileges.
+
+## Troubleshooting
+
+- Ensure the caller repository has appropriate permissions to use this workflow and to write releases and PRs.
+- Verify that `release-automation-secret-name` exists and grants access for creating analyzer update PRs.
+- Check job logs if the final summary indicates failure; the per-job logs contain detailed outputs even when `verbose` is disabled.
+- Ensure the `Jira Tech User GitHub` is an Administrator on the target Jira project; admin rights are required to release the Jira version and to create a new version.
