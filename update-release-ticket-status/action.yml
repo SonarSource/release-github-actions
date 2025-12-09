@@ -43,12 +43,10 @@ runs:
       env:
         JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
-        JIRA_PROD_URL: "https://sonarsource.atlassian.net/"
-        JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
         ASSIGNEE_INPUT: ${{ inputs.assignee }}
         TICKET_KEY: ${{ inputs.release-ticket-key }}
         STATUS: ${{ inputs.status }}
-        JIRA_URL: ${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}
+        JIRA_URL: "https://sonarsource${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && '-sandbox-608' }}.atlassian.net/"
       run: |
         ASSIGNEE_FLAG=""
         if [[ -n "$ASSIGNEE_INPUT" ]]; then
