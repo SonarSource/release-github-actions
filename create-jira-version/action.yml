@@ -83,8 +83,6 @@ runs:
       env:
         JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
-        JIRA_PROD_URL: "https://sonarsource.atlassian.net/"
-        JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
         PROJECT_KEY_INPUT: ${{ inputs.jira-project-key || env.JIRA_PROJECT_KEY }}
         VERSION_NAME: ${{ steps.determine-new-version-name.outputs.new-version-name }}
         JIRA_URL: "https://sonarsource${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && '-sandbox-608' }}.atlassian.net/"
