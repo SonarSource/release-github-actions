@@ -190,7 +190,7 @@ jobs:
         with:
           project-name: ${{ inputs.project-name }}
           short-description: ${{ inputs.short-description }}
-          rule-props-changed: ${{ inputs.rule-props-changed }}
+          rule-props-changed: ${{ inputs.rule-props-changed == 'true' && 'Yes' || 'No' }}
           jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
           start-progress: true
           version: ${{ needs.prepare-release.outputs.release-version }}
