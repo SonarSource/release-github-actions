@@ -18,6 +18,7 @@ A centralized collection of reusable GitHub Actions designed to streamline and a
 * [**Update Release Ticket Status**](update-release-ticket-status/README.md): Updates the status of a Jira release ticket and can change its assignee.
 * [**Update Rule Metadata**](update-rule-metadata/README.md): Automates updating rule metadata across all supported languages using the rule-api tooling.
 * [**Automated Release Workflow**](docs/AUTOMATED_RELEASE.md): Orchestrates the end-to-end release across Jira and GitHub, with optional integration tickets and analyzer PRs.
+* [**Bump Project Version**](bump-version/README.md): Updates the version in Maven and Gradle files across your repository, with support for excluding specific modules.
 
 ## Development
 
