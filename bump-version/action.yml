@@ -1,0 +1,31 @@
+name: Bump Project Version
+
+inputs:
+  version:
+    description: The new version (without -SNAPSHOT)
+    required: true
+  exluded-modules:
+    description: A comma-separated list of modules to exclude from version bumping
+    required: false
+
+runs:
+  using: 'composite'
+  steps:
+  - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+  - name: Bump version
+    shell: bash
+    env:
+      VERSION: "${{ inputs.version }}-SNAPSHOT"
+      EXCLUDED_MODULES: ${{ inputs.exluded-modules || '' }}
+    run: |
+      bash "${GITHUB_ACTION_PATH}/bump_version.sh"
+
+  - uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7
+    with:
+      author: ${{ github.actor }} <${{ github.actor }}>
+      commit-message: Prepare next development iteration
+      title: Prepare next development iteration
+      branch: bot/bump-project-version
+      branch-suffix: timestamp
+      base: master
+      reviewers: ${{ github.actor }}
