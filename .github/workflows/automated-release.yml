@@ -111,6 +111,15 @@ on:
         required: false
         type: boolean
         default: false
+      freeze-branch:
+        description: "Freeze the branch during the release"
+        required: false
+        type: boolean
+        default: true
+      slack-channel:
+        description: "Slack channel for notifications"
+        required: false
+        type: string
 
     outputs:
       new-version:
@@ -121,12 +130,47 @@ env:
   USE_JIRA_SANDBOX: ${{ inputs.use-jira-sandbox == true && 'true' || 'false' }}
 
 jobs:
-  # Step 1: Prepare Release
+  # This job freezes the specified branch to prevent changes during the release process.
+  freeze-branch:
+    name: Freeze ${{ inputs.branch }} branch
+    if: ${{ inputs.freeze-branch }}
+    runs-on: ${{ inputs.runner-environment }}
+    permissions:
+      id-token: write
+    steps:
+      - &freeze-branch-secrets
+        id: secrets
+        uses: SonarSource/vault-action-wrapper@v3
+        with:
+          secrets: |
+            development/github/token/{REPO_OWNER_NAME_DASH}-lock token | lock_token;
+            development/kv/data/slack token | slack_api_token;
+      - &freeze-branch-toggle
+        uses: sonarsource/gh-action-lt-backlog/ToggleLockBranch@v2
+        with:
+          github-token: ${{ fromJSON(steps.secrets.outputs.vault).lock_token }}
+          slack-token: ${{ fromJSON(steps.secrets.outputs.vault).slack_api_token }}
+          slack-channel: ${{ inputs.slack-channel }}
+          branch-pattern: ${{ inputs.branch }}
+      - name: Summary
+        if: ${{ inputs.verbose }}
+        shell: bash
+        env:
+          BRANCH: ${{ inputs.branch }}
+          SLACK_CHANNEL: ${{ inputs.slack-channel || 'not set' }}
+        run: |
+          echo "## 🧊 Freeze Branch" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### What happened" >> $GITHUB_STEP_SUMMARY
+          echo "- Locked branch pattern \`$BRANCH\` to prevent changes during the release." >> $GITHUB_STEP_SUMMARY
+          echo "- Notifications sent to Slack channel: \`$SLACK_CHANNEL\`." >> $GITHUB_STEP_SUMMARY
+
   # This step determines the release version, Jira version name, and gathers release notes.
   # It sets up the necessary outputs for subsequent steps.
   # These outputs include the release version, Jira version name, release notes, Jira release notes, and Jira release URL.
   prepare-release:
     name: Prepare Release
+    needs: [ freeze-branch ]
     runs-on: ${{ inputs.runner-environment }}
     permissions:
       statuses: read
@@ -179,7 +223,6 @@ jobs:
           echo "- Release version: \`${{ steps.get-release-version.outputs.release-version }}\`." >> $GITHUB_STEP_SUMMARY
           echo "- Jira version name: \`${{ steps.get-jira-version.outputs.jira-version-name }}\`." >> $GITHUB_STEP_SUMMARY
 
-  # Step 2: Create Release Ticket
   # This step creates a Jira release ticket using the prepared release information.
   # It outputs the release ticket key and URL for further use.
   create-release-ticket:
@@ -222,7 +265,6 @@ jobs:
           echo "- Ticket key: \`${{ steps.create-ticket.outputs.release-ticket-key }}\`." >> $GITHUB_STEP_SUMMARY
           echo "- Ticket link: ${{ steps.create-ticket.outputs.release-ticket-url }}" >> $GITHUB_STEP_SUMMARY
 
-  # Step 3: Publish GitHub Release
   # This step publishes the GitHub release using the prepared release information and the created Jira release ticket.
   # It outputs the GitHub release URL for further use.
   publish-github-release:
@@ -261,7 +303,30 @@ jobs:
           echo "### Results" >> $GITHUB_STEP_SUMMARY
           echo "- Release page: ${{ steps.publish-github-release.outputs.release-url }}" >> $GITHUB_STEP_SUMMARY
 
-  # Step 4: Release in Jira
+  # This job unfreezes the specified branch after the GitHub release is published.
+  unfreeze-branch:
+    name: Unfreeze ${{ inputs.branch }} branch
+    if: ${{ inputs.freeze-branch }}
+    runs-on: ${{ inputs.runner-environment }}
+    needs: [ publish-github-release ]
+    permissions:
+      id-token: write
+    steps:
+      - *freeze-branch-secrets
+      - *freeze-branch-toggle
+      - name: Summary
+        if: ${{ inputs.verbose }}
+        shell: bash
+        env:
+          BRANCH: ${{ inputs.branch }}
+          SLACK_CHANNEL: ${{ inputs.slack-channel || 'not set' }}
+        run: |
+          echo "## 🔓 Unfreeze Branch" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### What happened" >> $GITHUB_STEP_SUMMARY
+          echo "- Unlocked branch pattern \`$BRANCH\` after publishing the GitHub release." >> $GITHUB_STEP_SUMMARY
+          echo "- Notifications sent to Slack channel: \`$SLACK_CHANNEL\`." >> $GITHUB_STEP_SUMMARY
+
   # This step releases the version in Jira and moves the release ticket to the "Technical Release Done" status.
   # It outputs the new version name and integration ticket keys and URLs.
   release-in-jira:
@@ -309,7 +374,6 @@ jobs:
           echo "### Results" >> $GITHUB_STEP_SUMMARY
           echo "- New Jira version: \`${{ steps.create-jira-version.outputs.jira-new-version-name }}\`." >> $GITHUB_STEP_SUMMARY
 
-  # Step 5: Create Integration Tickets
   # This step creates integration tickets in various Jira projects based on the inputs provided.
   # It creates tickets for SLVS, SLVSCODE, SLE, SLI, SQC, and SQS as specified.
   # It outputs the integration ticket keys for SQC and SQS for further use.
@@ -422,7 +486,6 @@ jobs:
           if [ "$SQC_INTEGRATION" = "true" ]; then echo "- SQC ticket \`${{ steps.create-sqc-ticket.outputs.ticket-key }}\` — ${{ steps.create-sqc-ticket.outputs.ticket-url }}" >> $GITHUB_STEP_SUMMARY; fi
           if [ "$SQS_INTEGRATION" = "true" ]; then echo "- SQS ticket \`${{ steps.create-sqs-ticket.outputs.ticket-key }}\` — ${{ steps.create-sqs-ticket.outputs.ticket-url }}" >> $GITHUB_STEP_SUMMARY; fi
 
-  # Step 6: Update Analyzers in SQS and SQC
   # This step updates the analyzers in SQS and SQC by creating pull requests based on the integration tickets created in the previous step.
   # It outputs the pull request URLs for SQS and SQC for further use.
   update-analyzers:
@@ -485,7 +548,6 @@ jobs:
           if [ "$SQS_INTEGRATION" = "true" ]; then echo "- SQS PR: ${{ steps.update-sqs.outputs.pull-request-url }}" >> $GITHUB_STEP_SUMMARY; fi
           if [ "$SQC_INTEGRATION" = "true" ]; then echo "- SQC PR: ${{ steps.update-sqc.outputs.pull-request-url }}" >> $GITHUB_STEP_SUMMARY; fi
 
-  # Step 7: Summarize Release
   # This step summarizes the results of the entire release process.
   # It checks the outcomes of all previous steps and generates a summary indicating whether the release was
   # successful or failed, along with relevant links and information.
