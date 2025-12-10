@@ -521,17 +521,17 @@ jobs:
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          echo "## Key Links" >> $GITHUB_STEP_SUMMARY
-          echo "- Released Version: \`$RELEASE_VERSION\`" >> $GITHUB_STEP_SUMMARY
-          echo "- New Version: \`$NEW_VERSION\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Jira Release: $JIRA_RELEASE_URL" >> $GITHUB_STEP_SUMMARY
-          echo "- Release Ticket: $RELEASE_TICKET_URL" >> $GITHUB_STEP_SUMMARY
-          echo "- GitHub Release: $GITHUB_RELEASE_URL" >> $GITHUB_STEP_SUMMARY
-          echo "- SQS Integration Ticket: $SQS_TICKET_URL" >> $GITHUB_STEP_SUMMARY
-          echo "- SQC Integration Ticket: $SQC_TICKET_URL" >> $GITHUB_STEP_SUMMARY
-          echo "- SQS Analyzer PR: $SQS_PR_URL" >> $GITHUB_STEP_SUMMARY
-          echo "- SQC Analyzer PR: $SQC_PR_URL" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          - Released Version: \`$RELEASE_VERSION\`
+          - New Version: \`$NEW_VERSION\`
+          - Jira Release: $JIRA_RELEASE_URL
+          - Release Ticket: $RELEASE_TICKET_URL
+          - GitHub Release: $GITHUB_RELEASE_URL
+          - SQS Integration Ticket: $SQS_TICKET_URL
+          - SQC Integration Ticket: $SQC_TICKET_URL
+          - SQS Analyzer PR: $SQS_PR_URL
+          - SQC Analyzer PR: $SQC_PR_URL
+          EOF
 
           echo "## Guidance" >> $GITHUB_STEP_SUMMARY
           if [[ "$ALL_SUCCESS" == "true" ]]; then
