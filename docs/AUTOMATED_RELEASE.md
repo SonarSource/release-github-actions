@@ -43,7 +43,7 @@ This workflow composes several actions from this repository:
 | `use-jira-sandbox`           | Use Jira sandbox                                                                                                | No       | `true`       |
 | `is-draft-release`           | Create the GitHub release as a draft                                                                            | No       | `true`       |
 | `pm-email`                   | Product manager email to assign the release ticket after technical release                                      | Yes      | -            |
-| `release-automation-secret-name` | Secret name used to create analyzer update PRs                                                              | No       | -            |
+| `release-automation-secret-name` | Secret name used to create analyzer update PRs. If omitted, defaults to `sonar-{plugin-name}-release-automation`. | No       | -            |
 | `short-description`          | Brief summary for release and integration tickets                                                               | Yes      | -            |
 | `rule-props-changed`         | Whether rule properties changed (`true`/`false`); mapped to Yes/No in the release ticket                        | Yes      | -            |
 | `branch`                     | Branch to release from                                                                                          | Yes      | `master`     |
@@ -107,7 +107,7 @@ jobs:
     with:
       jira-project-key: CSD
       project-name: "Cloud Security"
-      plugin-name: "sonar-secrets"
+      plugin-name: "csd"
       pm-email: "pm@example.com"
       short-description: ${{ inputs.short-description }}
       rule-props-changed: "false"
@@ -115,7 +115,6 @@ jobs:
       new-version: ${{ inputs.new-version }}
       sqs-integration: true
       sqc-integration: true
-      release-automation-secret-name: "sonar-csd-release-automation"
       slack-channel: "release-notifications"
       verbose: ${{ inputs.verbose }}
 ```
@@ -128,7 +127,7 @@ jobs:
   - Unlock the branch after the GitHub release is published
   - Send lock/unlock notifications to the configured `slack-channel` if provided
 - When `release-notes` is empty, Jira release notes are fetched and used.
-- Integration tickets and analyzer update PRs are created only if their respective flags are enabled and prerequisites are met (e.g., secret name for PR creation).
+- Integration tickets and analyzer update PRs are created only if their respective flags are enabled and prerequisites are met.
 - Summaries:
   - Each job includes a "Summary" step that writes to `$GITHUB_STEP_SUMMARY` only when `verbose: true`.
 - Permissions and environments are scoped per job to minimize required privileges.
@@ -136,6 +135,6 @@ jobs:
 ## Troubleshooting
 
 - Ensure the caller repository has appropriate permissions to use this workflow and to write releases and PRs.
-- Verify that `release-automation-secret-name` exists and grants access for creating analyzer update PRs.
+- Verify that `release-automation-secret-name` exists and grants access for creating analyzer update PRs. If omitted, ensure the default secret (`sonar-{plugin-name}-release-automation`) exists and is configured with the required permissions.
 - Check job logs if the final summary indicates failure; the per-job logs contain detailed outputs even when `verbose` is disabled.
 - Ensure the `Jira Tech User GitHub` is an Administrator on the target Jira project; admin rights are required to release the Jira version and to create a new version.
