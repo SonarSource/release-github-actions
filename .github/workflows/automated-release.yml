@@ -274,10 +274,6 @@ jobs:
       id-token: write
     outputs:
       new-version: ${{ steps.create-jira-version.outputs.jira-new-version-name }}
-      sqc-ticket-key: ${{ steps.create-sc-ticket.outputs.ticket-key }}
-      sqc-ticket-url: ${{ steps.create-sc-ticket.outputs.ticket-url }}
-      sqs-ticket-key: ${{ steps.create-sonar-ticket.outputs.ticket-key }}
-      sqs-ticket-url: ${{ steps.create-sonar-ticket.outputs.ticket-url }}
     steps:
       - name: Release in Jira
         uses: SonarSource/release-github-actions/release-jira-version@v1
@@ -327,7 +323,9 @@ jobs:
       id-token: write
     outputs:
       sqc-ticket-key: ${{ steps.create-sqc-ticket.outputs.ticket-key }}
+      sqc-ticket-url: ${{ steps.create-sqs-ticket.outputs.ticket-url }}
       sqs-ticket-key: ${{ steps.create-sqs-ticket.outputs.ticket-key }}
+      sqs-ticket-url: ${{ steps.create-sqs-ticket.outputs.ticket-url }}
     runs-on: ${{ inputs.runner-environment }}
     steps:
       - name: Create SLVS Ticket
@@ -519,8 +517,8 @@ jobs:
           echo "- Jira Release: ${{ needs.prepare-release.outputs.jira-release-url }}" >> $GITHUB_STEP_SUMMARY
           echo "- Release Ticket: ${{ needs.create-release-ticket.outputs.release-ticket-url }}" >> $GITHUB_STEP_SUMMARY
           echo "- GitHub Release: ${{ needs.publish-github-release.outputs.github-release-url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- SQS Integration Ticket: ${{ needs.release-in-jira.outputs.sqs-ticket-url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- SQC Integration Ticket: ${{ needs.release-in-jira.outputs.sqc-ticket-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- SQS Integration Ticket: ${{ needs.create-integration-tickets.outputs.sqs-ticket-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- SQC Integration Ticket: ${{ needs.create-integration-tickets.outputs.sqc-ticket-url }}" >> $GITHUB_STEP_SUMMARY
           echo "- SQS Analyzer PR: ${{ needs.update-analyzers.outputs.sqs-pull-request-url }}" >> $GITHUB_STEP_SUMMARY
           echo "- SQC Analyzer PR: ${{ needs.update-analyzers.outputs.sqc-pull-request-url }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
