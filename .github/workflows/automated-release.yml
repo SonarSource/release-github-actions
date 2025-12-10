@@ -274,10 +274,6 @@ jobs:
       id-token: write
     outputs:
       new-version: ${{ steps.create-jira-version.outputs.jira-new-version-name }}
-      sqc-ticket-key: ${{ steps.create-sc-ticket.outputs.ticket-key }}
-      sqc-ticket-url: ${{ steps.create-sc-ticket.outputs.ticket-url }}
-      sqs-ticket-key: ${{ steps.create-sonar-ticket.outputs.ticket-key }}
-      sqs-ticket-url: ${{ steps.create-sonar-ticket.outputs.ticket-url }}
     steps:
       - name: Release in Jira
         uses: SonarSource/release-github-actions/release-jira-version@v1
@@ -300,7 +296,7 @@ jobs:
         if: ${{ inputs.verbose }}
         shell: bash
         env:
-          NEW_VERSION: ${{ inputs.new-version }}
+          NEW_VERSION: ${{ inputs.new-version || 'not specified, autoincrement minor version' }}
           PM_EMAIL: ${{ inputs.pm-email }}
         run: |
           echo "## 🗂️ Release in Jira" >> $GITHUB_STEP_SUMMARY
@@ -327,7 +323,9 @@ jobs:
       id-token: write
     outputs:
       sqc-ticket-key: ${{ steps.create-sqc-ticket.outputs.ticket-key }}
+      sqc-ticket-url: ${{ steps.create-sqc-ticket.outputs.ticket-url }}
       sqs-ticket-key: ${{ steps.create-sqs-ticket.outputs.ticket-key }}
+      sqs-ticket-url: ${{ steps.create-sqs-ticket.outputs.ticket-url }}
     runs-on: ${{ inputs.runner-environment }}
     steps:
       - name: Create SLVS Ticket
@@ -430,7 +428,7 @@ jobs:
   update-analyzers:
     name: Update Analyzers in SQS and SQC
     runs-on: ${{ inputs.runner-environment }}
-    needs: [ create-integration-tickets ]
+    needs: [ prepare-release, create-integration-tickets ]
     if: ${{ (inputs.sqs-integration || inputs.sqc-integration) && inputs.release-automation-secret-name != '' }}
     permissions:
       id-token: write
@@ -501,6 +499,16 @@ jobs:
     steps:
       - name: Post Summary to Workflow
         shell: bash
+        env:
+          RELEASE_VERSION: ${{ needs.prepare-release.outputs.release-version }}
+          NEW_VERSION: ${{ needs.release-in-jira.outputs.new-version || 'not created' }}
+          JIRA_RELEASE_URL: ${{ needs.prepare-release.outputs.jira-release-url || 'not resolved' }}
+          RELEASE_TICKET_URL: ${{ needs.create-release-ticket.outputs.release-ticket-url || 'not created' }}
+          GITHUB_RELEASE_URL: ${{ needs.publish-github-release.outputs.github-release-url || 'not created' }}
+          SQS_TICKET_URL: ${{ needs.create-integration-tickets.outputs.sqs-ticket-url || 'not created' }}
+          SQC_TICKET_URL: ${{ needs.create-integration-tickets.outputs.sqc-ticket-url || 'not created' }}
+          SQS_PR_URL: ${{ needs.update-analyzers.outputs.sqs-pull-request-url || 'not created' }}
+          SQC_PR_URL: ${{ needs.update-analyzers.outputs.sqc-pull-request-url || 'not created' }}
         run: |
           ALL_SUCCESS=$(echo '${{ toJson(needs) }}' | jq -r 'to_entries | all(.value.result == "success")')
           
@@ -513,17 +521,17 @@ jobs:
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          echo "## Key Links" >> $GITHUB_STEP_SUMMARY
-          echo "- Released Version: \`${{ needs.prepare-release.outputs.release-version }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- New Version: \`${{ needs.release-in-jira.outputs.new-version }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Jira Release: ${{ needs.prepare-release.outputs.jira-release-url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Release Ticket: ${{ needs.create-release-ticket.outputs.release-ticket-url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- GitHub Release: ${{ needs.publish-github-release.outputs.github-release-url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- SQS Integration Ticket: ${{ needs.release-in-jira.outputs.sqs-ticket-url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- SQC Integration Ticket: ${{ needs.release-in-jira.outputs.sqc-ticket-url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- SQS Analyzer PR: ${{ needs.update-analyzers.outputs.sqs-pull-request-url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- SQC Analyzer PR: ${{ needs.update-analyzers.outputs.sqc-pull-request-url }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          - Released Version: \`$RELEASE_VERSION\`
+          - New Version: \`$NEW_VERSION\`
+          - Jira Release: $JIRA_RELEASE_URL
+          - Release Ticket: $RELEASE_TICKET_URL
+          - GitHub Release: $GITHUB_RELEASE_URL
+          - SQS Integration Ticket: $SQS_TICKET_URL
+          - SQC Integration Ticket: $SQC_TICKET_URL
+          - SQS Analyzer PR: $SQS_PR_URL
+          - SQC Analyzer PR: $SQC_PR_URL
+          EOF
 
           echo "## Guidance" >> $GITHUB_STEP_SUMMARY
           if [[ "$ALL_SUCCESS" == "true" ]]; then
