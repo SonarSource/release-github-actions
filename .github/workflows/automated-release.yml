@@ -38,7 +38,7 @@ on:
         required: true
         type: string
       release-automation-secret-name:
-        description: "Release automation secret name to create integration PRs in SQS and SQC. If not provided uses plugin-name as default."
+        description: "Release automation secret name to create integration PRs in SQS and SQC. If not provided uses `sonar-{plugin-name}-release-automation` as default."
         required: false
         type: string
       short-description:
