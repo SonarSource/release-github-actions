@@ -4,19 +4,19 @@ inputs:
   version:
     description: The new version (without -SNAPSHOT)
     required: true
-  exluded-modules:
+  excluded-modules:
     description: A comma-separated list of modules to exclude from version bumping
     required: false
 
 runs:
   using: 'composite'
   steps:
-  - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+  - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
   - name: Bump version
     shell: bash
     env:
       VERSION: "${{ inputs.version }}-SNAPSHOT"
-      EXCLUDED_MODULES: ${{ inputs.exluded-modules || '' }}
+      EXCLUDED_MODULES: ${{ inputs.excluded-modules || '' }}
     run: |
       bash "${GITHUB_ACTION_PATH}/bump_version.sh"
   - name: Create Pull Request for Version Bump
@@ -32,11 +32,8 @@ runs:
       branch: bot/prepare-next-development-iteration-${{ inputs.version }}
       labels: skip-qa
       reviewers: ${{ github.actor }}
-  - name: Set output for PR URL
-    shell: bash
-    run: echo "pull-request-url=${{ steps.create-pr.outputs.pull-request-url }}" >> "$GITHUB_OUTPUT"
 
 outputs:
   pull-request-url:
     description: URL of the version bump pull request
-    value: ${{ steps.cpr.outputs.pull-request-url }}
+    value: ${{ steps.create-pr.outputs.pull-request-url }}
