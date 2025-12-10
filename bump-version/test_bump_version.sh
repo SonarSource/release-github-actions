@@ -13,11 +13,12 @@ assert() {
     echo "ASSERT FAIL: ${msg}" >&2
     exit 1
   fi
+  return 0
 }
 
 # Create temp workspace
 TMPDIR="$(mktemp -d)"
-cleanup() { rm -rf "$TMPDIR"; }
+cleanup() { rm -rf "$TMPDIR"; return 0; }
 trap cleanup EXIT
 
 # Scaffold files
