@@ -296,7 +296,7 @@ jobs:
         if: ${{ inputs.verbose }}
         shell: bash
         env:
-          NEW_VERSION: ${{ inputs.new-version }}
+          NEW_VERSION: ${{ inputs.new-version || 'not specified, autoincrement minor version' }}
           PM_EMAIL: ${{ inputs.pm-email }}
         run: |
           echo "## 🗂️ Release in Jira" >> $GITHUB_STEP_SUMMARY
@@ -323,7 +323,7 @@ jobs:
       id-token: write
     outputs:
       sqc-ticket-key: ${{ steps.create-sqc-ticket.outputs.ticket-key }}
-      sqc-ticket-url: ${{ steps.create-sqs-ticket.outputs.ticket-url }}
+      sqc-ticket-url: ${{ steps.create-sqc-ticket.outputs.ticket-url }}
       sqs-ticket-key: ${{ steps.create-sqs-ticket.outputs.ticket-key }}
       sqs-ticket-url: ${{ steps.create-sqs-ticket.outputs.ticket-url }}
     runs-on: ${{ inputs.runner-environment }}
