@@ -19,10 +19,10 @@ runs:
       EXCLUDED_MODULES: ${{ inputs.exluded-modules || '' }}
     run: |
       bash "${GITHUB_ACTION_PATH}/bump_version.sh"
-
-  - uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7
+  - name: Create Pull Request for Version Bump
+    uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7
+    id: create-pr
     env:
-
       TITLE_MESSAGE: Prepare next development iteration ${{ inputs.version }}
     with:
       author: ${{ github.actor }} <${{ github.actor }}>
@@ -32,3 +32,11 @@ runs:
       branch: bot/prepare-next-development-iteration-${{ inputs.version }}
       labels: skip-qa
       reviewers: ${{ github.actor }}
+  - name: Set output for PR URL
+    shell: bash
+    run: echo "pull-request-url=${{ steps.create-pr.outputs.pull-request-url }}" >> "$GITHUB_OUTPUT"
+
+outputs:
+  pull-request-url:
+    description: URL of the version bump pull request
+    value: ${{ steps.cpr.outputs.pull-request-url }}
