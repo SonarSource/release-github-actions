@@ -38,7 +38,7 @@ on:
         required: true
         type: string
       release-automation-secret-name:
-        description: "Release automation secret name to create integration PRs in SQS and SQC"
+        description: "Release automation secret name to create integration PRs in SQS and SQC. If not provided uses `sonar-{plugin-name}-release-automation` as default."
         required: false
         type: string
       short-description:
@@ -507,7 +507,7 @@ jobs:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           ticket-key: ${{ needs.create-integration-tickets.outputs.sqs-ticket-key }}
           plugin-name: ${{ inputs.plugin-name }}
-          secret-name: ${{ inputs.release-automation-secret-name }}
+          secret-name: ${{ inputs.release-automation-secret-name || format('sonar-{0}-release-automation', inputs.plugin-name) }}
           plugin-artifacts: ${{inputs.plugin-artifacts-sqs || inputs.plugin-name }}
           draft: ${{ inputs.is-draft-release }}
           reviewers: ${{ github.actor }}
@@ -520,7 +520,7 @@ jobs:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           ticket-key: ${{ needs.create-integration-tickets.outputs.sqc-ticket-key }}
           plugin-name: ${{ inputs.plugin-name }}
-          secret-name: ${{ inputs.release-automation-secret-name }}
+          secret-name: ${{ inputs.release-automation-secret-name || format('sonar-{0}-release-automation', inputs.plugin-name) }}
           plugin-artifacts: ${{inputs.plugin-artifacts-sqc || inputs.plugin-name }}
           draft: ${{ inputs.is-draft-release }}
           reviewers: ${{ github.actor }}
