@@ -6,14 +6,15 @@ This reusable GitHub Actions workflow automates the end-to-end release process a
 
 The workflow orchestrates these steps:
 
-1. Determine the release version and Jira version name
-2. Optionally generate Jira release notes if not provided
-3. Create a Jira release ticket
-4. Publish a GitHub release (draft or final)
-5. Release the current Jira version and create the next version in Jira
-6. Optionally create integration tickets (SLVS, SLVSCODE, SLE, SLI, SQC, SQS)
-7. Optionally open analyzer update PRs in SQS and SQC
-8. Optionally post per-job and final workflow summaries when `verbose` is enabled
+1. Optionally freeze (lock) the target branch at the start of the release
+2. Determine the release version and Jira version name
+3. Optionally generate Jira release notes if not provided
+4. Create a Jira release ticket
+5. Publish a GitHub release (draft or final)
+6. Release the current Jira version and create the next version in Jira
+7. Optionally create integration tickets (SLVS, SLVSCODE, SLE, SLI, SQC, SQS)
+8. Optionally open analyzer update PRs in SQS and SQC
+9. Optionally post per-job and final workflow summaries when `verbose` is enabled
 
 ## Dependencies
 
@@ -28,6 +29,7 @@ This workflow composes several actions from this repository:
 - `SonarSource/release-github-actions/create-integration-ticket`
 - `SonarSource/release-github-actions/update-analyzer`
 - `SonarSource/release-github-actions/update-release-ticket-status`
+- Branch lock/unlock via `sonarsource/gh-action-lt-backlog/ToggleLockBranch`
 
 ## Inputs
 
@@ -57,6 +59,8 @@ This workflow composes several actions from this repository:
 | `runner-environment`         | Runner labels/environment                                                                                        | No       | `sonar-m`    |
 | `release-process`            | Release process documentation URL                                                                               | No       | General page |
 | `verbose`                    | When `true`, posts per-job summaries and a final run summary                                                    | No       | `false`      |
+| `freeze-branch`              | When `true`, locks the target branch during the release and unlocks it after publishing                         | No       | `true`       |
+| `slack-channel`              | Slack channel to notify when locking/unlocking the branch                                                       | No       | -            |
 
 ## Outputs
 
@@ -112,11 +116,17 @@ jobs:
       sqs-integration: true
       sqc-integration: true
       release-automation-secret-name: "sonar-csd-release-automation"
+      slack-channel: "release-notifications"
       verbose: ${{ inputs.verbose }}
 ```
 
 ## Notes
 
+- When `freeze-branch: true`, the workflow will:
+  - Lock the specified branch at the start of the release
+  - Proceed with the release steps
+  - Unlock the branch after the GitHub release is published
+  - Send lock/unlock notifications to the configured `slack-channel` if provided
 - When `release-notes` is empty, Jira release notes are fetched and used.
 - Integration tickets and analyzer update PRs are created only if their respective flags are enabled and prerequisites are met (e.g., secret name for PR creation).
 - Summaries:
