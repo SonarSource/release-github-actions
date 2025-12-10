@@ -4,10 +4,10 @@ This action updates the version in Maven and Gradle files across your repository
 
 ## Inputs
 
-| Name              | Description                                                      | Required | Default |
-|-------------------|------------------------------------------------------------------|----------|------|
-| version           | The new version (without `-SNAPSHOT`)                            | Yes      |      |
-| exluded-modules   | Comma-separated list of modules to exclude from version bumping   | No       |      |
+| Name             | Description                                                      | Required | Default |
+|------------------|------------------------------------------------------------------|----------|------|
+| version          | The new version (without `-SNAPSHOT`)                            | Yes      |      |
+| excluded-modules | Comma-separated list of modules to exclude from version bumping   | No       |      |
 
 ## Outputs
 
@@ -20,10 +20,10 @@ This action updates the version in Maven and Gradle files across your repository
 ```yaml
 - name: Bump version
   id: bump
-  uses: SonarSource/release-github-action/bump-version@v1
+  uses: SonarSource/release-github-actions/bump-version@v1
   with:
     version: '1.2.3'
-    exluded-modules: 'moduleA,moduleB'
+    excluded-modules: 'moduleA,moduleB'
 
 - name: Show PR URL
   run: echo "PR URL: ${{ steps.bump.outputs.pull-request-url }}"
