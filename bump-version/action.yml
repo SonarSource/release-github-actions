@@ -21,11 +21,14 @@ runs:
       bash "${GITHUB_ACTION_PATH}/bump_version.sh"
 
   - uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7
+    env:
+
+      TITLE_MESSAGE: Prepare next development iteration ${{ inputs.version }}
     with:
       author: ${{ github.actor }} <${{ github.actor }}>
-      commit-message: Prepare next development iteration
-      title: Prepare next development iteration
-      branch: bot/bump-project-version
-      branch-suffix: timestamp
+      commit-message: ${{ env.TITLE_MESSAGE }}
+      title: ${{ env.TITLE_MESSAGE }}
       base: master
+      branch: bot/prepare-next-development-iteration-${{ inputs.version }}
+      labels: skip-qa
       reviewers: ${{ github.actor }}
