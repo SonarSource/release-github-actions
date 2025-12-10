@@ -399,17 +399,15 @@ jobs:
       - name: Summary
         if: ${{ inputs.verbose }}
         shell: bash
-        env:
-          NEW_VERSION: ${{ needs.release-in-jira.outputs.new-version }}
         run: |
           echo "## 🚀 Prepare Next Development Iteration" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### What happened" >> $GITHUB_STEP_SUMMARY
-          echo "- Bumped the version to: \`$NEW_VERSION\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Bumped the version to: \`${{ needs.release-in-jira.outputs.new-version }}\`." >> $GITHUB_STEP_SUMMARY
           echo "- Created a pull request to start the next development iteration." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Results" >> $GITHUB_STEP_SUMMARY
-          echo "- Pull request: [${{ steps.bump-version.outputs.pull-request-url }}](${{ steps.bump-version.outputs.pull-request-url }})" >> $GITHUB_STEP_SUMMARY
+          echo "- Pull request: ${{ steps.bump-version.outputs.pull-request-url }}" >> $GITHUB_STEP_SUMMARY
 
   # This step creates integration tickets in various Jira projects based on the inputs provided.
   # It creates tickets for SLVS, SLVSCODE, SLE, SLI, SQC, and SQS as specified.
