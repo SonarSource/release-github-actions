@@ -120,6 +120,11 @@ on:
         description: "Slack channel for notifications"
         required: false
         type: string
+      bump-version:
+        description: "Should the version be bumped after the release"
+        required: false
+        type: boolean
+        default: true
 
     outputs:
       new-version:
@@ -373,6 +378,38 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Results" >> $GITHUB_STEP_SUMMARY
           echo "- New Jira version: \`${{ steps.create-jira-version.outputs.jira-new-version-name }}\`." >> $GITHUB_STEP_SUMMARY
+
+   # This step bumps the version in the repository and creates a pull request for the next development iteration.
+  # It uses the new version determined in the Jira release step.
+  bump-version:
+    name: Bump Version
+    runs-on: ${{ inputs.runner-environment }}
+    needs: [ release-in-jira ]
+    if: ${{ inputs.bump-version }}
+    permissions:
+      contents: write # write for peter-evans/create-pull-request, read for actions/checkout
+      pull-requests: write # write for peter-evans/create-pull-request
+    steps:
+      - name: Bump Version and Create Pull Request
+        id: bump-version
+        uses: SonarSource/release-github-actions/bump-version@nw/create-bump-version-action
+        with:
+          version: ${{ needs.release-in-jira.outputs.new-version }}
+
+      - name: Summary
+        if: ${{ inputs.verbose }}
+        shell: bash
+        env:
+          NEW_VERSION: ${{ needs.release-in-jira.outputs.new-version }}
+        run: |
+          echo "## 🚀 Prepare Next Development Iteration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### What happened" >> $GITHUB_STEP_SUMMARY
+          echo "- Bumped the version to: \`$NEW_VERSION\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Created a pull request to start the next development iteration." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Pull request: [${{ steps.bump-version.outputs.pull-request-url }}](${{ steps.bump-version.outputs.pull-request-url }})" >> $GITHUB_STEP_SUMMARY
 
   # This step creates integration tickets in various Jira projects based on the inputs provided.
   # It creates tickets for SLVS, SLVSCODE, SLE, SLI, SQC, and SQS as specified.
