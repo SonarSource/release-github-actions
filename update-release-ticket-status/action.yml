@@ -46,7 +46,7 @@ runs:
         ASSIGNEE_INPUT: ${{ inputs.assignee }}
         TICKET_KEY: ${{ inputs.release-ticket-key }}
         STATUS: ${{ inputs.status }}
-        JIRA_URL: "https://sonarsource${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && '-sandbox-608' }}.atlassian.net/"
+        JIRA_URL: "https://sonarsource${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && '-sandbox-608' || '' }}.atlassian.net/"
       run: |
         ASSIGNEE_FLAG=""
         if [[ -n "$ASSIGNEE_INPUT" ]]; then
