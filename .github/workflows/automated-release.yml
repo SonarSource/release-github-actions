@@ -492,7 +492,7 @@ jobs:
     name: Update Analyzers in SQS and SQC
     runs-on: ${{ inputs.runner-environment }}
     needs: [ prepare-release, create-integration-tickets ]
-    if: ${{ (inputs.sqs-integration || inputs.sqc-integration) && inputs.release-automation-secret-name != '' }}
+    if: ${{ (inputs.sqs-integration || inputs.sqc-integration) }}
     permissions:
       id-token: write
     outputs:
