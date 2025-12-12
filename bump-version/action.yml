@@ -10,6 +10,13 @@ inputs:
   excluded-modules:
     description: A comma-separated list of modules to exclude from version bumping
     required: false
+  base-branch:
+    description: The base branch for the pull request
+    required: false
+    default: master
+  pr-labels:
+    description: Comma-separated list of labels to add to the pull request
+    required: false
 
 runs:
   using: 'composite'
@@ -29,17 +36,17 @@ runs:
       secrets: |
         development/github/token/SonarSource-${{ inputs.secret-name}} token | GITHUB_TOKEN;
   - name: Create Pull Request for Version Bump
-    uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7
+    uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
     id: create-pr
     env:
       TITLE_MESSAGE: Prepare next development iteration ${{ inputs.version }}
     with:
-      author: ${{ github.actor }} <${{ github.actor }}>
+      author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
       commit-message: ${{ env.TITLE_MESSAGE }}
       title: ${{ env.TITLE_MESSAGE }}
-      base: master
+      base: ${{ inputs.base-branch }}
       branch: bot/prepare-next-development-iteration-${{ inputs.version }}
-      labels: skip-qa
+      labels: ${{ inputs.pr-labels }}
       reviewers: ${{ github.actor }}
       token: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
 
