@@ -12,9 +12,10 @@ The workflow orchestrates these steps:
 4. Create a Jira release ticket
 5. Publish a GitHub release (draft or final)
 6. Release the current Jira version and create the next version in Jira
-7. Optionally create integration tickets (SLVS, SLVSCODE, SLE, SLI, SQC, SQS)
-8. Optionally open analyzer update PRs in SQS and SQC
-9. Optionally post per-job and final workflow summaries when `verbose` is enabled
+7. Optionally bump the version in the repository and open a PR for the next development iteration
+8. Optionally create integration tickets (SLVS, SLVSCODE, SLE, SLI, SQC, SQS)
+9. Optionally open analyzer update PRs in SQS and SQC
+10. Optionally post per-job and final workflow summaries when `verbose` is enabled
 
 ## Dependencies
 
@@ -61,6 +62,7 @@ This workflow composes several actions from this repository:
 | `verbose`                    | When `true`, posts per-job summaries and a final run summary                                                    | No       | `false`      |
 | `freeze-branch`              | When `true`, locks the target branch during the release and unlocks it after publishing                         | No       | `true`       |
 | `slack-channel`              | Slack channel to notify when locking/unlocking the branch                                                       | No       | -            |
+| `bump-version`               | When `true`, bumps the version and opens a PR for the next development iteration after the Jira release is done | No       | `true`       |
 
 ## Outputs
 
@@ -127,6 +129,10 @@ jobs:
   - Unlock the branch after the GitHub release is published
   - Send lock/unlock notifications to the configured `slack-channel` if provided
 - When `release-notes` is empty, Jira release notes are fetched and used.
+- When `bump-version: true` (the default), the workflow will:
+  - Run the **Bump Version** job after the Jira release job completes successfully
+  - Bump the version in the repository to the new Jira version
+  - Open a pull request to start the next development iteration
 - Integration tickets and analyzer update PRs are created only if their respective flags are enabled and prerequisites are met.
 - Summaries:
   - Each job includes a "Summary" step that writes to `$GITHUB_STEP_SUMMARY` only when `verbose: true`.
