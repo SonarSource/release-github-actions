@@ -125,6 +125,10 @@ on:
         required: false
         type: boolean
         default: true
+      bump-version-pr-labels:
+        description: "Labels to add to the bump version PR"
+        required: false
+        type: string
 
     outputs:
       new-version:
@@ -398,6 +402,8 @@ jobs:
         with:
           version: ${{ needs.release-in-jira.outputs.new-version }}
           secret-name: ${{ env.GH_TOKEN_SECRET_NAME }}
+          base-branch: ${{ inputs.branch }}
+          pr-labels: ${{ inputs.bump-version-pr-labels }}
 
 
       - name: Summary
