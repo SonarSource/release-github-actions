@@ -133,6 +133,7 @@ on:
 env:
   JIRA_PROJECT_KEY: ${{ inputs.jira-project-key }}
   USE_JIRA_SANDBOX: ${{ inputs.use-jira-sandbox == true && 'true' || 'false' }}
+  GH_TOKEN_SECRET_NAME: ${{ inputs.release-automation-secret-name != '' && inputs.release-automation-secret-name || format('sonar-{}-release-automation', inputs.plugin-name) }}
 
 jobs:
   # This job freezes the specified branch to prevent changes during the release process.
@@ -395,6 +396,8 @@ jobs:
         uses: SonarSource/release-github-actions/bump-version@nw/create-bump-version-action
         with:
           version: ${{ needs.release-in-jira.outputs.new-version }}
+          secret-name: ${{ env.GH_TOKEN_SECRET_NAME }}
+
 
       - name: Summary
         if: ${{ inputs.verbose }}
@@ -542,7 +545,7 @@ jobs:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           ticket-key: ${{ needs.create-integration-tickets.outputs.sqs-ticket-key }}
           plugin-name: ${{ inputs.plugin-name }}
-          secret-name: ${{ inputs.release-automation-secret-name || format('sonar-{0}-release-automation', inputs.plugin-name) }}
+          secret-name: ${{ env.GH_TOKEN_SECRET_NAME }}
           plugin-artifacts: ${{inputs.plugin-artifacts-sqs || inputs.plugin-name }}
           draft: ${{ inputs.is-draft-release }}
           reviewers: ${{ github.actor }}
@@ -555,7 +558,7 @@ jobs:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           ticket-key: ${{ needs.create-integration-tickets.outputs.sqc-ticket-key }}
           plugin-name: ${{ inputs.plugin-name }}
-          secret-name: ${{ inputs.release-automation-secret-name || format('sonar-{0}-release-automation', inputs.plugin-name) }}
+          secret-name: ${{ env.GH_TOKEN_SECRET_NAME }}
           plugin-artifacts: ${{inputs.plugin-artifacts-sqc || inputs.plugin-name }}
           draft: ${{ inputs.is-draft-release }}
           reviewers: ${{ github.actor }}
