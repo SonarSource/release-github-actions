@@ -63,6 +63,7 @@ This workflow composes several actions from this repository:
 | `freeze-branch`              | When `true`, locks the target branch during the release and unlocks it after publishing                         | No       | `true`       |
 | `slack-channel`              | Slack channel to notify when locking/unlocking the branch                                                       | No       | -            |
 | `bump-version`               | When `true`, bumps the version and opens a PR for the next development iteration after the Jira release is done | No       | `true`       |
+| `bump-version-pr-labels`     | Comma-separated list of labels to apply to the bump-version PR (e.g. `automated,bump-version`)                   | No       | -            |
 
 ## Outputs
 
@@ -132,7 +133,7 @@ jobs:
 - When `bump-version: true` (the default), the workflow will:
   - Run the **Bump Version** job after the Jira release job completes successfully
   - Bump the version in the repository to the new Jira version
-  - Open a pull request to start the next development iteration
+  - Open a pull request to start the next development iteration (optionally labeled with `bump-version-pr-labels` if provided)
 - Integration tickets and analyzer update PRs are created only if their respective flags are enabled and prerequisites are met.
 - Summaries:
   - Each job includes a "Summary" step that writes to `$GITHUB_STEP_SUMMARY` only when `verbose: true`.
