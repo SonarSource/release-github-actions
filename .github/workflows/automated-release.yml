@@ -133,7 +133,7 @@ on:
 env:
   JIRA_PROJECT_KEY: ${{ inputs.jira-project-key }}
   USE_JIRA_SANDBOX: ${{ inputs.use-jira-sandbox == true && 'true' || 'false' }}
-  GH_TOKEN_SECRET_NAME: ${{ inputs.release-automation-secret-name != '' && inputs.release-automation-secret-name || format('sonar-' , inputs.plugin-name , '-release-automation') }}
+  GH_TOKEN_SECRET_NAME: ${{ inputs.release-automation-secret-name || format('sonar-{0}-release-automation', inputs.plugin-name) }}
 
 jobs:
   # This job freezes the specified branch to prevent changes during the release process.
@@ -390,6 +390,7 @@ jobs:
     permissions:
       contents: write # write for peter-evans/create-pull-request, read for actions/checkout
       pull-requests: write # write for peter-evans/create-pull-request
+      id-token: write
     steps:
       - name: Bump Version and Create Pull Request
         id: bump-version
