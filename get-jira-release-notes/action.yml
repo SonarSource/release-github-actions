@@ -23,6 +23,9 @@ outputs:
   jira-release-url:
     description: 'The URL to the Jira release notes page.'
     value: ${{ steps.get_notes.outputs.jira-release-url }}
+  jira-release-id:
+    description: 'The unique ID of the Jira release.'
+    value: ${{ steps.get_notes.outputs.jira-release-id }}
 
 runs:
   using: "composite"
@@ -54,8 +57,8 @@ runs:
       env:
         JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
-        JIRA_PROD_URL: "https://sonarsource.atlassian.net/"
-        JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
+        ISSUE_TYPES: ${{ inputs.issue-types }}
+        JIRA_URL: "https://sonarsource${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && '-sandbox-608' || '' }}.atlassian.net/"
       run: |
         PROJECT_KEY="${{ inputs.jira-project-key || env.JIRA_PROJECT_KEY }}"
         VERSION_NAME="${{ inputs.jira-version-name || env.JIRA_VERSION_NAME }}"
@@ -68,6 +71,6 @@ runs:
         python ${{ github.action_path }}/get_jira_release_notes.py \
           --project-key="$PROJECT_KEY" \
           --version-name="$VERSION_NAME" \
-          --issue-types="${{ inputs.issue-types }}" \
-          --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
-          | tee -a $GITHUB_OUTPUT | sed 's/^jira-release-url=/JIRA_RELEASE_URL=/' | sed 's/^release-notes<</RELEASE_NOTES<</' | sed 's/^jira-release-notes<</JIRA_RELEASE_NOTES<</' >> $GITHUB_ENV
+          --issue-types="$ISSUE_TYPES" \
+          --jira-url="$JIRA_URL" \
+          | tee -a $GITHUB_OUTPUT | sed 's/^jira-release-url=/JIRA_RELEASE_URL=/' | sed 's/^release-notes<</RELEASE_NOTES<</' | sed 's/^jira-release-notes<</JIRA_RELEASE_NOTES<</' | sed 's/^jira-release-id<</JIRA_RELEASE_ID<</'>> $GITHUB_ENV

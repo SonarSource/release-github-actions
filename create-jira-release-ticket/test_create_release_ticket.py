@@ -73,9 +73,9 @@ class TestCreateReleaseTicket(unittest.TestCase):
         args.rule_props_changed = 'Yes'
         args.sonarlint_changelog = 'Test changelog'
 
-        release_url = 'https://jira.com/release/notes'
+        issue_filter_url = 'https://jira.com/issues/?jql=fixVersion%3D12345'
 
-        result = create_release_ticket(mock_jira, args, release_url)
+        result = create_release_ticket(mock_jira, args, issue_filter_url)
 
         self.assertEqual(result, mock_ticket)
         mock_jira.create_issue.assert_called_once()
@@ -86,7 +86,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         self.assertEqual(call_args['issuetype'], 'Ask for release')
         self.assertEqual(call_args['summary'], 'TestProject 1.2.3')
         self.assertEqual(call_args['customfield_10146'], 'Test release')  # SHORT_DESCRIPTION
-        self.assertEqual(call_args['customfield_10145'], release_url)  # LINK_TO_RELEASE_NOTES
+        self.assertEqual(call_args['customfield_10145'], issue_filter_url)  # LINK_TO_ISSUE_FILTER
         self.assertEqual(call_args['customfield_10147'], 'Ready')  # DOCUMENTATION_STATUS
         self.assertEqual(call_args['customfield_11263'], {'value': 'Yes'})  # RULE_PROPS_CHANGED
         self.assertEqual(call_args['customfield_11264'], 'Test changelog')  # SONARLINT_CHANGELOG
@@ -109,7 +109,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         args.sonarlint_changelog = ''
 
         with self.assertRaises(SystemExit) as cm:
-            create_release_ticket(mock_jira, args, 'https://release.url')
+            create_release_ticket(mock_jira, args, 'https://jira.com/issues/?jql=fixVersion%3D12345')
 
         self.assertEqual(cm.exception.code, 1)
 
@@ -120,7 +120,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         '--version', '1.0.0',
         '--short-description', 'Test release',
         '--jira-url', 'https://test.jira.com',
-        '--jira-release-url', 'https://jira.com/release/notes'
+        '--issue-filter-url', 'https://jira.com/issues/?jql=fixVersion%3D12345'
     ])
     @patch('create_release_ticket.get_jira_instance')
     @patch('create_release_ticket.create_release_ticket')
@@ -145,7 +145,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         mock_create_ticket.assert_called_once()
         call_args = mock_create_ticket.call_args
         self.assertEqual(call_args[0][0], mock_jira)  # jira client
-        self.assertEqual(call_args[0][2], 'https://jira.com/release/notes')  # release URL
+        self.assertEqual(call_args[0][2], 'https://jira.com/issues/?jql=fixVersion%3D12345')  # issue filter URL
 
         # Verify output
         stdout_output = mock_stdout.getvalue()
@@ -153,7 +153,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         self.assertIn('ticket_url=https://jira.com/REL-456', stdout_output)
 
         stderr_output = mock_stderr.getvalue()
-        self.assertIn('Using release URL: https://jira.com/release/notes', stderr_output)
+        self.assertIn('Using issue filter URL: https://jira.com/issues/?jql=fixVersion%3D12345', stderr_output)
         self.assertIn('🎉 Successfully created release ticket!', stderr_output)
 
     # noinspection PyUnusedLocal
@@ -164,7 +164,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         '--version', '1.0.0',
         '--short-description', 'Test release',
         '--jira-url', 'https://sandbox.jira.com',
-        '--jira-release-url', 'https://sandbox.jira.com/release/notes',
+        '--issue-filter-url', 'https://sandbox.jira.com/issues/?jql=fixVersion%3D67890',
         '--documentation-status', 'Ready',
         '--rule-props-changed', 'Yes',
         '--sonarlint-changelog', 'Some changelog'
@@ -197,13 +197,13 @@ class TestCreateReleaseTicket(unittest.TestCase):
         self.assertEqual(args.version, '1.0.0')
         self.assertEqual(args.short_description, 'Test release')
         self.assertEqual(args.jira_url, 'https://sandbox.jira.com')
-        self.assertEqual(args.jira_release_url, 'https://sandbox.jira.com/release/notes')
+        self.assertEqual(args.issue_filter_url, 'https://sandbox.jira.com/issues/?jql=fixVersion%3D67890')
         self.assertEqual(args.documentation_status, 'Ready')
         self.assertEqual(args.rule_props_changed, 'Yes')
         self.assertEqual(args.sonarlint_changelog, 'Some changelog')
 
         stderr_output = mock_stderr.getvalue()
-        self.assertIn('Using release URL: https://sandbox.jira.com/release/notes', stderr_output)
+        self.assertIn('Using issue filter URL: https://sandbox.jira.com/issues/?jql=fixVersion%3D67890', stderr_output)
 
 
 if __name__ == '__main__':
