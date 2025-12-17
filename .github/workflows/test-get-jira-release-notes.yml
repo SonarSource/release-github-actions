@@ -82,6 +82,7 @@ jobs:
           # Create a mock script that simulates the Python output
           cat > mock_output.py << 'EOF'
           print("jira-release-url=https://test.atlassian.net/projects/TEST/versions/123/tab/release-report-all-issues")
+          print("jira-release-id=123")
           print("release-notes<<EOF")
           print("# Release notes - Test Project - 1.0.0")
           print("")  
@@ -141,6 +142,7 @@ jobs:
       - name: Output results
         run: |
           echo "Jira Release URL: ${{ steps.test-sandbox.outputs.jira-release-url }}"
+          echo "Jira Release ID: ${{ steps.test-sandbox.outputs.jira-release-id }}"
           echo "Release Notes:"
           echo "${{ steps.test-sandbox.outputs.release-notes }}"
           echo "Jira Release Notes:"
@@ -153,6 +155,15 @@ jobs:
             exit 1
           else
             echo "✅ Jira Release URL format is correct"
+          fi
+
+      - name: Verify Jira Release ID
+        run: |
+          if [[ "${{ steps.test-sandbox.outputs.jira-release-id }}" != 22169 ]]; then
+            echo "❌ Jira Release ID is incorrect"
+            exit 1
+          else
+            echo "✅ Jira Release ID is correct"
           fi
 
       - name: Verify Release Notes Content
