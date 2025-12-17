@@ -109,7 +109,7 @@ runs:
           FIXED_VERSION_ID=$(echo "$JIRA_RELEASE_URL" | grep -oE '/versions/([0-9]+)' | grep -oE '[0-9]+')
         fi
         
-        ISSUE_FILTER="$JIRA_URL/issues/?jql=fixVersion%3D$FIXED_VERSION_ID"
+        ISSUE_FILTER="${JIRA_URL}issues/?jql=fixVersion%3D${FIXED_VERSION_ID}"
         
         echo "ISSUE_FILTER=$ISSUE_FILTER"
 
