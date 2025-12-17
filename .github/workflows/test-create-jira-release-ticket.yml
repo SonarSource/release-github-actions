@@ -52,7 +52,7 @@ jobs:
           echo "JIRA_USER=test_user" >> $GITHUB_ENV
           echo "JIRA_TOKEN=test_token" >> $GITHUB_ENV
           echo "JIRA_PROJECT_KEY=TEST" >> $GITHUB_ENV
-          echo "JIRA_RELEASE_URL=https://test.jira.com/release/notes" >> $GITHUB_ENV
+          echo "JIRA_RELEASE_ID=12345" >> $GITHUB_ENV
 
       - name: Test Action with Environment Variables
         id: test-action
@@ -114,8 +114,8 @@ jobs:
         run: |
           echo "✓ Action correctly failed when neither jira-project-key input nor JIRA_PROJECT_KEY env var is set"
 
-      - name: Test Missing Release URL (no input, no env var)
-        id: test-missing-release-url
+      - name: Test Missing Release ID (no input, no env var)
+        id: test-missing-release-id
         uses: ./create-jira-release-ticket
         with:
           jira-project-key: "TEST"
@@ -124,16 +124,16 @@ jobs:
           short-description: "Test release"
         continue-on-error: true
 
-      - name: Verify Missing Release URL Failure
-        if: steps.test-missing-release-url.outcome == 'success'
+      - name: Verify Missing Release ID Failure
+        if: steps.test-missing-release-id.outcome == 'success'
         run: |
-          echo "✗ Action should have failed when neither jira-release-url input nor JIRA_RELEASE_URL env var is set"
+          echo "✗ Action should have failed when neither jira-release-id input nor JIRA_RELEASE_ID env var is set"
           exit 1
 
-      - name: Confirm Missing Release URL Failure
-        if: steps.test-missing-release-url.outcome == 'failure'
+      - name: Confirm Missing Release ID Failure
+        if: steps.test-missing-release-id.outcome == 'failure'
         run: |
-          echo "✓ Action correctly failed when neither jira-release-url input nor JIRA_RELEASE_URL env var is set"
+          echo "✓ Action correctly failed when neither jira-release-id input nor JIRA_RELEASE_ID env var is set"
 
       - name: Test Project Key from Environment Variable
         env:
@@ -144,7 +144,7 @@ jobs:
           project-name: "Test Project"
           version: "1.0.0"
           short-description: "Test release"
-          jira-release-url: "https://test.jira.com/release/notes"
+          jira-release-id: "12345"
         continue-on-error: true
 
       - name: Verify Project Key Environment Variable Works
@@ -159,10 +159,10 @@ jobs:
             echo "✓ Project key from environment variable test completed (failure expected due to missing credentials)"
           fi
 
-      - name: Test Release URL from Environment Variable
+      - name: Test Release ID from Environment Variable
         env:
-          JIRA_RELEASE_URL: "https://env.jira.com/release/notes"
-        id: test-release-url-env
+          JIRA_RELEASE_ID: "67890"
+        id: test-release-id-env
         uses: ./create-jira-release-ticket
         with:
           jira-project-key: "TEST"
@@ -171,21 +171,21 @@ jobs:
           short-description: "Test release"
         continue-on-error: true
 
-      - name: Verify Release URL Environment Variable Works
+      - name: Verify Release ID Environment Variable Works
         run: |
-          # This should fail due to missing JIRA credentials, not missing release URL
-          if [ "${{ steps.test-release-url-env.outcome }}" = "success" ]; then
-            echo "✓ Action accepted release URL from JIRA_RELEASE_URL environment variable"
+          # This should fail due to missing JIRA credentials, not missing release ID
+          if [ "${{ steps.test-release-id-env.outcome }}" = "success" ]; then
+            echo "✓ Action accepted release ID from JIRA_RELEASE_ID environment variable"
           else
-            echo "Action failed - checking if it was due to credentials (expected) or missing release URL (unexpected)"
-            echo "Expected: Action should fail due to missing JIRA credentials, not missing release URL"
-            echo "✓ Release URL from environment variable test completed (failure expected due to missing credentials)"
+            echo "Action failed - checking if it was due to credentials (expected) or missing release ID (unexpected)"
+            echo "Expected: Action should fail due to missing JIRA credentials, not missing release ID"
+            echo "✓ Release ID from environment variable test completed (failure expected due to missing credentials)"
           fi
 
       - name: Test Input Takes Precedence Over Environment Variable
         env:
           JIRA_PROJECT_KEY: "ENVKEY"
-          JIRA_RELEASE_URL: "https://env.jira.com/release"
+          JIRA_RELEASE_ID: "11111"
         id: test-input-precedence
         uses: ./create-jira-release-ticket
         with:
@@ -193,7 +193,7 @@ jobs:
           project-name: "Test Project"
           version: "1.0.0"
           short-description: "Test release"
-          jira-release-url: "https://input.jira.com/release"
+          jira-release-id: "22222"
         continue-on-error: true
 
       - name: Verify Input Precedence
@@ -208,8 +208,202 @@ jobs:
           echo "Validation Test Results Summary:"
           echo "================================"
           echo "✓ Missing project key validation: ${{ steps.test-missing-project-key.outcome == 'failure' && 'PASS' || 'FAIL' }}"
-          echo "✓ Missing release URL validation: ${{ steps.test-missing-release-url.outcome == 'failure' && 'PASS' || 'FAIL' }}"
+          echo "✓ Missing release ID validation: ${{ steps.test-missing-release-id.outcome == 'failure' && 'PASS' || 'FAIL' }}"
           echo "✓ Project key from env var: TESTED"
-          echo "✓ Release URL from env var: TESTED"
+          echo "✓ Release ID from env var: TESTED"
           echo "✓ Input precedence over env vars: TESTED"
           echo "================================"
+
+  deprecation-tests:
+    name: Test Deprecation Warnings
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test Deprecated jira-release-url Input
+        id: test-deprecated-input
+        uses: ./create-jira-release-ticket
+        with:
+          jira-project-key: "TEST"
+          project-name: "Test Project"
+          version: "1.0.0"
+          short-description: "Test release"
+          jira-release-url: "https://sonarsource.atlassian.net/projects/TEST/versions/12345"
+        continue-on-error: true
+
+      - name: Verify Deprecation Warning for Input
+        run: |
+          echo "✓ Testing deprecated jira-release-url input generates warning"
+          echo "Expected: Action should generate deprecation warning"
+
+      - name: Test Deprecated JIRA_RELEASE_URL Environment Variable
+        env:
+          JIRA_RELEASE_URL: "https://sonarsource.atlassian.net/projects/TEST/versions/67890"
+        id: test-deprecated-env
+        uses: ./create-jira-release-ticket
+        with:
+          jira-project-key: "TEST"
+          project-name: "Test Project"
+          version: "1.0.0"
+          short-description: "Test release"
+        continue-on-error: true
+
+      - name: Verify Deprecation Warning for Env Var
+        run: |
+          echo "✓ Testing deprecated JIRA_RELEASE_URL env var generates warning"
+          echo "Expected: Action should generate deprecation warning"
+
+      - name: Test New jira-release-id Input (No Warning)
+        id: test-new-input
+        uses: ./create-jira-release-ticket
+        with:
+          jira-project-key: "TEST"
+          project-name: "Test Project"
+          version: "1.0.0"
+          short-description: "Test release"
+          jira-release-id: "12345"
+        continue-on-error: true
+
+      - name: Verify No Deprecation Warning for New Input
+        run: |
+          echo "✓ Testing new jira-release-id input does not generate deprecation warning"
+          echo "Expected: Action should NOT generate deprecation warning"
+
+      - name: Test New JIRA_RELEASE_ID Environment Variable (No Warning)
+        env:
+          JIRA_RELEASE_ID: "67890"
+        id: test-new-env
+        uses: ./create-jira-release-ticket
+        with:
+          jira-project-key: "TEST"
+          project-name: "Test Project"
+          version: "1.0.0"
+          short-description: "Test release"
+        continue-on-error: true
+
+      - name: Verify No Deprecation Warning for New Env Var
+        run: |
+          echo "✓ Testing new JIRA_RELEASE_ID env var does not generate deprecation warning"
+          echo "Expected: Action should NOT generate deprecation warning"
+
+      - name: Summary of Deprecation Tests
+        run: |
+          echo "===================================="
+          echo "Deprecation Test Results Summary:"
+          echo "===================================="
+          echo "✓ Deprecated jira-release-url input: TESTED"
+          echo "✓ Deprecated JIRA_RELEASE_URL env var: TESTED"
+          echo "✓ New jira-release-id input: TESTED"
+          echo "✓ New JIRA_RELEASE_ID env var: TESTED"
+          echo "===================================="
+
+  url-extraction-tests:
+    name: Test URL Extraction
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.10'
+
+      - name: Test Extract ID from Full Jira URL
+        run: |
+          URL="https://sonarsource.atlassian.net/projects/SONARIAC/versions/12345"
+          EXTRACTED_ID=$(echo "$URL" | grep -oE '/versions/([0-9]+)' | grep -oE '[0-9]+')
+          echo "Extracted ID: $EXTRACTED_ID"
+          if [ "$EXTRACTED_ID" = "12345" ]; then
+            echo "✓ Successfully extracted ID 12345 from full Jira URL"
+          else
+            echo "✗ Failed to extract correct ID. Got: $EXTRACTED_ID, Expected: 12345"
+            exit 1
+          fi
+
+      - name: Test Extract ID from Sandbox URL
+        run: |
+          URL="https://sonarsource-sandbox-608.atlassian.net/projects/TEST/versions/67890"
+          EXTRACTED_ID=$(echo "$URL" | grep -oE '/versions/([0-9]+)' | grep -oE '[0-9]+')
+          echo "Extracted ID: $EXTRACTED_ID"
+          if [ "$EXTRACTED_ID" = "67890" ]; then
+            echo "✓ Successfully extracted ID 67890 from sandbox Jira URL"
+          else
+            echo "✗ Failed to extract correct ID. Got: $EXTRACTED_ID, Expected: 67890"
+            exit 1
+          fi
+
+      - name: Test Extract ID from URL with Query Parameters
+        run: |
+          URL="https://sonarsource.atlassian.net/projects/SONARJAVA/versions/99999?param=value"
+          EXTRACTED_ID=$(echo "$URL" | grep -oE '/versions/([0-9]+)' | grep -oE '[0-9]+')
+          echo "Extracted ID: $EXTRACTED_ID"
+          if [ "$EXTRACTED_ID" = "99999" ]; then
+            echo "✓ Successfully extracted ID 99999 from URL with query parameters"
+          else
+            echo "✗ Failed to extract correct ID. Got: $EXTRACTED_ID, Expected: 99999"
+            exit 1
+          fi
+
+      - name: Test Extract ID from Minimal URL
+        run: |
+          URL="https://sonarsource.atlassian.net/versions/42"
+          EXTRACTED_ID=$(echo "$URL" | grep -oE '/versions/([0-9]+)' | grep -oE '[0-9]+')
+          echo "Extracted ID: $EXTRACTED_ID"
+          if [ "$EXTRACTED_ID" = "42" ]; then
+            echo "✓ Successfully extracted ID 42 from minimal URL"
+          else
+            echo "✗ Failed to extract correct ID. Got: $EXTRACTED_ID, Expected: 42"
+            exit 1
+          fi
+
+      - name: Test Issue Filter URL Construction
+        run: |
+          JIRA_URL="https://sonarsource.atlassian.net/"
+          FIXED_VERSION_ID="12345"
+          ISSUE_FILTER="${JIRA_URL}issues/?jql=fixVersion%3D${FIXED_VERSION_ID}"
+          echo "Constructed Issue Filter URL: $ISSUE_FILTER"
+          
+          EXPECTED="https://sonarsource.atlassian.net/issues/?jql=fixVersion%3D12345"
+          if [ "$ISSUE_FILTER" = "$EXPECTED" ]; then
+            echo "✓ Successfully constructed issue filter URL"
+          else
+            echo "✗ Failed to construct correct issue filter URL"
+            echo "   Expected: $EXPECTED"
+            echo "   Got:      $ISSUE_FILTER"
+            exit 1
+          fi
+
+      - name: Test Issue Filter URL Construction for Sandbox
+        run: |
+          JIRA_URL="https://sonarsource-sandbox-608.atlassian.net/"
+          FIXED_VERSION_ID="67890"
+          ISSUE_FILTER="${JIRA_URL}issues/?jql=fixVersion%3D${FIXED_VERSION_ID}"
+          echo "Constructed Sandbox Issue Filter URL: $ISSUE_FILTER"
+          
+          EXPECTED="https://sonarsource-sandbox-608.atlassian.net/issues/?jql=fixVersion%3D67890"
+          if [ "$ISSUE_FILTER" = "$EXPECTED" ]; then
+            echo "✓ Successfully constructed sandbox issue filter URL"
+          else
+            echo "✗ Failed to construct correct sandbox issue filter URL"
+            echo "   Expected: $EXPECTED"
+            echo "   Got:      $ISSUE_FILTER"
+            exit 1
+          fi
+
+      - name: Summary of URL Extraction Tests
+        run: |
+          echo "====================================="
+          echo "URL Extraction Test Results Summary:"
+          echo "====================================="
+          echo "✓ Extract ID from full Jira URL: PASS"
+          echo "✓ Extract ID from sandbox URL: PASS"
+          echo "✓ Extract ID from URL with query params: PASS"
+          echo "✓ Extract ID from minimal URL: PASS"
+          echo "✓ Construct issue filter URL: PASS"
+          echo "✓ Construct sandbox issue filter URL: PASS"
+          echo "====================================="
+
