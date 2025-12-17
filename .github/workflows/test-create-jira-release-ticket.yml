@@ -15,6 +15,21 @@ on:
   workflow_dispatch:
 
 jobs:
+  # =============================================================================
+  # Unit Tests Job
+  # =============================================================================
+  # This job runs Python unit tests for the create_release_ticket.py script.
+  # It validates:
+  # - JIRA instance creation with valid and invalid credentials
+  # - Authentication failure handling
+  # - Ticket creation with all required and optional fields
+  # - Error handling for JIRA API failures
+  # - Command-line argument parsing through the main() function
+  # - Proper output formatting for GitHub Actions
+  #
+  # The tests use mocking to avoid actual JIRA API calls, ensuring fast and
+  # reliable test execution without external dependencies.
+  # =============================================================================
   unit-tests:
     name: Run Unit Tests
     runs-on: ubuntu-latest
@@ -39,6 +54,22 @@ jobs:
           cd create-jira-release-ticket
           python -m pytest test_create_release_ticket.py -v --cov=create_release_ticket --cov-report=term-missing
 
+  # =============================================================================
+  # Integration Tests Job
+  # =============================================================================
+  # This job tests the GitHub Action as a whole, verifying that all components
+  # work together correctly. It validates:
+  # - The action can be invoked with environment variables
+  # - Credentials are properly passed from environment to the Python script
+  # - The action uses the sandbox Jira instance when requested
+  # - Output environment variables (RELEASE_TICKET_KEY, RELEASE_TICKET_URL)
+  #   are correctly set (or remain undefined on failure)
+  # - The action gracefully handles authentication failures with mock credentials
+  #
+  # This test uses mock credentials intentionally, so we expect the action to
+  # fail at the authentication stage, but it should pass all input validation
+  # and setup steps first.
+  # =============================================================================
   integration-tests:
     name: Run Integration Tests
     runs-on: ubuntu-latest
@@ -85,6 +116,32 @@ jobs:
           
           echo "Environment variable test completed successfully!"
 
+  # =============================================================================
+  # Validation Tests Job
+  # =============================================================================
+  # This job validates the input validation logic of the GitHub Action.
+  # It ensures that the action properly handles missing, invalid, or
+  # conflicting inputs. Specifically, it tests:
+  #
+  # 1. Missing Required Inputs:
+  #    - Action fails when neither jira-project-key input nor JIRA_PROJECT_KEY
+  #      environment variable is provided
+  #    - Action fails when neither jira-release-id/jira-release-url input nor
+  #      JIRA_RELEASE_ID/JIRA_RELEASE_URL environment variable is provided
+  #
+  # 2. Environment Variable Fallback:
+  #    - JIRA_PROJECT_KEY environment variable is used when jira-project-key
+  #      input is not provided
+  #    - JIRA_RELEASE_ID environment variable is used when jira-release-id
+  #      input is not provided
+  #
+  # 3. Input Precedence:
+  #    - Explicit inputs (jira-project-key, jira-release-id) take precedence
+  #      over environment variables (JIRA_PROJECT_KEY, JIRA_RELEASE_ID)
+  #
+  # All tests use continue-on-error to capture failures and validate them
+  # explicitly, ensuring the action fails for the right reasons.
+  # =============================================================================
   validation-tests:
     name: Test Input Validation
     runs-on: ubuntu-latest
@@ -214,6 +271,31 @@ jobs:
           echo "✓ Input precedence over env vars: TESTED"
           echo "================================"
 
+  # =============================================================================
+  # Deprecation Tests Job
+  # =============================================================================
+  # This job validates the deprecation warnings for the old jira-release-url
+  # input and JIRA_RELEASE_URL environment variable. It ensures a smooth
+  # migration path from the deprecated approach to the new approach.
+  #
+  # What's being deprecated:
+  # - Input: jira-release-url (full Jira version URL)
+  # - Env Var: JIRA_RELEASE_URL (full Jira version URL)
+  #
+  # What's the new approach:
+  # - Input: jira-release-id (just the numeric version ID)
+  # - Env Var: JIRA_RELEASE_ID (just the numeric version ID)
+  #
+  # This job tests:
+  # 1. Using deprecated jira-release-url input generates a deprecation warning
+  # 2. Using deprecated JIRA_RELEASE_URL env var generates a deprecation warning
+  # 3. Using new jira-release-id input does NOT generate a deprecation warning
+  # 4. Using new JIRA_RELEASE_ID env var does NOT generate a deprecation warning
+  #
+  # The deprecated inputs/env vars still work (backward compatibility), but
+  # users are warned to migrate to the new approach. The action extracts the
+  # version ID from the deprecated URL format automatically.
+  # =============================================================================
   deprecation-tests:
     name: Test Deprecation Warnings
     runs-on: ubuntu-latest
@@ -299,6 +381,36 @@ jobs:
           echo "✓ New JIRA_RELEASE_ID env var: TESTED"
           echo "===================================="
 
+  # =============================================================================
+  # URL Extraction Tests Job
+  # =============================================================================
+  # This job validates the URL parsing and issue filter URL construction logic.
+  # It ensures that the action can correctly extract version IDs from various
+  # Jira URL formats and construct proper issue filter URLs.
+  #
+  # URL Extraction Tests:
+  # The action needs to extract the numeric version ID from deprecated
+  # jira-release-url inputs that may be in various formats:
+  # - Full URL: https://sonarsource.atlassian.net/projects/SONARIAC/versions/12345
+  # - Sandbox URL: https://sonarsource-sandbox-608.atlassian.net/projects/TEST/versions/67890
+  # - URL with query params: https://sonarsource.atlassian.net/projects/PROJ/versions/99999?param=value
+  # - Minimal URL: https://sonarsource.atlassian.net/versions/42
+  #
+  # Issue Filter URL Construction Tests:
+  # Once the version ID is known (from jira-release-id or extracted from URL),
+  # the action constructs a Jira issue filter URL that shows all issues in that
+  # version. The format is:
+  # https://<jira-url>/issues/?jql=fixVersion%3D<version-id>
+  #
+  # This job validates:
+  # 1. Correct extraction of version IDs from various URL formats
+  # 2. Proper handling of both production and sandbox Jira instances
+  # 3. Correct construction of issue filter URLs for both environments
+  # 4. URL encoding of JQL query parameters (%3D for equals sign)
+  #
+  # These tests ensure robust URL handling across different use cases and
+  # environments.
+  # =============================================================================
   url-extraction-tests:
     name: Test URL Extraction
     runs-on: ubuntu-latest
