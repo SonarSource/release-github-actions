@@ -120,6 +120,11 @@ on:
         description: "Slack channel for notifications"
         required: false
         type: string
+      issue-categories:
+        description: "Jira issue categories to include in the release notes"
+        required: false
+        type: string
+        default: "New Feature,False Positive,False Negative,Bug,Improvement,Task"
 
     outputs:
       new-version:
@@ -197,6 +202,8 @@ jobs:
         id: get-jira-release-notes
         if: inputs.release-notes == ''
         uses: SonarSource/release-github-actions/get-jira-release-notes@v1
+        with:
+          issue-types: ${{ inputs.issue-categories }}
 
       - name: Summary
         if: ${{ inputs.verbose }}
