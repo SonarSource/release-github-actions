@@ -175,7 +175,6 @@ jobs:
   # These outputs include the release version, Jira version name, release notes, Jira release notes, and Jira release URL.
   prepare-release:
     name: Prepare Release
-    needs: [ freeze-branch ]
     runs-on: ${{ inputs.runner-environment }}
     permissions:
       statuses: read
