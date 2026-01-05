@@ -197,7 +197,6 @@ def main():
     # Using multiline string format for the release notes
     print(f"jira-release-url={release_notes_url}")
     print(f"jira-release-issue-filter-url={release_issue_filter_url}")
-    print(f"jira-release-id={version_id}")
     print("release-notes<<EOF")
     print(markdown_notes)
     print("EOF")

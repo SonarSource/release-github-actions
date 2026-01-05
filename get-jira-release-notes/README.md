@@ -40,12 +40,12 @@ This action depends on:
 
 ## Environment Variables Set
 
-| Environment Variable              | Description                                                                                             |
-|-----------------------------------|---------------------------------------------------------------------------------------------------------|
-| `RELEASE_NOTES`                   | The formatted release notes as Markdown (same content as `release-notes` output)                        |
-| `JIRA_RELEASE_NOTES`              | The formatted release notes in Jira wiki markup (same content as `jira-release-notes` output)           |
-| `JIRA_RELEASE_URL`                | The URL to the Jira release notes page (same content as `jira-release-url` output)                      |
-| `JIRA_RELEASE_ISSUE_FILTER_URL`   | The URL of the issue filter for the Jira release (same content as `jira-release-issue-filter-url` output) |
+| Environment Variable            | Description                                                                                               |
+|---------------------------------|-----------------------------------------------------------------------------------------------------------|
+| `RELEASE_NOTES`                 | The formatted release notes as Markdown (same content as `release-notes` output)                          |
+| `JIRA_RELEASE_NOTES`            | The formatted release notes in Jira wiki markup (same content as `jira-release-notes` output)             |
+| `JIRA_RELEASE_URL`              | The URL to the Jira release notes page (same content as `jira-release-url` output)                        |
+| `JIRA_RELEASE_ISSUE_FILTER_URL` | The URL of the issue filter for the Jira release (same content as `jira-release-issue-filter-url` output) |
 
 ## Usage
 
