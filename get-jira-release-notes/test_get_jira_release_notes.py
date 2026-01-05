@@ -273,17 +273,16 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
 
         # Verify expected output format
         print_calls = mock_print.call_args_list
-        self.assertEqual(len(print_calls), 10)  # URL + filter URL + ID + markdown start/content/end + jira start/content/end
+        self.assertEqual(len(print_calls), 9)  # URL + filter URL + markdown start/content/end + jira start/content/end
         # Check the main outputs
         self.assertEqual(print_calls[1][0][0], "jira-release-url=https://test.jira.com/projects/TEST/versions/10001/tab/release-report-all-issues")
         self.assertEqual(print_calls[2][0][0], "jira-release-issue-filter-url=https://test.jira.com/issues/?jql=fixVersion%3D10001")
-        self.assertEqual(print_calls[3][0][0], "jira-release-id=10001")
-        self.assertEqual(print_calls[4][0][0], "release-notes<<EOF")
-        self.assertEqual(print_calls[5][0][0], "# Release notes - Test Project - 1.0.0\n\nNo issues found.")
-        self.assertEqual(print_calls[6][0][0], "EOF")
-        self.assertEqual(print_calls[7][0][0], "jira-release-notes<<EOF")
-        self.assertEqual(print_calls[8][0][0], "h1. Release notes - Test Project - 1.0.0\n\nNo issues found.")
-        self.assertEqual(print_calls[9][0][0], "EOF")
+        self.assertEqual(print_calls[3][0][0], "release-notes<<EOF")
+        self.assertEqual(print_calls[4][0][0], "# Release notes - Test Project - 1.0.0\n\nNo issues found.")
+        self.assertEqual(print_calls[5][0][0], "EOF")
+        self.assertEqual(print_calls[6][0][0], "jira-release-notes<<EOF")
+        self.assertEqual(print_calls[7][0][0], "h1. Release notes - Test Project - 1.0.0\n\nNo issues found.")
+        self.assertEqual(print_calls[8][0][0], "EOF")
 
     @patch('sys.argv', [
         'get_jira_release_notes.py',
