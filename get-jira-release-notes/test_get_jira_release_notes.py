@@ -22,6 +22,7 @@ from get_jira_release_notes import (
     format_notes_as_markdown,
     format_notes_as_jira_markup,
     generate_release_notes_url,
+    generate_release_issue_filter_url,
     main
 )
 from jira.exceptions import JIRAError
@@ -212,6 +213,18 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
         expected = 'https://jira.com/projects/TEST/versions/10001/tab/release-report-all-issues'
         self.assertEqual(url, expected)
 
+    def test_generate_release_issue_filter_url(self):
+        """Test release issue filter URL generation."""
+        url = generate_release_issue_filter_url('https://jira.com', '10001')
+        expected = 'https://jira.com/issues/?jql=fixVersion%3D10001'
+        self.assertEqual(url, expected)
+
+    def test_generate_release_issue_filter_url_trailing_slash(self):
+        """Test release issue filter URL generation with trailing slash."""
+        url = generate_release_issue_filter_url('https://jira.com/', '10001')
+        expected = 'https://jira.com/issues/?jql=fixVersion%3D10001'
+        self.assertEqual(url, expected)
+
     # noinspection PyUnusedLocal
     @patch('sys.argv', [
         'get_jira_release_notes.py',
@@ -226,10 +239,12 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
     @patch('get_jira_release_notes.format_notes_as_markdown')
     @patch('get_jira_release_notes.format_notes_as_jira_markup')
     @patch('get_jira_release_notes.generate_release_notes_url')
+    @patch('get_jira_release_notes.generate_release_issue_filter_url')
     @patch('sys.stderr', new_callable=StringIO)
     @patch('builtins.print')
-    def test_main_success(self, mock_print, mock_stderr, mock_generate_url, mock_format_jira_markup, mock_format_notes,
-                          mock_get_issues, mock_get_project_name, mock_get_version_id, mock_get_jira):
+    def test_main_success(self, mock_print, mock_stderr, mock_generate_filter_url, mock_generate_url,
+                          mock_format_jira_markup, mock_format_notes, mock_get_issues, mock_get_project_name,
+                          mock_get_version_id, mock_get_jira):
         """Test successful main function execution."""
         # Setup mocks
         mock_jira = Mock()
@@ -240,6 +255,7 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
         mock_format_notes.return_value = "# Release notes - Test Project - 1.0.0\n\nNo issues found."
         mock_format_jira_markup.return_value = "h1. Release notes - Test Project - 1.0.0\n\nNo issues found."
         mock_generate_url.return_value = "https://test.jira.com/projects/TEST/versions/10001/tab/release-report-all-issues"
+        mock_generate_filter_url.return_value = "https://test.jira.com/issues/?jql=fixVersion%3D10001"
 
         main()
 
@@ -247,6 +263,7 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
         mock_get_jira.assert_called_once_with('https://test.jira.com')
         mock_get_version_id.assert_called_once_with(mock_jira, 'TEST', '1.0.0')
         mock_generate_url.assert_called_once_with('https://test.jira.com', 'TEST', '10001')
+        mock_generate_filter_url.assert_called_once_with('https://test.jira.com', '10001')
         mock_get_project_name.assert_called_once_with(mock_jira, 'TEST')
         mock_get_issues.assert_called_once_with(mock_jira, 'TEST', '1.0.0')
 
@@ -256,16 +273,17 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
 
         # Verify expected output format
         print_calls = mock_print.call_args_list
-        self.assertEqual(len(print_calls), 9)  # URL + ID + markdown start/content/end + jira start/content/end
+        self.assertEqual(len(print_calls), 10)  # URL + filter URL + ID + markdown start/content/end + jira start/content/end
         # Check the main outputs
         self.assertEqual(print_calls[1][0][0], "jira-release-url=https://test.jira.com/projects/TEST/versions/10001/tab/release-report-all-issues")
-        self.assertEqual(print_calls[2][0][0], "jira-release-id=10001")
-        self.assertEqual(print_calls[3][0][0], "release-notes<<EOF")
-        self.assertEqual(print_calls[4][0][0], "# Release notes - Test Project - 1.0.0\n\nNo issues found.")
-        self.assertEqual(print_calls[5][0][0], "EOF")
-        self.assertEqual(print_calls[6][0][0], "jira-release-notes<<EOF")
-        self.assertEqual(print_calls[7][0][0], "h1. Release notes - Test Project - 1.0.0\n\nNo issues found.")
-        self.assertEqual(print_calls[8][0][0], "EOF")
+        self.assertEqual(print_calls[2][0][0], "jira-release-issue-filter-url=https://test.jira.com/issues/?jql=fixVersion%3D10001")
+        self.assertEqual(print_calls[3][0][0], "jira-release-id=10001")
+        self.assertEqual(print_calls[4][0][0], "release-notes<<EOF")
+        self.assertEqual(print_calls[5][0][0], "# Release notes - Test Project - 1.0.0\n\nNo issues found.")
+        self.assertEqual(print_calls[6][0][0], "EOF")
+        self.assertEqual(print_calls[7][0][0], "jira-release-notes<<EOF")
+        self.assertEqual(print_calls[8][0][0], "h1. Release notes - Test Project - 1.0.0\n\nNo issues found.")
+        self.assertEqual(print_calls[9][0][0], "EOF")
 
     @patch('sys.argv', [
         'get_jira_release_notes.py',

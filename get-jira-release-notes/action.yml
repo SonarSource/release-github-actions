@@ -23,9 +23,9 @@ outputs:
   jira-release-url:
     description: 'The URL to the Jira release notes page.'
     value: ${{ steps.get_notes.outputs.jira-release-url }}
-  jira-release-id:
-    description: 'The unique ID of the Jira release.'
-    value: ${{ steps.get_notes.outputs.jira-release-id }}
+  jira-release-issue-filter-url:
+    description: 'The URL of the issue filter for the Jira release.'
+    value: ${{ steps.get_notes.outputs.jira-release-issue-filter-url }}
 
 runs:
   using: "composite"
@@ -73,4 +73,4 @@ runs:
           --version-name="$VERSION_NAME" \
           --issue-types="$ISSUE_TYPES" \
           --jira-url="$JIRA_URL" \
-          | tee -a $GITHUB_OUTPUT | sed 's/^jira-release-url=/JIRA_RELEASE_URL=/' | sed 's/^release-notes<</RELEASE_NOTES<</' | sed 's/^jira-release-notes<</JIRA_RELEASE_NOTES<</' | sed 's/^jira-release-id<</JIRA_RELEASE_ID<</'>> $GITHUB_ENV
+          | tee -a $GITHUB_OUTPUT | sed 's/^jira-release-url=/JIRA_RELEASE_URL=/' | sed 's/^jira-release-issue-filter-url=/JIRA_RELEASE_ISSUE_FILTER_URL=/' | sed 's/^release-notes<</RELEASE_NOTES<</' | sed 's/^jira-release-notes<</JIRA_RELEASE_NOTES<</' >> $GITHUB_ENV
