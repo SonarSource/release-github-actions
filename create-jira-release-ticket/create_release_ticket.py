@@ -13,7 +13,7 @@ from jira.exceptions import JIRAError
 
 CUSTOM_FIELDS = {
     'SHORT_DESCRIPTION': 'customfield_10146',
-    'LINK_TO_ISSUE_FILTER': 'customfield_10145',
+    'LINK_TO_RELEASE_NOTES': 'customfield_10145',
     'DOCUMENTATION_STATUS': 'customfield_10147',
     'RULE_PROPS_CHANGED': 'customfield_11263',
     'SONARLINT_CHANGELOG': 'customfield_11264',
@@ -63,14 +63,9 @@ def get_jira_instance(jira_url):
         sys.exit(1)
 
 
-def create_release_ticket(jira_client, args, issue_filter_url):
+def create_release_ticket(jira_client, args, link_to_release_notes):
     """
     Creates the 'Ask for release' ticket in Jira.
-
-    Args:
-        jira_client: The JIRA client instance
-        args: Parsed command line arguments
-        issue_filter_url: URL to filter all issues in the release
     """
     eprint("\nPreparing to create release ticket...")
     ticket_details = {
@@ -78,7 +73,7 @@ def create_release_ticket(jira_client, args, issue_filter_url):
         'issuetype': 'Ask for release',
         'summary': f'{args.project_name} {args.version}',
         CUSTOM_FIELDS['SHORT_DESCRIPTION']: args.short_description,
-        CUSTOM_FIELDS['LINK_TO_ISSUE_FILTER']: issue_filter_url,
+        CUSTOM_FIELDS['LINK_TO_RELEASE_NOTES']: link_to_release_notes,
         CUSTOM_FIELDS['DOCUMENTATION_STATUS']: args.documentation_status,
         CUSTOM_FIELDS['RULE_PROPS_CHANGED']: {'value': args.rule_props_changed},
         CUSTOM_FIELDS['SONARLINT_CHANGELOG']: args.sonarlint_changelog
@@ -110,21 +105,21 @@ def main():
     parser.add_argument("--documentation-status", default="N/A", help="Status of the documentation.")
     parser.add_argument("--rule-props-changed", default="No", choices=['Yes', 'No'],
                         help="Whether rule properties have changed.")
-    parser.add_argument("--issue-filter-url", default="", help="The URL to filter all issues in the release.")
+    parser.add_argument("--jira-release-url", default="", help="The URL to the Jira release notes page.")
     parser.add_argument("--sonarlint-changelog", default="", help="The SonarLint changelog content.")
 
     args = parser.parse_args()
 
     jira = get_jira_instance(args.jira_url)
 
-    eprint(f"Using issue filter URL: {args.issue_filter_url}")
-    ticket = create_release_ticket(jira, args, args.issue_filter_url)
+    eprint(f"Using release URL: {args.jira_release_url}")
+    ticket = create_release_ticket(jira, args, args.jira_release_url)
 
     eprint("\n" + "=" * 50)
     eprint("🎉 Successfully created release ticket!")
     eprint(f"   Ticket Key: {ticket.key}")
     eprint(f"   Ticket URL: {ticket.permalink()}")
-    eprint(f"   Issue Filter URL: {args.issue_filter_url}")
+    eprint(f"   Release URL: {args.jira_release_url}")
     eprint("=" * 50)
 
     print(f"ticket_key={ticket.key}")

@@ -22,11 +22,7 @@ inputs:
     description: 'Whether rule properties have changed'
     default: 'No'
   jira-release-url:
-    description: 'The URL to the Jira release notes page. Required if JIRA_RELEASE_URL env var is not set. DEPRECATED: use jira-release-id instead.'
-    default: ''
-  jira-release-id:
-    description: 'The ID of the Jira release version.'
-    default: ''
+    description: 'The URL to the Jira release notes page. Required if JIRA_RELEASE_URL env var is not set.'
   sonarlint-changelog:
     description: 'The SonarLint changelog content.'
     default: ''
@@ -77,52 +73,26 @@ runs:
       env:
         JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
-        JIRA_URL: "https://sonarsource${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && '-sandbox-608' || '' }}.atlassian.net/"
-        PROJECT_KEY: ${{ inputs.jira-project-key || env.JIRA_PROJECT_KEY }}
-        PROJECT_NAME: ${{ inputs.project-name }}
-        VERSION: ${{ inputs.version || env.RELEASE_VERSION }}
-        SHORT_DESCRIPTION: ${{ inputs.short-description }}
-        DOCUMENTATION_STATUS: ${{ inputs.documentation-status }}
-        RULE_PROPS_CHANGED: ${{ inputs.rule-props-changed }}
-        JIRA_RELEASE_URL: ${{ inputs.jira-release-url || env.JIRA_RELEASE_URL }}
-        JIRA_RELEASE_ID: ${{ inputs.jira-release-id || env.JIRA_RELEASE_ID }}
-        SONARLINT_CHANGELOG: ${{ inputs.sonarlint-changelog }}
+        JIRA_PROD_URL: "https://sonarsource.atlassian.net/"
+        JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
       run: |
+        PROJECT_KEY="${{ inputs.jira-project-key || env.JIRA_PROJECT_KEY }}"
+        
         if [[ -z "$PROJECT_KEY" ]]; then
           echo "::error::Both jira-project-key input and JIRA_PROJECT_KEY environment variable are missing. One must be provided."
           exit 1
         fi
-        
-        if [[ -z "$JIRA_RELEASE_URL" && -z "$JIRA_RELEASE_ID" ]]; then
-          echo "::error::Both jira-release-url/jira-release-id input and JIRA_RELEASE_URL/JIRA_RELEASE_ID environment variable are missing. One must be provided."
-          exit 1
-        fi
-        
-        if [[ -n "$JIRA_RELEASE_URL" ]]; then
-          echo "::warning::The jira-release-url input and JIRA_RELEASE_URL env is deprecated. Please use jira-release-id/JIRA_RELEASE_ID instead."
-        fi
-        
-        if [[ -n "$JIRA_RELEASE_ID" ]]; then
-          FIXED_VERSION_ID="$JIRA_RELEASE_ID"
-        else
-          # Extract the ID from the URL
-          FIXED_VERSION_ID=$(echo "$JIRA_RELEASE_URL" | grep -oE '/versions/([0-9]+)' | grep -oE '[0-9]+')
-        fi
-        
-        ISSUE_FILTER="${JIRA_URL}issues/?jql=fixVersion%3D${FIXED_VERSION_ID}"
-        
-        echo "ISSUE_FILTER=$ISSUE_FILTER"
 
         python ${{ github.action_path }}/create_release_ticket.py \
           --project-key="$PROJECT_KEY" \
-          --project-name="$PROJECT_NAME" \
-          --version="$VERSION" \
-          --short-description="$SHORT_DESCRIPTION" \
-          --jira-url="$JIRA_URL" \
-          --documentation-status="$DOCUMENTATION_STATUS" \
-          --rule-props-changed="$RULE_PROPS_CHANGED" \
-          --issue-filter-url="$ISSUE_FILTER" \
-          --sonarlint-changelog="$SONARLINT_CHANGELOG" >> $GITHUB_OUTPUT
+          --project-name="${{ inputs.project-name }}" \
+          --version="${{ inputs.version || env.RELEASE_VERSION }}" \
+          --short-description="${{ inputs.short-description }}" \
+          --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
+          --documentation-status="${{ inputs.documentation-status }}" \
+          --rule-props-changed="${{ inputs.rule-props-changed }}" \
+          --jira-release-url="${{ inputs.jira-release-url || env.JIRA_RELEASE_URL }}" \
+          --sonarlint-changelog="${{ inputs.sonarlint-changelog }}" >> $GITHUB_OUTPUT
 
     - name: Start Progress on Release Ticket
       if: ${{ inputs.start-progress == 'true' }}

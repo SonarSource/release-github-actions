@@ -186,6 +186,7 @@ jobs:
       jira-version-name: ${{ steps.get-jira-version.outputs.jira-version-name }}
       release-notes: ${{ inputs.release-notes != '' && inputs.release-notes || steps.get-jira-release-notes.outputs.release-notes }}
       jira-release-notes: ${{ inputs.release-notes != '' && inputs.release-notes || steps.get-jira-release-notes.outputs.jira-release-notes }}
+      jira-release-url: ${{ steps.get-jira-release-notes.outputs.jira-release-id }}
     steps:
       - name: Get Release Version
         id: get-release-version
