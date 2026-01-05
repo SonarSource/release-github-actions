@@ -145,6 +145,11 @@ def generate_release_notes_url(jira_url, project_key, version_id):
     return f"{jira_url.rstrip('/')}/projects/{project_key}/versions/{version_id}/tab/release-report-all-issues"
 
 
+def generate_release_issue_filter_url(jira_url, version_id):
+    """Generates the issue filter URL for the release version."""
+    return f"{jira_url.rstrip('/')}/issues/?jql=fixVersion%3D{version_id}"
+
+
 def main():
     """Main function to orchestrate fetching and formatting notes."""
     parser = argparse.ArgumentParser(
@@ -174,13 +179,14 @@ def main():
         eprint(f"Using default issue type order: {category_order}")
 
     jira = get_jira_instance(args.jira_url)
-    
+
     # Get version ID for URL generation
     version_id = get_version_id(jira, args.project_key, args.version_name)
-    
-    # Generate release notes URL
+
+    # Generate release notes URL and issue filter URL
     release_notes_url = generate_release_notes_url(args.jira_url, args.project_key, version_id)
-    
+    release_issue_filter_url = generate_release_issue_filter_url(args.jira_url, version_id)
+
     # Get project name and issues for both formats
     project_name = get_project_name(jira, args.project_key)
     issues = get_issues_for_release(jira, args.project_key, args.version_name)
@@ -190,6 +196,7 @@ def main():
     # Output results for GitHub Actions
     # Using multiline string format for the release notes
     print(f"jira-release-url={release_notes_url}")
+    print(f"jira-release-issue-filter-url={release_issue_filter_url}")
     print("release-notes<<EOF")
     print(markdown_notes)
     print("EOF")

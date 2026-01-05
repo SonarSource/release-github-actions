@@ -82,25 +82,26 @@ jobs:
           # Create a mock script that simulates the Python output
           cat > mock_output.py << 'EOF'
           print("jira-release-url=https://test.atlassian.net/projects/TEST/versions/123/tab/release-report-all-issues")
+          print("jira-release-issue-filter-url=https://test.atlassian.net/issues/?jql=fixVersion%3D123")
           print("release-notes<<EOF")
           print("# Release notes - Test Project - 1.0.0")
-          print("")  
+          print("")
           print("### Bug")
           print("[TEST-1](https://test.atlassian.net/browse/TEST-1) Fix test issue")
           print("")
           print("EOF")
           EOF
-          
+
           # Test the tee + sed pipeline
-          python mock_output.py | tee test_output.txt | sed 's/^jira-release-url=/JIRA_RELEASE_URL=/' | sed 's/^release-notes<</RELEASE_NOTES<</' > test_env.txt
-          
+          python mock_output.py | tee test_output.txt | sed 's/^jira-release-url=/JIRA_RELEASE_URL=/' | sed 's/^jira-release-issue-filter-url=/JIRA_RELEASE_ISSUE_FILTER_URL=/' | sed 's/^release-notes<</RELEASE_NOTES<</' > test_env.txt
+
           # Verify outputs were created correctly
           echo "=== GitHub Output format ==="
           cat test_output.txt
           echo ""
           echo "=== Environment Variable format ==="
           cat test_env.txt
-          
+
           # Verify transformations
           if grep -q "JIRA_RELEASE_URL=https://test.atlassian.net" test_env.txt; then
             echo "✅ JIRA_RELEASE_URL transformation works"
@@ -108,7 +109,14 @@ jobs:
             echo "❌ JIRA_RELEASE_URL transformation failed"
             exit 1
           fi
-          
+
+          if grep -q "JIRA_RELEASE_ISSUE_FILTER_URL=https://test.atlassian.net/issues" test_env.txt; then
+            echo "✅ JIRA_RELEASE_ISSUE_FILTER_URL transformation works"
+          else
+            echo "❌ JIRA_RELEASE_ISSUE_FILTER_URL transformation failed"
+            exit 1
+          fi
+
           if grep -q "RELEASE_NOTES<<EOF" test_env.txt; then
             echo "✅ RELEASE_NOTES transformation works"
           else
@@ -141,6 +149,7 @@ jobs:
       - name: Output results
         run: |
           echo "Jira Release URL: ${{ steps.test-sandbox.outputs.jira-release-url }}"
+          echo "Jira Release Issue Filter URL: ${{ steps.test-sandbox.outputs.jira-release-issue-filter-url }}"
           echo "Release Notes:"
           echo "${{ steps.test-sandbox.outputs.release-notes }}"
           echo "Jira Release Notes:"
@@ -153,6 +162,17 @@ jobs:
             exit 1
           else
             echo "✅ Jira Release URL format is correct"
+          fi
+
+      - name: Verify Jira Release Issue Filter URL
+        run: |
+          if [[ "${{ steps.test-sandbox.outputs.jira-release-issue-filter-url }}" != https://sonarsource-sandbox-608.atlassian.net/issues/?jql=fixVersion%3D22169 ]]; then
+            echo "❌ Jira Release Issue Filter URL is incorrect"
+            echo "Expected: https://sonarsource-sandbox-608.atlassian.net/issues/?jql=fixVersion%3D22169"
+            echo "Got: ${{ steps.test-sandbox.outputs.jira-release-issue-filter-url }}"
+            exit 1
+          else
+            echo "✅ Jira Release Issue Filter URL is correct"
           fi
 
       - name: Verify Release Notes Content

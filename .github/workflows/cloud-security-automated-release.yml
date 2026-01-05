@@ -139,6 +139,7 @@ jobs:
       release-notes: ${{ inputs.release-notes != '' && inputs.release-notes || steps.get-jira-release-notes.outputs.release-notes }}
       jira-release-notes: ${{ inputs.release-notes != '' && inputs.release-notes || steps.get-jira-release-notes.outputs.jira-release-notes }}
       jira-release-url: ${{ steps.get-jira-release-notes.outputs.jira-release-url }}
+      jira-release-issue-filter-url: ${{ steps.get-jira-release-notes.outputs.jira-release-issue-filter-url }}
     steps:
       - name: Get Release Version
         id: get-release-version
@@ -174,7 +175,7 @@ jobs:
           project-name: ${{ inputs.project-name }}
           short-description: ${{ inputs.short-description }}
           rule-props-changed: ${{ inputs.rule-props-changed }}
-          jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
+          jira-release-url: ${{ needs.prepare-release.outputs.jira-release-issue-filter-url }}
           start-progress: true
           version: ${{ needs.prepare-release.outputs.release-version }}
 

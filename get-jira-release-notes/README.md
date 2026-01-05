@@ -31,19 +31,21 @@ This action depends on:
 
 ## Outputs
 
-| Output                | Description                                      |
-|-----------------------|--------------------------------------------------|
-| `release-notes`       | The formatted release notes as Markdown          |
-| `jira-release-notes`  | The formatted release notes in Jira wiki markup  |
-| `jira-release-url`    | The URL to the Jira release notes page           |
+| Output                          | Description                                              |
+|---------------------------------|----------------------------------------------------------|
+| `release-notes`                 | The formatted release notes as Markdown                  |
+| `jira-release-notes`            | The formatted release notes in Jira wiki markup          |
+| `jira-release-url`              | The URL to the Jira release notes page                   |
+| `jira-release-issue-filter-url` | The URL of the issue filter for the Jira release         |
 
 ## Environment Variables Set
 
-| Environment Variable | Description                                                                                   |
-|----------------------|-----------------------------------------------------------------------------------------------|
-| `RELEASE_NOTES`      | The formatted release notes as Markdown (same content as `release-notes` output)              |
-| `JIRA_RELEASE_NOTES` | The formatted release notes in Jira wiki markup (same content as `jira-release-notes` output) |
-| `JIRA_RELEASE_URL`   | The URL to the Jira release notes page (same content as `jira-release-url` output)            |
+| Environment Variable            | Description                                                                                               |
+|---------------------------------|-----------------------------------------------------------------------------------------------------------|
+| `RELEASE_NOTES`                 | The formatted release notes as Markdown (same content as `release-notes` output)                          |
+| `JIRA_RELEASE_NOTES`            | The formatted release notes in Jira wiki markup (same content as `jira-release-notes` output)             |
+| `JIRA_RELEASE_URL`              | The URL to the Jira release notes page (same content as `jira-release-url` output)                        |
+| `JIRA_RELEASE_ISSUE_FILTER_URL` | The URL of the issue filter for the Jira release (same content as `jira-release-issue-filter-url` output) |
 
 ## Usage
 
@@ -60,6 +62,7 @@ This action depends on:
 - name: Use the outputs
   run: |
     echo "Release Notes URL: ${{ steps.jira-notes.outputs.jira-release-url }}"
+    echo "Issue Filter URL: ${{ steps.jira-notes.outputs.jira-release-issue-filter-url }}"
     echo "Release Notes (Markdown):"
     echo "${{ steps.jira-notes.outputs.release-notes }}"
     echo "Release Notes (Jira Format):"
