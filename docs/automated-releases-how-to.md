@@ -99,7 +99,7 @@ If your repository already contains some of these workflows, double-check that t
 #### 1.5 Release Action
 
 * We assume that a release action similar to
-  [DBD's release action](https://github.com/SonarSource/sonar-dataflow-bug-detection/blob/154aeb888d290afbc36f584e415d6608986eb65b/.github/workflows/release.yml)
+  [DBD's release action](https://github.com/SonarSource/sonar-dataflow-bug-detection/blob/2a3929c11b1c2ab9bb77b5f88ea7428f887fb359/.github/workflows/release.yml)
   is already in place.
 * However, make sure that you are using at least version 6 of the release workflow:
   `SonarSource/gh-action_release/.github/workflows/main.yaml@v6`
@@ -127,9 +127,10 @@ If your repository already contains some of these workflows, double-check that t
     uses: SonarSource/gh-action_release/.github/workflows/main.yaml@v6
     with:
       # [...]
-      version: ${{ inputs.version }}
-      releaseId: ${{ inputs.releaseId }}
-      dryRun: ${{ inputs.dryRun }}
+      # We do not have any inputs if this workflow is triggered by a release event, hence we have to use a fallback for all inputs
+      version: ${{ inputs.version || github.event.release.tag_name }}
+      releaseId: ${{ inputs.releaseId || github.event.release.id }}
+      dryRun: ${{ inputs.dryRun == true }}
   ```
 
 [//]: # (@formatter:on)
