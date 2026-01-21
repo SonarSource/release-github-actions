@@ -72,6 +72,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         args.documentation_status = 'Ready'
         args.rule_props_changed = 'Yes'
         args.sonarlint_changelog = 'Test changelog'
+        args.due_date = '2029-12-24'
 
         release_url = 'https://jira.com/release/notes'
 
@@ -85,6 +86,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         self.assertEqual(call_args['project'], 'REL')
         self.assertEqual(call_args['issuetype'], 'Ask for release')
         self.assertEqual(call_args['summary'], 'TestProject 1.2.3')
+        self.assertEqual(call_args['duedate'], '2029-12-24')
         self.assertEqual(call_args['customfield_10146'], 'Test release')  # SHORT_DESCRIPTION
         self.assertEqual(call_args['customfield_10145'], release_url)  # LINK_TO_RELEASE_NOTES
         self.assertEqual(call_args['customfield_10147'], 'Ready')  # DOCUMENTATION_STATUS
@@ -163,11 +165,12 @@ class TestCreateReleaseTicket(unittest.TestCase):
         '--project-name', 'Test Project',
         '--version', '1.0.0',
         '--short-description', 'Test release',
+        '--due-date', '2029-12-24',
         '--jira-url', 'https://sandbox.jira.com',
         '--jira-release-url', 'https://sandbox.jira.com/release/notes',
         '--documentation-status', 'Ready',
         '--rule-props-changed', 'Yes',
-        '--sonarlint-changelog', 'Some changelog'
+        '--sonarlint-changelog', 'Some changelog',
     ])
     @patch('create_release_ticket.get_jira_instance')
     @patch('create_release_ticket.create_release_ticket')
@@ -201,6 +204,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         self.assertEqual(args.documentation_status, 'Ready')
         self.assertEqual(args.rule_props_changed, 'Yes')
         self.assertEqual(args.sonarlint_changelog, 'Some changelog')
+        self.assertEqual(args.due_date, '2029-12-24')
 
         stderr_output = mock_stderr.getvalue()
         self.assertIn('Using release URL: https://sandbox.jira.com/release/notes', stderr_output)
