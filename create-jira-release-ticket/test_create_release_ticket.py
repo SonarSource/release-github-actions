@@ -93,6 +93,43 @@ class TestCreateReleaseTicket(unittest.TestCase):
         self.assertEqual(call_args['customfield_11263'], {'value': 'Yes'})  # RULE_PROPS_CHANGED
         self.assertEqual(call_args['customfield_11264'], 'Test changelog')  # SONARLINT_CHANGELOG
 
+    def test_create_release_ticket_without_due_date(self):
+        """Test creating release ticket without due date."""
+        mock_jira = Mock()
+        mock_ticket = Mock()
+        mock_ticket.key = 'REL-124'
+        mock_ticket.permalink.return_value = 'https://jira.com/REL-124'
+        mock_jira.create_issue.return_value = mock_ticket
+
+        # Mock args without due_date
+        args = Mock()
+        args.project_name = 'TestProject'
+        args.version = '1.2.4'
+        args.short_description = 'Test release'
+        args.documentation_status = 'Ready'
+        args.rule_props_changed = 'No'
+        args.sonarlint_changelog = 'Test changelog'
+        args.due_date = ''  # Empty string
+
+        release_url = 'https://jira.com/release/notes'
+
+        result = create_release_ticket(mock_jira, args, release_url)
+
+        self.assertEqual(result, mock_ticket)
+        mock_jira.create_issue.assert_called_once()
+
+        # Verify the issue creation call does NOT have duedate
+        call_args = mock_jira.create_issue.call_args[1]['fields']
+        self.assertEqual(call_args['project'], 'REL')
+        self.assertEqual(call_args['issuetype'], 'Ask for release')
+        self.assertEqual(call_args['summary'], 'TestProject 1.2.4')
+        self.assertNotIn('duedate', call_args)  # Verify duedate is not present
+        self.assertEqual(call_args['customfield_10146'], 'Test release')  # SHORT_DESCRIPTION
+        self.assertEqual(call_args['customfield_10145'], release_url)  # LINK_TO_RELEASE_NOTES
+        self.assertEqual(call_args['customfield_10147'], 'Ready')  # DOCUMENTATION_STATUS
+        self.assertEqual(call_args['customfield_11263'], {'value': 'No'})  # RULE_PROPS_CHANGED
+        self.assertEqual(call_args['customfield_11264'], 'Test changelog')  # SONARLINT_CHANGELOG
+
     # noinspection DuplicatedCode,PyUnusedLocal
     @patch('create_release_ticket.eprint')
     def test_create_release_ticket_jira_error(self, mock_eprint):
@@ -109,6 +146,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         args.documentation_status = 'N/A'
         args.rule_props_changed = 'No'
         args.sonarlint_changelog = ''
+        args.due_date = ''
 
         with self.assertRaises(SystemExit) as cm:
             create_release_ticket(mock_jira, args, 'https://release.url')
