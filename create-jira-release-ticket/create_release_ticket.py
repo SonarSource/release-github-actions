@@ -72,13 +72,15 @@ def create_release_ticket(jira_client, args, link_to_release_notes):
         'project': 'REL',
         'issuetype': 'Ask for release',
         'summary': f'{args.project_name} {args.version}',
-        'duedate': args.due_date,
         CUSTOM_FIELDS['SHORT_DESCRIPTION']: args.short_description,
         CUSTOM_FIELDS['LINK_TO_RELEASE_NOTES']: link_to_release_notes,
         CUSTOM_FIELDS['DOCUMENTATION_STATUS']: args.documentation_status,
         CUSTOM_FIELDS['RULE_PROPS_CHANGED']: {'value': args.rule_props_changed},
         CUSTOM_FIELDS['SONARLINT_CHANGELOG']: args.sonarlint_changelog
     }
+
+    if args.due_date:
+        ticket_details['duedate'] = args.due_date
 
     try:
         new_ticket = jira_client.create_issue(fields=ticket_details)
