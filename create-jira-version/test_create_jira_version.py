@@ -14,8 +14,44 @@ from io import StringIO
 # Add the current directory to the path to import our module
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from create_jira_version import get_jira_instance, main
+from create_jira_version import get_jira_instance, main, normalize_version_name
 from jira.exceptions import JIRAError
+
+
+class TestNormalizeVersionName(unittest.TestCase):
+    """Tests for the normalize_version_name function."""
+
+    def test_removes_zero_patch(self):
+        """Test that .0 patch is removed from version names."""
+        self.assertEqual(normalize_version_name('1.2.0'), '1.2')
+
+    def test_keeps_non_zero_patch(self):
+        """Test that non-zero patches are kept."""
+        self.assertEqual(normalize_version_name('1.2.4'), '1.2.4')
+        self.assertEqual(normalize_version_name('1.2.1'), '1.2.1')
+        self.assertEqual(normalize_version_name('10.20.30'), '10.20.30')
+
+    def test_handles_two_part_versions(self):
+        """Test that two-part versions are unchanged."""
+        self.assertEqual(normalize_version_name('1.2'), '1.2')
+
+    def test_handles_single_zero(self):
+        """Test edge case with just 0."""
+        self.assertEqual(normalize_version_name('0'), '0')
+
+    def test_handles_version_with_prefix(self):
+        """Test versions with prefixes like 'v'."""
+        self.assertEqual(normalize_version_name('v1.2.0'), 'v1.2')
+        self.assertEqual(normalize_version_name('v1.2.4'), 'v1.2.4')
+
+    def test_handles_four_part_version_with_zero(self):
+        """Test four-part versions ending in .0."""
+        self.assertEqual(normalize_version_name('1.2.3.0'), '1.2.3')
+
+    def test_handles_multiple_zeros(self):
+        """Test versions with multiple zeros."""
+        self.assertEqual(normalize_version_name('1.0.0'), '1.0')
+        self.assertEqual(normalize_version_name('0.0.0'), '0.0')
 
 
 class TestCreateJiraVersion(unittest.TestCase):
@@ -59,7 +95,7 @@ class TestCreateJiraVersion(unittest.TestCase):
             get_jira_instance('https://prod.com')
         self.assertEqual(cm.exception.code, 1)
 
-    @patch('sys.argv', ['create_jira_version.py', '--project-key', 'TEST', '--version-name', '1.0.0', '--jira-url', 'https://test.jira.com'])
+    @patch('sys.argv', ['create_jira_version.py', '--project-key', 'TEST', '--version-name', '1.5.0', '--jira-url', 'https://test.jira.com'])
     @patch('create_jira_version.get_jira_instance')
     @patch('sys.stdout', new_callable=StringIO)
     @patch('sys.stderr', new_callable=StringIO)
@@ -69,7 +105,7 @@ class TestCreateJiraVersion(unittest.TestCase):
         mock_jira = Mock()
         mock_version = Mock()
         mock_version.id = '12345'
-        mock_version.name = '1.0.0'
+        mock_version.name = '1.5'
         mock_jira.create_version.return_value = mock_version
         mock_get_jira.return_value = mock_jira
 
@@ -78,19 +114,20 @@ class TestCreateJiraVersion(unittest.TestCase):
         # Verify get_jira_instance was called with correct URL
         mock_get_jira.assert_called_once_with('https://test.jira.com')
 
-        # Verify the version was created with correct parameters
-        mock_jira.create_version.assert_called_once_with(name='1.0.0', project='TEST')
+        # Verify the version was created with normalized name (1.5 instead of 1.5.0)
+        mock_jira.create_version.assert_called_once_with(name='1.5', project='TEST')
 
         # Verify output
         stdout_output = mock_stdout.getvalue()
         self.assertIn('new_version_id=12345', stdout_output)
-        self.assertIn('new_version_name=1.0.0', stdout_output)
+        self.assertIn('new_version_name=1.5', stdout_output)
 
         stderr_output = mock_stderr.getvalue()
-        self.assertIn("Try to create new version '1.0.0'", stderr_output)
-        self.assertIn("✅ Successfully created new version '1.0.0'", stderr_output)
+        self.assertIn("Normalized version name from '1.5.0' to '1.5'", stderr_output)
+        self.assertIn("Try to create new version '1.5'", stderr_output)
+        self.assertIn("✅ Successfully created new version '1.5'", stderr_output)
 
-    @patch('sys.argv', ['create_jira_version.py', '--project-key', 'TEST', '--version-name', '1.0.0', '--jira-url', 'https://test.jira.com'])
+    @patch('sys.argv', ['create_jira_version.py', '--project-key', 'TEST', '--version-name', '1.5.0', '--jira-url', 'https://test.jira.com'])
     @patch('create_jira_version.get_jira_instance')
     @patch('sys.stdout', new_callable=StringIO)
     @patch('sys.stderr', new_callable=StringIO)
@@ -105,11 +142,11 @@ class TestCreateJiraVersion(unittest.TestCase):
             text="A version with this name already exists in this project."
         )
 
-        # Mock project and existing version
+        # Mock project and existing version (normalized to 1.5)
         mock_project = Mock()
         mock_existing_version = Mock()
         mock_existing_version.id = '67890'
-        mock_existing_version.name = '1.0.0'
+        mock_existing_version.name = '1.5'
         mock_project.versions = [mock_existing_version]
         mock_jira.project.return_value = mock_project
 
@@ -117,8 +154,8 @@ class TestCreateJiraVersion(unittest.TestCase):
 
         main()
 
-        # Verify the version creation was attempted
-        mock_jira.create_version.assert_called_once_with(name='1.0.0', project='TEST')
+        # Verify the version creation was attempted with normalized name
+        mock_jira.create_version.assert_called_once_with(name='1.5', project='TEST')
 
         # Verify project was fetched to get existing version
         mock_jira.project.assert_called_once_with('TEST')
@@ -126,12 +163,12 @@ class TestCreateJiraVersion(unittest.TestCase):
         # Verify output
         stdout_output = mock_stdout.getvalue()
         self.assertIn('new_version_id=67890', stdout_output)
-        self.assertIn('new_version_name=1.0.0', stdout_output)
+        self.assertIn('new_version_name=1.5', stdout_output)
 
         stderr_output = mock_stderr.getvalue()
-        self.assertIn("Warning: Version '1.0.0' already exists. Skipping creation.", stderr_output)
+        self.assertIn("Warning: Version '1.5' already exists. Skipping creation.", stderr_output)
 
-    @patch('sys.argv', ['create_jira_version.py', '--project-key', 'TEST', '--version-name', '1.0.0', '--jira-url', 'https://test.jira.com'])
+    @patch('sys.argv', ['create_jira_version.py', '--project-key', 'TEST', '--version-name', '1.5.0', '--jira-url', 'https://test.jira.com'])
     @patch('create_jira_version.get_jira_instance')
     @patch('sys.stderr', new_callable=StringIO)
     def test_main_version_exists_but_not_found(self, mock_stderr, mock_get_jira):
@@ -159,9 +196,9 @@ class TestCreateJiraVersion(unittest.TestCase):
         self.assertEqual(cm.exception.code, 1)
 
         stderr_output = mock_stderr.getvalue()
-        self.assertIn("Error: Could not find existing version '1.0.0' in project.", stderr_output)
+        self.assertIn("Error: Could not find existing version '1.5' in project.", stderr_output)
 
-    @patch('sys.argv', ['create_jira_version.py', '--project-key', 'TEST', '--version-name', '1.0.0', '--jira-url', 'https://test.jira.com'])
+    @patch('sys.argv', ['create_jira_version.py', '--project-key', 'TEST', '--version-name', '1.5.1', '--jira-url', 'https://test.jira.com'])
     @patch('create_jira_version.get_jira_instance')
     @patch('sys.stderr', new_callable=StringIO)
     def test_main_other_jira_error(self, mock_stderr, mock_get_jira):
@@ -183,6 +220,62 @@ class TestCreateJiraVersion(unittest.TestCase):
 
         stderr_output = mock_stderr.getvalue()
         self.assertIn("Error: Failed to create new version. Status: 500, Text: Internal server error", stderr_output)
+
+
+    @patch('sys.argv', ['create_jira_version.py', '--project-key', 'TEST', '--version-name', '1.2.0', '--jira-url', 'https://test.jira.com'])
+    @patch('create_jira_version.get_jira_instance')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_main_normalizes_version_with_zero_patch(self, mock_stderr, mock_stdout, mock_get_jira):
+        """Test that version names with .0 patch are normalized."""
+        # Mock JIRA instance and version
+        mock_jira = Mock()
+        mock_version = Mock()
+        mock_version.id = '12345'
+        mock_version.name = '1.2'
+        mock_jira.create_version.return_value = mock_version
+        mock_get_jira.return_value = mock_jira
+
+        main()
+
+        # Verify the version was created with normalized name (1.2 instead of 1.2.0)
+        mock_jira.create_version.assert_called_once_with(name='1.2', project='TEST')
+
+        # Verify output shows normalized version
+        stdout_output = mock_stdout.getvalue()
+        self.assertIn('new_version_id=12345', stdout_output)
+        self.assertIn('new_version_name=1.2', stdout_output)
+
+        stderr_output = mock_stderr.getvalue()
+        self.assertIn("Normalized version name from '1.2.0' to '1.2'", stderr_output)
+        self.assertIn("Try to create new version '1.2'", stderr_output)
+
+    @patch('sys.argv', ['create_jira_version.py', '--project-key', 'TEST', '--version-name', '1.2.3', '--jira-url', 'https://test.jira.com'])
+    @patch('create_jira_version.get_jira_instance')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.stderr', new_callable=StringIO)
+    def test_main_keeps_non_zero_patch(self, mock_stderr, mock_stdout, mock_get_jira):
+        """Test that version names with non-zero patch are kept as-is."""
+        # Mock JIRA instance and version
+        mock_jira = Mock()
+        mock_version = Mock()
+        mock_version.id = '12345'
+        mock_version.name = '1.2.3'
+        mock_jira.create_version.return_value = mock_version
+        mock_get_jira.return_value = mock_jira
+
+        main()
+
+        # Verify the version was created with original name
+        mock_jira.create_version.assert_called_once_with(name='1.2.3', project='TEST')
+
+        # Verify output shows original version
+        stdout_output = mock_stdout.getvalue()
+        self.assertIn('new_version_name=1.2.3', stdout_output)
+
+        stderr_output = mock_stderr.getvalue()
+        # Should NOT contain normalization message
+        self.assertNotIn("Normalized version name", stderr_output)
 
 
 if __name__ == '__main__':
