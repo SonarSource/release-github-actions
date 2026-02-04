@@ -7,19 +7,21 @@ This reusable GitHub Actions workflow automates the end-to-end release process a
 The workflow orchestrates these steps:
 
 1. Optionally freeze (lock) the target branch at the start of the release
-2. Determine the release version and Jira version name
-3. Optionally generate Jira release notes if not provided
-4. Create a Jira release ticket
-5. Publish a GitHub release (draft or final)
-6. Release the current Jira version and create the next version in Jira
-7. Optionally create integration tickets (SLVS, SLVSCODE, SLE, SLI, SQC, SQS)
-8. Optionally open analyzer update PRs in SQS and SQC
-9. Optionally post per-job and final workflow summaries when `verbose` is enabled
+2. Check releasability status on the branch (enabled by default)
+3. Determine the release version and Jira version name
+4. Optionally generate Jira release notes if not provided
+5. Create a Jira release ticket
+6. Publish a GitHub release (draft or final)
+7. Release the current Jira version and create the next version in Jira
+8. Optionally create integration tickets (SLVS, SLVSCODE, SLE, SLI, SQC, SQS)
+9. Optionally open analyzer update PRs in SQS and SQC
+10. Optionally post per-job and final workflow summaries when `verbose` is enabled
 
 ## Dependencies
 
 This workflow composes several actions from this repository:
 
+- `SonarSource/gh-action_releasability/releasability-status` (external action for releasability checks)
 - `SonarSource/release-github-actions/get-release-version`
 - `SonarSource/release-github-actions/get-jira-version`
 - `SonarSource/release-github-actions/get-jira-release-notes`
@@ -60,6 +62,7 @@ This workflow composes several actions from this repository:
 | `release-process`            | Release process documentation URL                                                                               | No       | General page |
 | `verbose`                    | When `true`, posts per-job summaries and a final run summary                                                    | No       | `false`      |
 | `freeze-branch`              | When `true`, locks the target branch during the release and unlocks it after publishing                         | No       | `true`       |
+| `check-releasability`        | When `true`, verifies the releasability status on the branch before proceeding                                  | No       | `true`       |
 | `slack-channel`              | Slack channel to notify when locking/unlocking the branch                                                       | No       | -            |
 
 ## Outputs
@@ -121,6 +124,10 @@ jobs:
 
 ## Notes
 
+- When `check-releasability: true` (default), the workflow will:
+  - Execute a releasability check on the specified branch immediately after freezing (using `SonarSource/gh-action_releasability@v3`)
+  - Update the commit status with the latest releasability results
+  - Fail early if the releasability check does not pass, preventing unnecessary work (like creating REL tickets)
 - When `freeze-branch: true`, the workflow will:
   - Lock the specified branch at the start of the release
   - Proceed with the release steps

@@ -16,10 +16,19 @@ inputs:
     required: false
     default: 'true'
 
+outputs:
+  releasability-state:
+    description: 'The state of the Releasability status (e.g., success, failure, pending)'
+    value: ${{ steps.check.outputs.releasability-state }}
+  releasability-description:
+    description: 'The description of the Releasability status'
+    value: ${{ steps.check.outputs.releasability-description }}
+
 runs:
   using: 'composite'
   steps:
     - name: Check releasability status
+      id: check
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
@@ -39,6 +48,10 @@ runs:
         # Find the Releasability status
         RELEASABILITY_STATE=$(echo "$STATUS_RESPONSE" | jq -r '.statuses[] | select(.context == "Releasability") | .state')
         RELEASABILITY_DESCRIPTION=$(echo "$STATUS_RESPONSE" | jq -r '.statuses[] | select(.context == "Releasability") | .description')
+
+        # Output the state and description for use in subsequent steps
+        echo "releasability-state=$RELEASABILITY_STATE" >> $GITHUB_OUTPUT
+        echo "releasability-description=$RELEASABILITY_DESCRIPTION" >> $GITHUB_OUTPUT
 
         if [ -z "$RELEASABILITY_STATE" ] || [ "$RELEASABILITY_STATE" = "null" ]; then
           echo "❌ Could not find Releasability status on $BRANCH_NAME branch"
