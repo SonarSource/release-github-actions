@@ -6,7 +6,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a collection of reusable GitHub Actions for automating SonarSource analyzer releases. Actions handle Jira integration (tickets, versions, release notes), GitHub releases, cross-repository updates, and Slack notifications.
 
+## Branching
+
+**Important:** Changes must always be made on a feature branch, never directly on `master`.
+- If on `master`, create a new branch using the format: `ab/<feature-name>` (e.g., `ab/add-slack-notifications`)
+- The prefix `ab` represents the developer's initials (first letter of first name + first letter of last name)
+- Adapt `<feature-name>` based on the task/prompt (use lowercase, hyphen-separated)
+- If already on a feature branch, do not create a new branch—continue working on the current branch
+
 ## Testing
+
+**Important:** When making any code changes, always check if there are related tests that need to be updated. Always run the tests after making changes to ensure nothing is broken.
 
 ### Run all tests (CI)
 Tests run automatically via GitHub Actions. To trigger manually:
