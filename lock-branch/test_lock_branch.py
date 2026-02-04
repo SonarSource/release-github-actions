@@ -61,6 +61,13 @@ class TestLockBranch(unittest.TestCase):
         self.assertFalse(payload['enforce_admins'])
         self.assertIsNone(payload['required_pull_request_reviews'])
         self.assertIsNone(payload['restrictions'])
+        # Optional boolean properties should default to False
+        self.assertFalse(payload['required_linear_history'])
+        self.assertFalse(payload['allow_force_pushes'])
+        self.assertFalse(payload['allow_deletions'])
+        self.assertFalse(payload['block_creations'])
+        self.assertFalse(payload['required_conversation_resolution'])
+        self.assertFalse(payload['allow_fork_syncing'])
 
     def test_build_protection_payload_unlock(self):
         """Test building payload for unlock operation."""
@@ -115,6 +122,53 @@ class TestLockBranch(unittest.TestCase):
         self.assertEqual(payload['restrictions']['users'], ['user1', 'user2'])
         self.assertEqual(payload['restrictions']['teams'], ['team1'])
         self.assertEqual(payload['restrictions']['apps'], ['app1'])
+
+    def test_build_protection_payload_preserves_optional_booleans(self):
+        """Test that optional boolean settings are preserved."""
+        current = {
+            'enforce_admins': {'enabled': False},
+            'required_status_checks': None,
+            'required_pull_request_reviews': None,
+            'restrictions': None,
+            'lock_branch': {'enabled': False},
+            'required_linear_history': {'enabled': True},
+            'allow_force_pushes': {'enabled': True},
+            'allow_deletions': {'enabled': False},
+            'block_creations': {'enabled': True},
+            'required_conversation_resolution': {'enabled': True},
+            'allow_fork_syncing': {'enabled': False}
+        }
+
+        payload = build_protection_payload(current, True)
+
+        self.assertTrue(payload['lock_branch'])
+        self.assertTrue(payload['required_linear_history'])
+        self.assertTrue(payload['allow_force_pushes'])
+        self.assertFalse(payload['allow_deletions'])
+        self.assertTrue(payload['block_creations'])
+        self.assertTrue(payload['required_conversation_resolution'])
+        self.assertFalse(payload['allow_fork_syncing'])
+
+    def test_build_protection_payload_missing_optional_booleans(self):
+        """Test that missing optional boolean settings default to False."""
+        current = {
+            'enforce_admins': {'enabled': False},
+            'required_status_checks': None,
+            'required_pull_request_reviews': None,
+            'restrictions': None,
+            'lock_branch': {'enabled': False}
+            # No optional boolean properties present
+        }
+
+        payload = build_protection_payload(current, True)
+
+        self.assertTrue(payload['lock_branch'])
+        self.assertFalse(payload['required_linear_history'])
+        self.assertFalse(payload['allow_force_pushes'])
+        self.assertFalse(payload['allow_deletions'])
+        self.assertFalse(payload['block_creations'])
+        self.assertFalse(payload['required_conversation_resolution'])
+        self.assertFalse(payload['allow_fork_syncing'])
 
     @patch('lock_branch.requests.get')
     def test_get_branch_protection_success(self, mock_get):

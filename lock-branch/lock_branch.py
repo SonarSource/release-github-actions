@@ -80,13 +80,19 @@ def build_protection_payload(current_protection, lock):
         dict: The payload for updating branch protection
     """
     if current_protection is None:
-        # Create minimal protection with just lock_branch
+        # Create minimal protection with lock_branch and sensible defaults
         return {
             "required_status_checks": None,
-            "enforce_admins": False,
+            "enforce_admins": True,
             "required_pull_request_reviews": None,
             "restrictions": None,
-            "lock_branch": lock
+            "lock_branch": lock,
+            "required_linear_history": True,
+            "allow_force_pushes": False,
+            "allow_deletions": False,
+            "block_creations": False,
+            "required_conversation_resolution": False,
+            "allow_fork_syncing": False
         }
 
     # Preserve existing settings while updating lock_branch
@@ -126,6 +132,20 @@ def build_protection_payload(current_protection, lock):
         }
     else:
         payload["restrictions"] = None
+
+    # Preserve optional boolean settings
+    payload["required_linear_history"] = current_protection.get(
+        'required_linear_history', {}).get('enabled', False)
+    payload["allow_force_pushes"] = current_protection.get(
+        'allow_force_pushes', {}).get('enabled', False)
+    payload["allow_deletions"] = current_protection.get(
+        'allow_deletions', {}).get('enabled', False)
+    payload["block_creations"] = current_protection.get(
+        'block_creations', {}).get('enabled', False)
+    payload["required_conversation_resolution"] = current_protection.get(
+        'required_conversation_resolution', {}).get('enabled', False)
+    payload["allow_fork_syncing"] = current_protection.get(
+        'allow_fork_syncing', {}).get('enabled', False)
 
     return payload
 
