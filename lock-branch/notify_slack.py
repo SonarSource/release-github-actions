@@ -42,7 +42,7 @@ def send_slack_notification(slack_token, channel, branch, repository, freeze, ru
         "Content-Type": "application/json"
     }
 
-    icon = ":lock:" if freeze else ":unlock:"
+    icon = ":ice_cube:" if freeze else ":sun_with_face:"
     action = "frozen" if freeze else "unfrozen"
     color = "warning" if freeze else "good"
 
