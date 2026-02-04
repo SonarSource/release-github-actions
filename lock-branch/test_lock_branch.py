@@ -126,7 +126,7 @@ class TestLockBranch(unittest.TestCase):
 
         result = get_branch_protection('token', 'owner/repo', 'main')
 
-        self.assertEqual(result['lock_branch']['enabled'], True)
+        self.assertTrue(result['lock_branch']['enabled'])
         mock_get.assert_called_once()
         # Verify the URL is correct
         call_args = mock_get.call_args
@@ -167,7 +167,7 @@ class TestLockBranch(unittest.TestCase):
         current = {'lock_branch': {'enabled': False}, 'enforce_admins': {'enabled': False}}
         result = update_branch_lock('token', 'owner/repo', 'main', True, current)
 
-        self.assertEqual(result['lock_branch']['enabled'], True)
+        self.assertTrue(result['lock_branch']['enabled'])
         mock_put.assert_called_once()
 
     @patch('lock_branch.requests.put')
@@ -180,7 +180,7 @@ class TestLockBranch(unittest.TestCase):
 
         result = update_branch_lock('token', 'owner/repo', 'main', True, None)
 
-        self.assertEqual(result['lock_branch']['enabled'], True)
+        self.assertTrue(result['lock_branch']['enabled'])
 
     @patch('lock_branch.requests.put')
     def test_update_branch_lock_failure(self, mock_put):
