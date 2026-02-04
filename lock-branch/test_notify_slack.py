@@ -83,7 +83,7 @@ class TestNotifySlack(unittest.TestCase):
 
         payload = mock_post.call_args[1]['json']
         message_text = payload['attachments'][0]['blocks'][0]['text']['text']
-        self.assertIn(':lock:', message_text)
+        self.assertIn(':ice_cube:', message_text)
         self.assertIn('frozen', message_text)
         self.assertIn('main', message_text)
         self.assertEqual(payload['attachments'][0]['color'], 'warning')
@@ -107,7 +107,7 @@ class TestNotifySlack(unittest.TestCase):
 
         payload = mock_post.call_args[1]['json']
         message_text = payload['attachments'][0]['blocks'][0]['text']['text']
-        self.assertIn(':unlock:', message_text)
+        self.assertIn(':sun_with_face:', message_text)
         self.assertIn('unfrozen', message_text)
         self.assertIn('develop', message_text)
         self.assertEqual(payload['attachments'][0]['color'], 'good')

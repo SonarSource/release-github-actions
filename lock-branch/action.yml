@@ -55,10 +55,12 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token || fromJSON(steps.secrets.outputs.vault).GITHUB_LOCK_TOKEN }}
+        INPUT_BRANCH: ${{ inputs.branch }}
+        INPUT_FREEZE: ${{ inputs.freeze }}
       run: |
         python ${{ github.action_path }}/lock_branch.py \
-          --branch "${{ inputs.branch }}" \
-          --freeze "${{ inputs.freeze }}" \
+          --branch "$INPUT_BRANCH" \
+          --freeze "$INPUT_FREEZE" \
           --repository "${{ github.repository }}" \
           >> $GITHUB_OUTPUT
 
@@ -67,10 +69,13 @@ runs:
       shell: bash
       env:
         SLACK_TOKEN: ${{ inputs.slack-token || fromJSON(steps.secrets.outputs.vault).SLACK_TOKEN }}
+        INPUT_CHANNEL: ${{ inputs.slack-channel }}
+        INPUT_BRANCH: ${{ inputs.branch }}
+        INPUT_FREEZE: ${{ inputs.freeze }}
       run: |
         python ${{ github.action_path }}/notify_slack.py \
-          --channel "${{ inputs.slack-channel }}" \
-          --branch "${{ inputs.branch }}" \
+          --channel "$INPUT_CHANNEL" \
+          --branch "$INPUT_BRANCH" \
           --repository "${{ github.repository }}" \
-          --freeze "${{ inputs.freeze }}" \
+          --freeze "$INPUT_FREEZE" \
           --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
