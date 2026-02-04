@@ -8,6 +8,8 @@ This is a collection of reusable GitHub Actions for automating SonarSource analy
 
 ## Testing
 
+**Important:** When making any code changes, always check if there are related tests that need to be updated. Always run the tests after making changes to ensure nothing is broken.
+
 ### Run all tests (CI)
 Tests run automatically via GitHub Actions. To trigger manually:
 - Push to `master` runs `.github/workflows/test-all.yml`

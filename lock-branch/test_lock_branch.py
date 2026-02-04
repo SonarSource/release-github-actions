@@ -58,11 +58,11 @@ class TestLockBranch(unittest.TestCase):
         payload = build_protection_payload(None, True)
         self.assertTrue(payload['lock_branch'])
         self.assertIsNone(payload['required_status_checks'])
-        self.assertFalse(payload['enforce_admins'])
+        self.assertTrue(payload['enforce_admins'])
         self.assertIsNone(payload['required_pull_request_reviews'])
         self.assertIsNone(payload['restrictions'])
-        # Optional boolean properties should default to False
-        self.assertFalse(payload['required_linear_history'])
+        # Sensible defaults based on typical branch protection rules
+        self.assertTrue(payload['required_linear_history'])
         self.assertFalse(payload['allow_force_pushes'])
         self.assertFalse(payload['allow_deletions'])
         self.assertFalse(payload['block_creations'])
