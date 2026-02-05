@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a collection of reusable GitHub Actions for automating SonarSource analyzer releases. Actions handle Jira integration (tickets, versions, release notes), GitHub releases, cross-repository updates, and Slack notifications.
 
+## Jira Project
+
+Related Jira tickets for this project are tracked in the **GHA** (GitHub Automation) project. When available, use the Jira MCP to access ticket details (e.g., `GHA-123`).
+
 ## Branching
 
 **Important:** Changes must always be made on a feature branch, never directly on `master`.
@@ -13,6 +17,14 @@ This is a collection of reusable GitHub Actions for automating SonarSource analy
 - The prefix `ab` represents the developer's initials (first letter of first name + first letter of last name)
 - Adapt `<feature-name>` based on the task/prompt (use lowercase, hyphen-separated)
 - If already on a feature branch, do not create a new branch—continue working on the current branch
+
+## Documentation
+
+**Important:** When making any code changes, check if the related README or documentation needs to be updated. Each action has its own `README.md`, and workflow documentation is in `docs/`. Keep documentation in sync with code changes.
+
+When creating a new action:
+- Add a `README.md` to the action's directory documenting inputs, outputs, and usage
+- Update the main `README.md` at the repository root to link to the new action
 
 ## Testing
 
@@ -95,3 +107,17 @@ env:
   INPUT_BRANCH: ${{ inputs.branch }}
 run: echo "$INPUT_BRANCH"
 ```
+
+### Pinning External Actions
+
+**Important:** All GitHub Actions from outside the SonarSource organization must be pinned to a full commit SHA (not a tag). Add a comment with the version number for readability.
+
+```yaml
+# Bad - using tag
+- uses: actions/checkout@v4
+
+# Good - pinned to commit SHA with version comment
+- uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+```
+
+This prevents tag mutation attacks where a malicious actor could change what code a tag points to.

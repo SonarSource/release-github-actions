@@ -24,7 +24,12 @@ This action requires the `statuses: read` permission for the GitHub token to acc
 
 ## Outputs
 
-This action has no outputs.
+| Output                     | Description                                                              |
+|----------------------------|--------------------------------------------------------------------------|
+| `releasability-state`      | The state of the Releasability status (e.g., `success`, `failure`, `pending`) |
+| `releasability-description`| The description of the Releasability status                              |
+
+These outputs are always set (even on failure), allowing subsequent steps to access the releasability information for reporting or debugging purposes.
 
 ## Usage
 

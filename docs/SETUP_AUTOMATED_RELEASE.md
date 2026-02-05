@@ -8,6 +8,10 @@ For detailed workflow documentation (inputs, outputs, behavior), see [AUTOMATED_
 
 Before the workflow will work, complete these steps:
 
+### Releasability Status
+
+- [ ] **Ensure releasability checks are configured** for your repository. The workflow verifies releasability status on the branch before proceeding with the release. This prevents creating REL tickets and other artifacts if the build is not releasable.
+
 ### Jira Configuration
 
 - [ ] **Add `Jira Tech User GitHub` as Administrator** on your Jira project (required to create/release versions)
@@ -295,4 +299,16 @@ sq-ide-short-description: "Changes relevant to IDE integrations"
 Specify a different runner:
 ```yaml
 runner-environment: "sonar-s"
+```
+
+### Releasability Check
+
+The workflow checks releasability status by default. To disable or customize:
+```yaml
+# Disable releasability check entirely
+check-releasability: false
+
+# Check releasability but allow failed optional checks
+check-releasability: true
+with-optional-releasability-checks: false
 ```

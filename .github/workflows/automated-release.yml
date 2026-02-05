@@ -116,6 +116,11 @@ on:
         required: false
         type: boolean
         default: true
+      check-releasability:
+        description: "Check the releasability status after freezing the branch"
+        required: false
+        type: boolean
+        default: true
       slack-channel:
         description: "Slack channel for notifications"
         required: false
@@ -170,19 +175,91 @@ jobs:
           echo "- Locked branch pattern \`$BRANCH\` to prevent changes during the release." >> $GITHUB_STEP_SUMMARY
           echo "- Notifications sent to Slack channel: \`$SLACK_CHANNEL\`." >> $GITHUB_STEP_SUMMARY
 
+  # This job executes the releasability check on the branch to ensure it is ready for release.
+  # Running this check early prevents unnecessary work (like creating REL tickets) if the release cannot proceed.
+  check-releasability:
+    name: Check Releasability
+    if: ${{ inputs.check-releasability && !cancelled() }}
+    needs: [ freeze-branch ]
+    runs-on: ${{ inputs.runner-environment }}
+    permissions:
+      id-token: write
+      contents: read
+      statuses: read
+    outputs:
+      release-version: ${{ steps.get-version.outputs.release-version }}
+    steps:
+      - name: Get Release Version
+        id: get-version
+        uses: SonarSource/release-github-actions/get-release-version@v1
+        with:
+          branch: ${{ inputs.branch }}
+
+      - uses: SonarSource/gh-action_releasability@v3
+        id: releasability
+        with:
+          branch: ${{ github.ref_name }}
+          commit-sha: ${{ github.sha }}
+          organization: ${{ github.repository_owner }}
+          repository: ${{ github.event.repository.name }}
+          version: ${{ steps.get-version.outputs.release-version }}
+
+      - name: Summary
+        if: ${{ always() && inputs.verbose }}
+        shell: bash
+        env:
+          BRANCH: ${{ inputs.branch }}
+          VERSION: ${{ steps.get-version.outputs.release-version }}
+          CHECK_OUTCOME: ${{ steps.releasability.outcome }}
+          CHECK_DEPENDENCIES: ${{ steps.releasability.outputs.releasabilityCheckDependencies }}
+          CHECK_QA: ${{ steps.releasability.outputs.releasabilityQA }}
+          CHECK_JIRA: ${{ steps.releasability.outputs.releasabilityJira }}
+          CHECK_PEACHEE: ${{ steps.releasability.outputs.releasabilityCheckPeacheeLanguagesStatistics }}
+          CHECK_QUALITY_GATE: ${{ steps.releasability.outputs.releasabilityQualityGate }}
+          CHECK_PARENT_POM: ${{ steps.releasability.outputs.releasabilityParentPOM }}
+          CHECK_GITHUB: ${{ steps.releasability.outputs.releasabilityGitHub }}
+          CHECK_MANIFEST: ${{ steps.releasability.outputs.releasabilityCheckManifestValues }}
+          CHECK_LICENSES: ${{ steps.releasability.outputs.releasabilityCheckLicenses }}
+        run: |
+          if [ "$CHECK_OUTCOME" = "success" ]; then
+            echo "## ✅ Releasability Check" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Releasability Check Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### What happened" >> $GITHUB_STEP_SUMMARY
+          echo "- Executed releasability check on branch \`$BRANCH\` for version \`$VERSION\`." >> $GITHUB_STEP_SUMMARY
+          if [ "$CHECK_OUTCOME" != "success" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Failed Checks" >> $GITHUB_STEP_SUMMARY
+            [ "$CHECK_DEPENDENCIES" = "FAILED" ] && echo "- ❌ CheckDependencies" >> $GITHUB_STEP_SUMMARY
+            [ "$CHECK_QA" = "FAILED" ] && echo "- ❌ QA" >> $GITHUB_STEP_SUMMARY
+            [ "$CHECK_JIRA" = "FAILED" ] && echo "- ❌ Jira" >> $GITHUB_STEP_SUMMARY
+            [ "$CHECK_PEACHEE" = "FAILED" ] && echo "- ❌ CheckPeacheeLanguagesStatistics" >> $GITHUB_STEP_SUMMARY
+            [ "$CHECK_QUALITY_GATE" = "FAILED" ] && echo "- ❌ QualityGate" >> $GITHUB_STEP_SUMMARY
+            [ "$CHECK_PARENT_POM" = "FAILED" ] && echo "- ❌ ParentPOM" >> $GITHUB_STEP_SUMMARY
+            [ "$CHECK_GITHUB" = "FAILED" ] && echo "- ❌ GitHub" >> $GITHUB_STEP_SUMMARY
+            [ "$CHECK_MANIFEST" = "FAILED" ] && echo "- ❌ CheckManifestValues" >> $GITHUB_STEP_SUMMARY
+            [ "$CHECK_LICENSES" = "FAILED" ] && echo "- ❌ CheckLicenses" >> $GITHUB_STEP_SUMMARY
+          fi
+
   # This step determines the release version, Jira version name, and gathers release notes.
   # It sets up the necessary outputs for subsequent steps.
   # These outputs include the release version, Jira version name, release notes, Jira release notes, and Jira release URL.
   prepare-release:
     name: Prepare Release
-    needs: [ freeze-branch ]
+    needs: [ freeze-branch, check-releasability ]
+    if: |
+      !cancelled() &&
+      (needs.freeze-branch.result == 'success' || needs.freeze-branch.result == 'skipped') &&
+      (needs.check-releasability.result == 'success' || needs.check-releasability.result == 'skipped')
     runs-on: ${{ inputs.runner-environment }}
     permissions:
       statuses: read
       contents: read
       id-token: write
     outputs:
-      release-version: ${{ steps.get-release-version.outputs.release-version }}
+      release-version: ${{ needs.check-releasability.outputs.release-version || steps.get-release-version.outputs.release-version }}
       jira-version-name: ${{ steps.get-jira-version.outputs.jira-version-name }}
       release-notes: ${{ inputs.release-notes != '' && inputs.release-notes || steps.get-jira-release-notes.outputs.release-notes }}
       jira-release-notes: ${{ inputs.release-notes != '' && inputs.release-notes || steps.get-jira-release-notes.outputs.jira-release-notes }}
@@ -191,6 +268,7 @@ jobs:
     steps:
       - name: Get Release Version
         id: get-release-version
+        if: ${{ needs.check-releasability.result == 'skipped' }}
         uses: SonarSource/release-github-actions/get-release-version@v1
         with:
           branch: ${{ inputs.branch }}
@@ -228,7 +306,7 @@ jobs:
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Results" >> $GITHUB_STEP_SUMMARY
-          echo "- Release version: \`${{ steps.get-release-version.outputs.release-version }}\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Release version: \`${{ needs.check-releasability.outputs.release-version || steps.get-release-version.outputs.release-version }}\`." >> $GITHUB_STEP_SUMMARY
           echo "- Jira version name: \`${{ steps.get-jira-version.outputs.jira-version-name }}\`." >> $GITHUB_STEP_SUMMARY
 
   # This step creates a Jira release ticket using the prepared release information.
@@ -563,7 +641,7 @@ jobs:
     name: Release Results
     runs-on: ${{ inputs.runner-environment }}
     if: always()
-    needs: [ prepare-release, publish-github-release, create-release-ticket, release-in-jira, create-integration-tickets, update-analyzers ]
+    needs: [ check-releasability, prepare-release, publish-github-release, create-release-ticket, release-in-jira, create-integration-tickets, update-analyzers ]
     env:
         RELEASE_PROCESS: ${{ inputs.release-process != '' && inputs.release-process || 'https://xtranet-sonarsource.atlassian.net/wiki/spaces/CSD/pages/4325048388/Release+Instructions+-+Cloud+Security' }}
     steps:
@@ -580,7 +658,7 @@ jobs:
           SQS_PR_URL: ${{ needs.update-analyzers.outputs.sqs-pull-request-url || 'not created' }}
           SQC_PR_URL: ${{ needs.update-analyzers.outputs.sqc-pull-request-url || 'not created' }}
         run: |
-          ALL_SUCCESS=$(echo '${{ toJson(needs) }}' | jq -r 'to_entries | all(.value.result == "success")')
+          ALL_SUCCESS=$(echo '${{ toJson(needs) }}' | jq -r 'to_entries | all(.value.result == "success" or .value.result == "skipped")')
           
           if [[ "$ALL_SUCCESS" == "true" ]]; then
             echo "# 🎉 Release Successful" >> $GITHUB_STEP_SUMMARY
