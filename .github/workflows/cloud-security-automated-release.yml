@@ -90,6 +90,12 @@ on:
         required: false
         type: boolean
         default: true
+      require-rule-metadata-update:
+        description: "Include 'Update Rule Metadata' in pre release checks"
+        required: false
+        type: boolean
+        default: true
+
 
     outputs:
       new-version:
@@ -112,6 +118,7 @@ jobs:
           branch: ${{ inputs.branch }}
 
       - name: Update Rule Metadata
+        if: ${{ inputs.require-rule-metadata-update }}
         id: update-rule-metadata
         uses: SonarSource/release-github-actions/update-rule-metadata@v1
         with:
