@@ -13,8 +13,8 @@ Related Jira tickets for this project are tracked in the **GHA** (GitHub Automat
 ## Branching
 
 **Critical:** Changes must always be made on a feature branch, never directly on `master`. Before any commit, verify you are not on `master`.
-- If on `master`, create a new branch using the format: `ab/<feature-name>` (e.g., `ab/add-slack-notifications`)
-- The prefix `ab` represents the developer's initials (first letter of first name + first letter of last name)
+- If on `master`, create a new branch using the format: `<username-prefix>/<feature-name>` (e.g., `ab/add-slack-notifications`)
+- Ask for the prefix to use from the team if unsure (e.g., `ab/` for Antoine B., `js/` for Jean S., etc.)
 - Adapt `<feature-name>` based on the task/prompt (use lowercase, hyphen-separated)
 - If already on a feature branch, do not create a new branch—continue working on the current branch
 

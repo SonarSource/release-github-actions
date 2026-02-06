@@ -148,20 +148,12 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - &freeze-branch-secrets
-        id: secrets
-        uses: SonarSource/vault-action-wrapper@v3
+      - name: Freeze branch
+        uses: SonarSource/release-github-actions/lock-branch@2a5ddd698dd3992bf592cf454a04da8fc99fecc5
         with:
-          secrets: |
-            development/github/token/{REPO_OWNER_NAME_DASH}-lock token | lock_token;
-            development/kv/data/slack token | slack_api_token;
-      - &freeze-branch-toggle
-        uses: sonarsource/gh-action-lt-backlog/ToggleLockBranch@v2
-        with:
-          github-token: ${{ fromJSON(steps.secrets.outputs.vault).lock_token }}
-          slack-token: ${{ fromJSON(steps.secrets.outputs.vault).slack_api_token }}
+          branch: ${{ inputs.branch }}
+          freeze: true
           slack-channel: ${{ inputs.slack-channel }}
-          branch-pattern: ${{ inputs.branch }}
       - name: Summary
         if: ${{ inputs.verbose }}
         shell: bash
@@ -398,8 +390,12 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - *freeze-branch-secrets
-      - *freeze-branch-toggle
+      - name: Unfreeze branch
+        uses: SonarSource/release-github-actions/lock-branch@2a5ddd698dd3992bf592cf454a04da8fc99fecc5
+        with:
+          branch: ${{ inputs.branch }}
+          freeze: false
+          slack-channel: ${{ inputs.slack-channel }}
       - name: Summary
         if: ${{ inputs.verbose }}
         shell: bash
