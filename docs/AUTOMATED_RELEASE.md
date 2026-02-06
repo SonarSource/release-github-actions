@@ -2,6 +2,8 @@
 
 This reusable GitHub Actions workflow automates the end-to-end release process across Jira and GitHub, and optionally creates integration tickets and analyzer update PRs. It is designed to be invoked via `workflow_call` from other repositories.
 
+> **Quick Setup**: Use the [automated-release-setup Claude Code skill](../skills/automated-release-setup/) to automatically set up this workflow in your repository. The skill will guide you through prerequisites, create the necessary workflow files, and configure vault permissions.
+
 ## Description
 
 The workflow orchestrates these steps:
@@ -132,9 +134,94 @@ jobs:
   - Each job includes a "Summary" step that writes to `$GITHUB_STEP_SUMMARY` only when `verbose: true`.
 - Permissions and environments are scoped per job to minimize required privileges.
 
+## Setup
+
+To set up this workflow in your repository, you need to complete the following prerequisites and create the necessary workflow files.
+
+### Prerequisites
+
+1. **Jira Configuration**:
+   - Add `Jira Tech User GitHub` as Administrator on your Jira project (Project settings → People → Administrator role)
+   - For dry-run testing, also add the user to the Jira sandbox: https://sonarsource-sandbox-811.atlassian.net/
+
+2. **Vault Permissions**:
+   - Create a PR in `re-terraform-aws-vault` to add the `release-automation` secret
+   - File: `orders/{squad}.yaml` (e.g., `orders/analysis-jvm-squad.yaml`)
+   - Add the `release_automation` anchor if not present:
+     ```yaml
+     release_automation: &release_automation
+       suffix: release-automation
+       description: access to sonar-enterprise and sonarcloud-core repositories to create PRs to update analyzers
+       organization: SonarSource
+       permissions:
+         contents: write
+         pull_requests: write
+     ```
+   - Add to your repository's `github.customs` section:
+     ```yaml
+     - <<: *release_automation
+       repositories: [your-repo-name, sonar-enterprise, sonarcloud-core]
+     ```
+   - Example PR: https://github.com/SonarSource/re-terraform-aws-vault/pull/8406
+
+3. **Release Workflow**:
+   - Update `release.yml` to support `workflow_dispatch` with inputs: `version`, `releaseId`, `dryRun`
+   - Add fallbacks for release events:
+     ```yaml
+     with:
+       version: ${{ inputs.version || github.event.release.tag_name }}
+       releaseId: ${{ inputs.releaseId || github.event.release.id }}
+       dryRun: ${{ inputs.dryRun == true }}
+     ```
+
+### Required Workflow Files
+
+You need to create two workflow files:
+
+1. **`automated-release.yml`**: Main workflow that calls this reusable workflow
+2. **`bump-versions.yaml`**: Bumps version after release (Maven or Gradle)
+
+See the [Usage](#usage) section for examples, or use the [automated-release-setup skill](../skills/automated-release-setup/) for guided setup.
+
+### SonarLint Integration
+
+When your analyzer is used by SonarLint, you can enable integration ticket creation for IDE teams:
+
+| Input | Jira Project | Description |
+|-------|--------------|-------------|
+| `create-slvs-ticket` | SLVS | SonarLint for Visual Studio |
+| `create-slvscode-ticket` | SLVSCODE | SonarLint for VS Code |
+| `create-sle-ticket` | SLE | SonarLint for Eclipse |
+| `create-sli-ticket` | SLI | SonarLint for IntelliJ |
+
+Use `sq-ide-short-description` to describe changes relevant for IDE integrations.
+
 ## Troubleshooting
 
 - Ensure the caller repository has appropriate permissions to use this workflow and to write releases and PRs.
 - Verify that `release-automation-secret-name` exists and grants access for creating analyzer update PRs. If omitted, ensure the default secret (`sonar-{plugin-name}-release-automation`) exists and is configured with the required permissions.
 - Check job logs if the final summary indicates failure; the per-job logs contain detailed outputs even when `verbose` is disabled.
 - Ensure the `Jira Tech User GitHub` is an Administrator on the target Jira project; admin rights are required to release the Jira version and to create a new version.
+
+## Testing
+
+1. **Test with dry-run first**:
+   - Go to Actions → Automated Release → Run workflow
+   - Set `dry-run: true`
+   - Verify Jira tickets in sandbox, draft GitHub release, draft PRs
+
+2. **Production release**:
+   - Set `dry-run: false`
+   - All tickets, releases, and PRs will be created in production
+
+## Post-Release Checklist
+
+- Review and merge the bump-version PR
+- Review and merge the SQS PR in sonar-enterprise
+- Review and merge the SQC PR in sonarcloud-core
+- Update integration ticket statuses in Jira
+- Set fix versions on the SONAR ticket
+
+**If SonarLint integration is enabled:**
+- Monitor the SLVS, SLVSCode, SLE, and/or SLI tickets created in Jira
+- Coordinate with IDE teams for integration timelines
