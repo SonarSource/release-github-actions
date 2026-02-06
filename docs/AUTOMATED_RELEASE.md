@@ -149,7 +149,7 @@ To set up this workflow in your repository, you need to complete the following p
 
 1. **Jira Configuration**:
    - Add `Jira Tech User GitHub` as Administrator on your Jira project (Project settings → People → Administrator role)
-   - For dry-run testing, also add the user to the Jira sandbox: https://sonarsource-sandbox-811.atlassian.net/
+   - For dry-run testing, also add the user to the Jira sandbox: https://sonarsource-sandbox-608.atlassian.net/
 
 2. **Vault Permissions**:
    - Create a PR in `re-terraform-aws-vault` to add the `release-automation` secret

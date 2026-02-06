@@ -40,7 +40,7 @@ Remind the user of these prerequisites and **ask for confirmation** using AskUse
      - "Have you added 'Jira Tech User GitHub' as Administrator on the {JIRA_PROJECT_KEY} project?" (Production)
      - "Have you added 'Jira Tech User GitHub' as Administrator on the {JIRA_PROJECT_KEY} project in the Jira sandbox?" (For dry-run testing)
    - The user must verify this manually at: Project settings → People → Administrator role
-   - Sandbox URL: https://sonarsource-sandbox-811.atlassian.net/
+   - Sandbox URL: https://sonarsource-sandbox-608.atlassian.net/
 
 2. **Vault Permissions** (re-terraform-aws-vault):
    - Create a PR to add the `release-automation` secret to the repository's config in the squad config file
@@ -103,7 +103,7 @@ on:
 jobs:
   release:
     name: Release
-    uses: SonarSource/release-github-actions/.github/workflows/automated-release.yml@master
+    uses: SonarSource/release-github-actions/.github/workflows/automated-release.yml@v1
     permissions:
       statuses: read
       id-token: write
@@ -202,7 +202,7 @@ on:
 jobs:
   release:
     name: Release
-    uses: SonarSource/release-github-actions/.github/workflows/automated-release.yml@master
+    uses: SonarSource/release-github-actions/.github/workflows/automated-release.yml@v1
     permissions:
       statuses: read
       id-token: write
