@@ -103,7 +103,7 @@ on:
 jobs:
   release:
     name: Release
-    uses: SonarSource/release-github-actions/.github/workflows/automated-release.yml@master
+    uses: SonarSource/release-github-actions/.github/workflows/automated-release.yml@v1
     permissions:
       statuses: read
       id-token: write
@@ -202,7 +202,7 @@ on:
 jobs:
   release:
     name: Release
-    uses: SonarSource/release-github-actions/.github/workflows/automated-release.yml@master
+    uses: SonarSource/release-github-actions/.github/workflows/automated-release.yml@v1
     permissions:
       statuses: read
       id-token: write
