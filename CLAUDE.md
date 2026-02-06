@@ -8,7 +8,7 @@ This is a collection of reusable GitHub Actions for automating SonarSource analy
 
 ## Branching
 
-**Important:** Changes must always be made on a feature branch, never directly on `master`.
+**Critical:** Changes must always be made on a feature branch, never directly on `master`. Before any commit, verify you are not on `master`.
 - If on `master`, create a new branch using the format: `ab/<feature-name>` (e.g., `ab/add-slack-notifications`)
 - The prefix `ab` represents the developer's initials (first letter of first name + first letter of last name)
 - Adapt `<feature-name>` based on the task/prompt (use lowercase, hyphen-separated)
