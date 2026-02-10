@@ -191,7 +191,7 @@ jobs:
         id: releasability
         with:
           branch: "master"
-          commit-sha: ${{ github.sha }}
+          commit-sha: "d3c31bbd0e53208868da293fabc5087223eac497"
           organization: ${{ github.repository_owner }}
           repository: ${{ github.event.repository.name }}
           version: ${{ steps.get-version.outputs.release-version }}
