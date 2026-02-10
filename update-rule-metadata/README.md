@@ -23,7 +23,7 @@ This action depends on:
 
 | Input              | Description                                                                                                                | Required | Default         |
 |--------------------|----------------------------------------------------------------------------------------------------------------------------|----------|-----------------|
-| `rule-api-version` | Version of the rule-api tooling to be used for the workflow.                                                               | No       | `2.15.0.4476`   |
+| `rule-api-version` | Version of the rule-api tooling to be used for the workflow.                                                               | No       | `2.18.0.5734`   |
 | `sonarpedia-files` | Comma-separated list of sonarpedia files to be updated. By default, it will update all Sonarpedia files in the repository. | No       | Auto-discovered |
 | `branch`           | Branch to run the check against and create the PR for. By default, it will use master.                                     | No       | `master`        |
 | `rspec-branch`     | Branch of the rspec repository to be used. If not specified, the `master` branch will be used by default.                  | No       | `master`        |
