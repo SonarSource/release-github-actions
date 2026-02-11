@@ -1,8 +1,13 @@
-# Skill: Setup Automated Release Workflow
+---
+name: automated-release-setup
+description: >
+  Use this skill whenever the user asks to "set up automated release", "configure release automation",
+  "add automated release workflow", or any variation of setting up the automated release workflow for
+  a SonarSource analyzer project. This skill gathers project details, creates workflow files, updates
+  existing release workflows, and sets up vault permissions.
+---
 
-Trigger: User asks to set up automated release workflow for a SonarSource analyzer project
-
-## Instructions
+# Setup Automated Release Workflow
 
 Help the user set up the automated release workflow by gathering required information and creating the necessary workflow files.
 

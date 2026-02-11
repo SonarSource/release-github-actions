@@ -29,11 +29,88 @@ A centralized collection of reusable GitHub Actions designed to streamline and a
 
 ## Claude Code Skills
 
-This repository includes [Claude Code skills](skills/README.md) for automating common tasks related to release workflows.
+This repository includes Claude Code skills for automating common tasks related to release workflows. Skills are instruction files (`.claude/skills/<skill-name>/SKILL.md`) that teach Claude Code how to perform specific tasks, using YAML frontmatter for metadata followed by detailed instructions.
+
+### Available Skills
 
 | Skill | Description |
 |-------|-------------|
-| [automated-release-setup](./skills/automated-release-setup/) | Set up automated release workflow for SonarSource analyzer projects |
+| [automated-release-setup](.claude/skills/automated-release-setup/) | Set up automated release workflow for SonarSource analyzer projects |
+
+### Usage
+
+#### In this repository (automatic)
+
+Skills in `.claude/skills/` are automatically discovered by Claude Code when you work in this repository. Simply ask Claude Code to perform the task:
+
+- "Set up automated release workflow"
+- "Configure automated release for this project"
+- "Help me create the release automation workflows"
+
+Or use the slash command: `/automated-release-setup`
+
+#### In other repositories (manual installation)
+
+To use these skills in other repositories, you can either download them or symlink them.
+
+**Option 1: Download and Install Manually**
+
+```bash
+# Create the skills directory if it doesn't exist
+mkdir -p .claude/skills/automated-release-setup
+
+# Download the skill
+curl -o .claude/skills/automated-release-setup/SKILL.md \
+  https://raw.githubusercontent.com/SonarSource/release-github-actions/master/.claude/skills/automated-release-setup/SKILL.md
+```
+
+**Option 2: Clone and Symlink**
+
+1. Clone this repository (if you haven't already):
+
+   ```bash
+   git clone https://github.com/SonarSource/release-github-actions.git
+   ```
+
+2. Create a symlink to the skill directory in your target repository:
+
+   ```bash
+   mkdir -p .claude/skills
+   ln -s /path/to/release-github-actions/.claude/skills/automated-release-setup \
+     .claude/skills/automated-release-setup
+   ```
+
+### Updating Skills
+
+```bash
+# If installed via curl
+curl -o .claude/skills/automated-release-setup/SKILL.md \
+  https://raw.githubusercontent.com/SonarSource/release-github-actions/master/.claude/skills/automated-release-setup/SKILL.md
+
+# If installed via symlink, just pull the latest changes
+cd /path/to/release-github-actions
+git pull
+```
+
+### Creating New Skills
+
+1. Create a new directory under `.claude/skills/` with your skill name
+2. Add a `SKILL.md` file with YAML frontmatter (`name`, `description`) followed by the skill instructions
+3. Update this README to include your skill in the "Available Skills" table
+4. Submit a pull request
+
+```markdown
+---
+name: my-skill-name
+description: >
+  Trigger description explaining when Claude Code should activate this skill.
+  Include example phrases like "set up X", "configure Y", etc.
+---
+
+# Skill Title
+
+Detailed instructions for Claude Code to follow...
+```
 
 ## Development
 
