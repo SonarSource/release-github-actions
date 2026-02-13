@@ -116,7 +116,7 @@ The action uses a bash script that:
 
 The action requires the following tokens configured in vault:
 - `development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader` for downloading the rule-api JAR from Artifactory
-- `development/github/token/{REPO_OWNER_NAME_DASH}-its` for authenticating with the private rspec repository
+- `development/github/token/{REPO_OWNER_NAME_DASH}-rspec-read` for authenticating with the private rspec repository
 
 These can be configured using the SPEED self-service portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platform/pages/3553787989/Manage+Vault+Policy+-+SPEED)).
 

@@ -44,7 +44,7 @@ runs:
         secrets: |
           development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader access_token | ARTIFACTORY_ACCESS_TOKEN;
           development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader role | ARTIFACTORY_ROLE;
-          development/github/token/{REPO_OWNER_NAME_DASH}-its token | GITHUB_TOKEN;
+          development/github/token/{REPO_OWNER_NAME_DASH}-rspec-read token | GITHUB_TOKEN;
 
     - name: Cache rule-api jar
       id: cache-rule-api
