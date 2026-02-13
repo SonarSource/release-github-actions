@@ -14,7 +14,7 @@ The action performs the following operations:
 ## Dependencies
 
 This action depends on:
-- [SonarSource/vault-action-wrapper](https://github.com/SonarSource/vault-action-wrapper) for retrieving Artifactory credentials
+- [SonarSource/vault-action-wrapper](https://github.com/SonarSource/vault-action-wrapper) for retrieving Artifactory credentials and GitHub token
 - Java 17 runtime for executing the rule-api JAR
 - Git for detecting changes and creating pull requests
 - [peter-evans/create-pull-request](https://github.com/peter-evans/create-pull-request) for automated PR creation
@@ -105,6 +105,7 @@ jobs:
 
 The action uses a bash script that:
 - Authenticates with Artifactory using credentials from HashiCorp Vault
+- Retrieves a GitHub token from Vault for accessing the private rspec repository
 - Downloads and caches the specified rule-api JAR version
 - Automatically discovers all directories containing sonarpedia.json files (unless specific files are provided)
 - Changes into each directory and runs the rule-api update command
@@ -113,8 +114,11 @@ The action uses a bash script that:
 
 ## Prerequisites
 
-The action requires that the repository has the `development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader` token configured in vault.
-This can be done using the SPEED self-service portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platform/pages/3553787989/Manage+Vault+Policy+-+SPEED)).
+The action requires the following tokens configured in vault:
+- `development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader` for downloading the rule-api JAR from Artifactory
+- `development/github/token/{REPO_OWNER_NAME_DASH}-its` for authenticating with the private rspec repository
+
+These can be configured using the SPEED self-service portal ([more info](https://xtranet-sonarsource.atlassian.net/wiki/spaces/Platform/pages/3553787989/Manage+Vault+Policy+-+SPEED)).
 
 The repository must have:
 - Proper sonarpedia.json files in language-specific directories
@@ -123,7 +127,7 @@ The repository must have:
 
 ## Notes
 
-- This action requires access to SonarSource's HashiCorp Vault for Artifactory credentials
+- This action requires access to SonarSource's HashiCorp Vault for Artifactory credentials and a GitHub token for the private rspec repository
 - The action automatically discovers all sonarpedia.json files unless specific files are provided
 - Pull requests are created with the label `skip-qa` and target the specified branch (defaults to `master`)
 - The rule-api JAR is cached to improve performance on subsequent runs

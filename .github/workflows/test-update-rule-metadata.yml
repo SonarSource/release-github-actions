@@ -165,6 +165,56 @@ jobs:
           echo "✓ All expected outputs are defined"
           echo "✓ Output schema validation complete"
 
+  vault-and-env-tests:
+    name: Test Vault Secrets and Environment Variables
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify GitHub token vault secret is configured
+        run: |
+          echo "Testing that vault secrets include GitHub token..."
+
+          # Test that the vault step retrieves a GitHub token for private rspec repo access
+          if grep -A10 "Get vault secrets" update-rule-metadata/action.yml | grep -q "development/github/token/{REPO_OWNER_NAME_DASH}-its"; then
+            echo "✓ GitHub token vault secret path found"
+          else
+            echo "✗ GitHub token vault secret path not found in vault step"
+            exit 1
+          fi
+
+          # Test that the GitHub token is mapped to GITHUB_TOKEN
+          if grep -A10 "Get vault secrets" update-rule-metadata/action.yml | grep -q "GITHUB_TOKEN"; then
+            echo "✓ GITHUB_TOKEN mapping found in vault secrets"
+          else
+            echo "✗ GITHUB_TOKEN mapping not found in vault secrets"
+            exit 1
+          fi
+
+      - name: Verify GITHUB_TOKEN is passed to rule-api execution step
+        run: |
+          echo "Testing that rule-api step has GITHUB_TOKEN in env..."
+
+          # Extract the rule-api step block (from "Run rule-api" to the next step marker)
+          STEP_BLOCK=$(sed -n '/name: Run rule-api to update metadata/,/^    - name: Remove rule-api/p' update-rule-metadata/action.yml)
+
+          if echo "$STEP_BLOCK" | grep -q "GITHUB_TOKEN"; then
+            echo "✓ GITHUB_TOKEN found in rule-api execution step"
+          else
+            echo "✗ GITHUB_TOKEN not found in rule-api execution step"
+            exit 1
+          fi
+
+          # Verify it references the vault output
+          if echo "$STEP_BLOCK" | grep -q "fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN"; then
+            echo "✓ GITHUB_TOKEN references vault output correctly"
+          else
+            echo "✗ GITHUB_TOKEN does not reference vault output"
+            exit 1
+          fi
+
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-latest
@@ -212,7 +262,7 @@ jobs:
   validation-summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [input-parameter-tests, branch-parameter-tests, output-validation, integration-tests]
+    needs: [input-parameter-tests, branch-parameter-tests, output-validation, integration-tests, vault-and-env-tests]
     if: always()
 
     steps:
@@ -225,11 +275,13 @@ jobs:
           echo "Branch Parameter Tests: ${{ needs.branch-parameter-tests.result }}"
           echo "Output Validation: ${{ needs.output-validation.result }}"
           echo "Integration Tests: ${{ needs.integration-tests.result }}"
+          echo "Vault & Env Variable Tests: ${{ needs.vault-and-env-tests.result }}"
           echo "================================"
 
           if [[ "${{ needs.input-parameter-tests.result }}" == "success" && \
                 "${{ needs.branch-parameter-tests.result }}" == "success" && \
-                "${{ needs.output-validation.result }}" == "success" ]]; then
+                "${{ needs.output-validation.result }}" == "success" && \
+                "${{ needs.vault-and-env-tests.result }}" == "success" ]]; then
             echo "✓ All validation tests passed!"
             echo "✓ Action is properly configured and ready to use"
           else
