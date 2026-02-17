@@ -43,7 +43,8 @@ runs:
       with:
         secrets: |
           development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader access_token | ARTIFACTORY_ACCESS_TOKEN;
-          development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader role | ARTIFACTORY_ROLE;  
+          development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader role | ARTIFACTORY_ROLE;
+          development/github/token/{REPO_OWNER_NAME_DASH}-rspec-read token | GITHUB_TOKEN;
 
     - name: Cache rule-api jar
       id: cache-rule-api
@@ -72,6 +73,8 @@ runs:
 
     - name: Run rule-api to update metadata
       shell: bash
+      env:
+        GITHUB_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
       run: |
         echo "" > rule-api-logs.txt
         
