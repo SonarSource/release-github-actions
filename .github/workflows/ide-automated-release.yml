@@ -16,9 +16,10 @@ on:
         required: true
         type: string
       pm-email:
-        description: "Product manager email to assign the REL ticket after release is done"
-        required: true
+        description: "Product manager email to assign the REL ticket after release is done, defaults to IDE XP PM"
+        required: false
         type: string
+        default: "alexander.rage@sonarsource.com"
       short-description:
         description: "A brief summary of what the release contains"
         required: true
@@ -27,7 +28,7 @@ on:
         description: "For testing: use Jira sandbox and create draft releases in GitHub"
         required: false
         type: boolean
-        default: true
+        default: false
       branch:
         description: "Branch from which to do the release"
         required: true
