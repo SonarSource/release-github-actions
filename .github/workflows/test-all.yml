@@ -29,6 +29,9 @@ jobs:
 
   test-get-jira-release-notes:
     uses: ./.github/workflows/test-get-jira-release-notes.yml
+    permissions:
+      contents: read
+      id-token: write
 
   test-publish-github-release:
     uses: ./.github/workflows/test-publish-github-release.yml
