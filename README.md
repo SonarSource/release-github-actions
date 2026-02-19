@@ -8,6 +8,7 @@ A centralized collection of reusable GitHub Actions designed to streamline and a
 |--------|-------------|
 | [Check Releasability Status](check-releasability-status/README.md) | Checks the releasability status and extracts the version if successful |
 | [Create Integration Ticket](create-integration-ticket/README.md) | Creates a Jira integration ticket with a custom summary and links it to another existing ticket |
+| [Create Pull Request](create-pull-request/README.md) | Creates or updates a pull request using the `gh` CLI, with vault-based token resolution |
 | [Create Jira Release Ticket](create-jira-release-ticket/README.md) | Automates the creation of an "Ask for release" ticket in Jira |
 | [Create Jira Version](create-jira-version/README.md) | Creates a new version in a Jira project, with the ability to automatically determine the next version number |
 | [Get Jira Release Notes](get-jira-release-notes/README.md) | Fetches Jira release notes and generates the release notes URL for a given project and version |
