@@ -93,10 +93,11 @@ jobs:
           fi
 
       - name: Verify inputs are passed via env (no direct interpolation in run blocks)
+        env:
+          PATTERN: '\$\{\{ inputs\.'
         run: |
           set -euo pipefail
-          # Extract run blocks and check for direct ${{ inputs.* }} usage
-          # We allow ${{ inputs.* }} in env:, if:, with:, and value: lines but not in run: block content
+          # Check that run: blocks do not contain direct input interpolation
           in_run_block=false
           found_violation=false
           while IFS= read -r line; do
@@ -110,8 +111,8 @@ jobs:
               in_run_block=false
             fi
             # Check for violation inside run blocks
-            if $in_run_block && echo "$line" | grep -q '\${{ inputs\.'; then
-              # Allow ${{ inputs.* }} only in comments
+            if $in_run_block && echo "$line" | grep -qE "$PATTERN"; then
+              # Allow only in comments
               if ! echo "$line" | grep -qE '^\s*#'; then
                 echo "FAIL: direct input interpolation in run block: $line"
                 found_violation=true
