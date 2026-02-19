@@ -4,10 +4,13 @@ This action updates the version in Maven and Gradle files across your repository
 
 ## Inputs
 
-| Name             | Description                                                      | Required | Default |
-|------------------|------------------------------------------------------------------|----------|------|
-| version          | The new version (without `-SNAPSHOT`)                            | Yes      |      |
-| excluded-modules | Comma-separated list of modules to exclude from version bumping   | No       |      |
+| Name             | Description                                                      | Required | Default  |
+|------------------|------------------------------------------------------------------|----------|----------|
+| version          | The new version (without `-SNAPSHOT`)                            | Yes      |          |
+| token            | The GitHub token for PR creation                                 | No       |          |
+| excluded-modules | Comma-separated list of modules to exclude from version bumping  | No       |          |
+| base-branch      | The base branch for the pull request                             | No       | `master` |
+| pr-labels        | Comma-separated list of labels to add to the pull request        | No       |          |
 
 ## Outputs
 
@@ -23,6 +26,7 @@ This action updates the version in Maven and Gradle files across your repository
   uses: SonarSource/release-github-actions/bump-version@v1
   with:
     version: '1.2.3'
+    token: ${{ secrets.GITHUB_TOKEN }}
     excluded-modules: 'moduleA,moduleB'
 
 - name: Show PR URL
@@ -31,5 +35,5 @@ This action updates the version in Maven and Gradle files across your repository
 
 ## How it works
 - Updates all `pom.xml` and `gradle.properties` files to the new version.
-- Skips files in modules listed in `exluded-modules`.
+- Skips files in modules listed in `excluded-modules`.
 - Commits changes and creates a pull request.

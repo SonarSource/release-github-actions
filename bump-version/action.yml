@@ -4,9 +4,9 @@ inputs:
   version:
     description: The new version (without -SNAPSHOT)
     required: true
-  secret-name:
-    description: The name of the GitHub token secret in Vault for PR creation
-    required: true
+  token:
+    description: The GitHub token for PR creation
+    required: false
   excluded-modules:
     description: A comma-separated list of modules to exclude from version bumping
     required: false
@@ -29,18 +29,13 @@ runs:
       EXCLUDED_MODULES: ${{ inputs.excluded-modules || '' }}
     run: |
       bash "${GITHUB_ACTION_PATH}/bump_version.sh"
-  - name: Get GitHub token from Vault
-    id: secrets
-    uses: SonarSource/vault-action-wrapper@v3
-    with:
-      secrets: |
-        development/github/token/SonarSource-${{ inputs.secret-name}} token | GITHUB_TOKEN;
   - name: Create Pull Request for Version Bump
-    uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
+    uses: SonarSource/release-github-actions/create-pull-request@nw/new-pr-creation-action
     id: create-pr
     env:
       TITLE_MESSAGE: Prepare next development iteration ${{ inputs.version }}
     with:
+      token: ${{ inputs.token }}
       author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
       commit-message: ${{ env.TITLE_MESSAGE }}
       title: ${{ env.TITLE_MESSAGE }}
@@ -48,7 +43,6 @@ runs:
       branch: bot/prepare-next-development-iteration-${{ inputs.version }}
       labels: ${{ inputs.pr-labels }}
       reviewers: ${{ github.actor }}
-      token: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
 
 outputs:
   pull-request-url:
