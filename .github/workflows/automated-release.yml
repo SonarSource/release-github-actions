@@ -171,7 +171,10 @@ jobs:
   # Running this check early prevents unnecessary work (like creating REL tickets) if the release cannot proceed.
   check-releasability:
     name: Check Releasability
-    if: ${{ inputs.check-releasability && !cancelled() }}
+    if: |
+      inputs.check-releasability &&
+      !cancelled() &&
+      (needs.freeze-branch.result == 'success' || needs.freeze-branch.result == 'skipped')
     needs: [ freeze-branch ]
     runs-on: ${{ inputs.runner-environment }}
     permissions:
@@ -240,10 +243,9 @@ jobs:
   # These outputs include the release version, Jira version name, release notes, Jira release notes, and Jira release URL.
   prepare-release:
     name: Prepare Release
-    needs: [ freeze-branch, check-releasability ]
+    needs: [ check-releasability ]
     if: |
       !cancelled() &&
-      (needs.freeze-branch.result == 'success' || needs.freeze-branch.result == 'skipped') &&
       (needs.check-releasability.result == 'success' || needs.check-releasability.result == 'skipped')
     runs-on: ${{ inputs.runner-environment }}
     permissions:
