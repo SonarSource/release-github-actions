@@ -170,11 +170,10 @@ def main():
         eprint(f"Using custom issue type order: {category_order}")
     else:
         category_order = [
-            "New Feature",
+            "Feature",
             "False Positive",
             "False Negative",
-            "Bug",
-            "Improvement"
+            "Bug"
         ]
         eprint(f"Using default issue type order: {category_order}")
 

@@ -20,12 +20,12 @@ This action depends on:
 
 ## Inputs
 
-| Input               | Description                                                                                                                                                                                                                      | Required | Default                                                     |
-|---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|-------------------------------------------------------------|
-| `jira-project-key`  | The key of the Jira project (e.g., SONARIAC). Can also be set via `JIRA_PROJECT_KEY` environment variable                                                                                                                        | No*      | -                                                           |
-| `jira-version-name` | The name of the Jira version/fixVersion (e.g., 1.2.3). Can also be set via `JIRA_VERSION_NAME` environment variable. If neither is provided, the action will attempt to automatically fetch the version using `get-jira-version` | No       | -                                                           |
-| `use-jira-sandbox`  | Use the sandbox Jira server instead of production. Can also be controlled via `USE_JIRA_SANDBOX` environment variable                                                                                                            | No       | `false`                                                     |
-| `issue-types`       | Comma-separated list of issue types to include in the release notes, in order                                                                                                                                                    | No       | `New Feature,False Positive,False Negative,Bug,Improvement` |
+| Input               | Description                                                                                                                                                                                                                      | Required | Default                                                |
+|---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|--------------------------------------------------------|
+| `jira-project-key`  | The key of the Jira project (e.g., SONARIAC). Can also be set via `JIRA_PROJECT_KEY` environment variable                                                                                                                        | No*      | -                                                      |
+| `jira-version-name` | The name of the Jira version/fixVersion (e.g., 1.2.3). Can also be set via `JIRA_VERSION_NAME` environment variable. If neither is provided, the action will attempt to automatically fetch the version using `get-jira-version` | No       | -                                                      |
+| `use-jira-sandbox`  | Use the sandbox Jira server instead of production. Can also be controlled via `USE_JIRA_SANDBOX` environment variable                                                                                                            | No       | `false`                                                |
+| `issue-types`       | Comma-separated list of issue types to include in the release notes, in order                                                                                                                                                    | No       | `Feature,False Positive,False Negative,Bug` |
 
 *Either the input or corresponding environment variable must be provided for jira-project-key.
 
@@ -78,7 +78,7 @@ This action depends on:
   with:
     jira-project-key: 'SONARIAC'
     jira-version-name: '1.2.3'
-    issue-types: 'New Feature,Bug,Improvement,Documentation'
+    issue-types: 'Feature,Bug,Security'
 ```
 
 ### Using environment variables
@@ -126,9 +126,9 @@ This action depends on:
 ## Example
 
 If you have a Jira project `SONARIAC` with version `1.2.3` containing:
-- 2 New Feature issues
+- 2 Feature issues
 - 3 Bug fixes
-- 1 Improvement
+- 1 Security
 
 The action will:
 1. Connect to Jira and find version `1.2.3` in project `SONARIAC`

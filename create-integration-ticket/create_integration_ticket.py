@@ -88,10 +88,10 @@ def create_integration_ticket(jira_client, args):
         createmeta_data = jira_client.createmeta(projectKeys=args.target_jira_project, expand='projects.issuetypes')
         issue_types = createmeta_data['projects'][0]['issuetypes']
 
-        # Try to find a suitable issue type (prefer improvement, then first available)
+        # Try to find a suitable issue type (prefer feature, then first available)
         issue_type = None
         for it in issue_types:
-            if it['name'].lower() in ['improvement', 'task']:
+            if it['name'].lower() in ['feature', 'maintenance']:
                 issue_type = it['name']
                 break
 
