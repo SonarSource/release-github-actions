@@ -275,13 +275,82 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         self.assertEqual(call_args['issuetype'], {'name': 'Feature'})
 
     # noinspection DuplicatedCode
+    def test_create_integration_ticket_with_task_type(self):
+        """Test creating integration ticket with Task issue type when Maintenance and Feature is not available."""
+        mock_jira = Mock()
+        mock_project = Mock()
+        mock_jira.project.return_value = mock_project
+
+        # Mock issue types with Task and Improvement available (no Bug)
+        mock_jira.createmeta.return_value = {
+            'projects': [{
+                'issuetypes': [
+                    {'name': 'Bug'},
+                    {'name': 'Task'},
+                    {'name': 'Improvement'},
+                ]
+            }]
+        }
+
+        mock_ticket = Mock()
+        mock_ticket.key = 'INT-124'
+        mock_jira.create_issue.return_value = mock_ticket
+
+        args = Mock()
+        args.target_jira_project = 'INT'
+        args.ticket_summary = 'Integration ticket for release'
+        args.ticket_description = None
+
+        result = create_integration_ticket(mock_jira, args)
+
+        self.assertEqual(result, mock_ticket)
+
+        # Verify the issue creation call - should use Feature
+        call_args = mock_jira.create_issue.call_args[1]['fields']
+        self.assertEqual(call_args['issuetype'], {'name': 'Task'})
+
+        # noinspection DuplicatedCode
+    def test_create_integration_ticket_with_improvement_type(self):
+        """Test creating integration ticket with Improvement issue type when Maintenance, Feature and Task is not available."""
+        mock_jira = Mock()
+        mock_project = Mock()
+        mock_jira.project.return_value = mock_project
+
+        # Mock issue types with only Improvement available (no Bug)
+        mock_jira.createmeta.return_value = {
+            'projects': [{
+                'issuetypes': [
+                    {'name': 'Bug'},
+                    {'name': 'Improvement'},
+                ]
+            }]
+        }
+
+        mock_ticket = Mock()
+        mock_ticket.key = 'INT-124'
+        mock_jira.create_issue.return_value = mock_ticket
+
+        args = Mock()
+        args.target_jira_project = 'INT'
+        args.ticket_summary = 'Integration ticket for release'
+        args.ticket_description = None
+
+        result = create_integration_ticket(mock_jira, args)
+
+        self.assertEqual(result, mock_ticket)
+
+        # Verify the issue creation call - should use Feature
+        call_args = mock_jira.create_issue.call_args[1]['fields']
+        self.assertEqual(call_args['issuetype'], {'name': 'Improvement'})
+
+    # noinspection DuplicatedCode
     def test_create_integration_ticket_with_first_available_type(self):
         """Test creating integration ticket with first available issue type."""
         mock_jira = Mock()
         mock_project = Mock()
         mock_jira.project.return_value = mock_project
 
-        # Mock issue types with neither Maintenance nor Feature available
+        # Mock issue types with neither Maintenance, Feature, Task, Improvement available
         mock_jira.createmeta.return_value = {
             'projects': [{
                 'issuetypes': [

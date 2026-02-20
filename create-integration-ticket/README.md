@@ -105,7 +105,7 @@ This action requires:
 ## Features
 
 - Creates a Jira ticket in the specified project with optional description
-- Automatically detects appropriate issue type (Maintenance, Feature, or first available)
+- Automatically detects appropriate issue type (Maintenance, Feature, Task, Improvement, or first available)
 - Links the created ticket to an existing ticket using the specified link type
 - Validates that the release ticket exists before creating the new ticket
 - Gracefully handles description field limitations (warns if description cannot be set but continues)
