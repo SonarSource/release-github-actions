@@ -338,7 +338,7 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
 
         # Verify stderr shows default issue types
         stderr_output = mock_stderr.getvalue()
-        expected_default = ["Feature", "False Positive", "False Negative", "Bug"]
+        expected_default = ["Feature", "New Feature", "False Positive", "False Negative", "Bug", "Improvement", "Security"]
         self.assertIn(f"Using default issue type order: {expected_default}", stderr_output)
 
     @patch('sys.argv', [

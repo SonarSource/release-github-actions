@@ -142,8 +142,8 @@ jobs:
         id: test-sandbox
         uses: ./get-jira-release-notes
         with:
-          jira-project-key: 'SONARPHP'
-          jira-version-name: '3.49'
+          jira-project-key: 'SONARIAC'
+          jira-version-name: '1.52'
           use-jira-sandbox: 'true'
 
       - name: Output results
@@ -157,7 +157,7 @@ jobs:
 
       - name: Verify Jira Release URL
         run: |
-          if [[ "${{ steps.test-sandbox.outputs.jira-release-url }}" != https://sonarsource-sandbox-608.atlassian.net/projects/SONARPHP/versions/*/tab/release-report-all-issues ]]; then
+          if [[ "${{ steps.test-sandbox.outputs.jira-release-url }}" != https://sonarsource-sandbox-608.atlassian.net/projects/SONARIAC/versions/*/tab/release-report-all-issues ]]; then
             echo "❌ Jira Release URL format is incorrect"
             exit 1
           else
@@ -166,9 +166,9 @@ jobs:
 
       - name: Verify Jira Release Issue Filter URL
         run: |
-          if [[ "${{ steps.test-sandbox.outputs.jira-release-issue-filter-url }}" != https://sonarsource-sandbox-608.atlassian.net/issues/?jql=fixVersion%3D22169 ]]; then
+          if [[ "${{ steps.test-sandbox.outputs.jira-release-issue-filter-url }}" != https://sonarsource-sandbox-608.atlassian.net/issues/?jql=fixVersion%3D23819 ]]; then
             echo "❌ Jira Release Issue Filter URL is incorrect"
-            echo "Expected: https://sonarsource-sandbox-608.atlassian.net/issues/?jql=fixVersion%3D22169"
+            echo "Expected: https://sonarsource-sandbox-608.atlassian.net/issues/?jql=fixVersion%3D23819"
             echo "Got: ${{ steps.test-sandbox.outputs.jira-release-issue-filter-url }}"
             exit 1
           else
@@ -178,10 +178,10 @@ jobs:
       - name: Verify Release Notes Content
         run: |
           if grep -q "### Feature" <<< "${{ steps.test-sandbox.outputs.release-notes }}"; then
-            echo "✅ Release Notes contain default issue categories"
+           echo "✅ Release Notes contain default issue categories"
           else
-            echo "❌ Release Notes are missing some default issue categories"
-            exit 1
+           echo "❌ Release Notes are missing some default issue categories"
+           exit 1
           fi
           
           if grep -q "### Maintenance" <<< "${{ steps.test-sandbox.outputs.release-notes }}"; then
@@ -221,8 +221,8 @@ jobs:
         id: test-sandbox-custom
         uses: ./get-jira-release-notes
         with:
-          jira-project-key: 'SONARPHP'
-          jira-version-name: '3.49'
+          jira-project-key: 'SONARIAC'
+          jira-version-name: '1.52'
           use-jira-sandbox: 'true'
           issue-types: 'Maintenance,Bug,Security'
 
@@ -265,4 +265,141 @@ jobs:
           else
             echo "✅ Jira Release Notes correctly exclude Feature category"
           fi
-  
+
+  test-default-issue-categories-deprecated-taxonomy:
+    name: Test Action Integration with Default Issue Categories on project with deprecated Jira taxonomy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get release notes from a sandbox project
+        id: test-sandbox
+        uses: ./get-jira-release-notes
+        with:
+          jira-project-key: 'SONARPHP'
+          jira-version-name: '3.49'
+          use-jira-sandbox: 'true'
+
+      - name: Output results
+        run: |
+          echo "Jira Release URL: ${{ steps.test-sandbox.outputs.jira-release-url }}"
+          echo "Jira Release Issue Filter URL: ${{ steps.test-sandbox.outputs.jira-release-issue-filter-url }}"
+          echo "Release Notes:"
+          echo "${{ steps.test-sandbox.outputs.release-notes }}"
+          echo "Jira Release Notes:"
+          echo "${{ steps.test-sandbox.outputs.jira-release-notes }}"
+
+      - name: Verify Jira Release URL
+        run: |
+          if [[ "${{ steps.test-sandbox.outputs.jira-release-url }}" != https://sonarsource-sandbox-608.atlassian.net/projects/SONARPHP/versions/*/tab/release-report-all-issues ]]; then
+            echo "❌ Jira Release URL format is incorrect"
+            exit 1
+          else
+            echo "✅ Jira Release URL format is correct"
+          fi
+
+      - name: Verify Jira Release Issue Filter URL
+        run: |
+          if [[ "${{ steps.test-sandbox.outputs.jira-release-issue-filter-url }}" != https://sonarsource-sandbox-608.atlassian.net/issues/?jql=fixVersion%3D22169 ]]; then
+            echo "❌ Jira Release Issue Filter URL is incorrect"
+            echo "Expected: https://sonarsource-sandbox-608.atlassian.net/issues/?jql=fixVersion%3D22169"
+            echo "Got: ${{ steps.test-sandbox.outputs.jira-release-issue-filter-url }}"
+            exit 1
+          else
+            echo "✅ Jira Release Issue Filter URL is correct"
+          fi
+
+      - name: Verify Release Notes Content
+        run: |
+          if grep -q "### Improvement" <<< "${{ steps.test-sandbox.outputs.release-notes }}"; then
+            echo "✅ Release Notes contain default issue categories"
+          else
+            echo "❌ Release Notes are missing some default issue categories"
+            exit 1
+          fi
+          
+          if grep -q "### Task" <<< "${{ steps.test-sandbox.outputs.release-notes }}"; then
+            echo "❌ Release Notes should not contain Task category with default settings"
+            exit 1
+          else
+            echo "✅ Release Notes correctly exclude Task category"
+          fi
+
+      - name: Verify Jira Release Notes Content
+        run: |
+          if grep -q "h3. Improvement" <<< "${{ steps.test-sandbox.outputs.jira-release-notes }}"; then
+            echo "✅ Jira Release Notes contain default issue category"
+          else
+            echo "❌ Jira Release Notes are missing some default issue categories"
+            exit 1
+          fi
+          
+          if grep -q "h3. Task" <<< "${{ steps.test-sandbox.outputs.jira-release-notes }}"; then
+            echo "❌ Jira Release Notes should not contain Task category with default settings"
+            exit 1
+          else
+            echo "✅ Jira Release Notes correctly exclude Task category"
+          fi
+
+  test-custom-issue-categories-deprecated-taxonomy:
+    name: Test Action Integration with Custom Issue Categories on project with deprecated Jira taxonomy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get release notes from a sandbox project with custom issue types
+        id: test-sandbox-custom
+        uses: ./get-jira-release-notes
+        with:
+          jira-project-key: 'SONARPHP'
+          jira-version-name: '3.49'
+          use-jira-sandbox: 'true'
+          issue-types: 'Task,Bug,New Feature'
+
+      - name: Output results
+        run: |
+          echo "Jira Release URL: ${{ steps.test-sandbox-custom.outputs.jira-release-url }}"
+          echo "Release Notes:"
+          echo "${{ steps.test-sandbox-custom.outputs.release-notes }}"
+          echo "Jira Release Notes:"
+          echo "${{ steps.test-sandbox-custom.outputs.jira-release-notes }}"
+
+      - name: Verify Release Notes Content
+        run: |
+          if grep -q "### Task" <<< "${{ steps.test-sandbox-custom.outputs.release-notes }}"; then
+            echo "✅ Release Notes contain Task category as specified"
+          else
+            echo "❌ Release Notes are missing Task category"
+            exit 1
+          fi
+          
+          if grep -q "### Improvement" <<< "${{ steps.test-sandbox-custom.outputs.release-notes }}"; then
+            echo "❌ Release Notes should not contain Improvement category with custom settings"
+            exit 1
+          else
+            echo "✅ Release Notes correctly exclude Improvement category"
+          fi
+
+      - name: Verify Jira Release Notes Content
+        run: |
+          if grep -q "h3. Task" <<< "${{ steps.test-sandbox-custom.outputs.jira-release-notes }}"; then
+            echo "✅ Jira Release Notes contain Task category as specified"
+          else
+            echo "❌ Jira Release Notes are missing Task category"
+            exit 1
+          fi
+          
+          if grep -q "h3. Improvement" <<< "${{ steps.test-sandbox-custom.outputs.jira-release-notes }}"; then
+            echo "❌ Jira Release Notes should not contain Improvement category with custom settings"
+            exit 1
+          else
+            echo "✅ Jira Release Notes correctly exclude Improvement category"
+          fi
