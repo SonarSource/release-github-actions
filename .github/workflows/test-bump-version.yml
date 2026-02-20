@@ -1,0 +1,28 @@
+name: Test Bump Version Script
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    paths:
+      - 'bump-version/**'
+      - '.github/workflows/test-bump-version.yml'
+  workflow_dispatch:
+
+jobs:
+  test-bump-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - name: Set up bash permissions
+        run: |
+          chmod +x bump-version/bump_version.sh
+          chmod +x bump-version/test_bump_version.sh
+
+      - name: Run bump version tests
+        shell: bash
+        run: |
+          bash bump-version/test_bump_version.sh
+

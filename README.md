@@ -4,23 +4,24 @@ A centralized collection of reusable GitHub Actions designed to streamline and a
 
 ## Available Actions
 
-| Action | Description |
-|--------|-------------|
-| [Check Releasability Status](check-releasability-status/README.md) | Checks the releasability status and extracts the version if successful |
-| [Create Integration Ticket](create-integration-ticket/README.md) | Creates a Jira integration ticket with a custom summary and links it to another existing ticket |
-| [Create Pull Request](create-pull-request/README.md) | Creates or updates a pull request using the `gh` CLI, with vault-based token resolution |
-| [Create Jira Release Ticket](create-jira-release-ticket/README.md) | Automates the creation of an "Ask for release" ticket in Jira |
-| [Create Jira Version](create-jira-version/README.md) | Creates a new version in a Jira project, with the ability to automatically determine the next version number |
-| [Get Jira Release Notes](get-jira-release-notes/README.md) | Fetches Jira release notes and generates the release notes URL for a given project and version |
-| [Get Jira Version](get-jira-version/README.md) | Extracts a Jira-compatible version number from a release version by formatting it appropriately for Jira |
-| [Get Release Version](get-release-version/README.md) | Extracts the release version from the repox status on a specified branch |
-| [Lock Branch](lock-branch/README.md) | Locks or unlocks a branch by modifying the `lock_branch` setting in branch protection rules |
-| [Notify Slack on Failure](notify-slack/README.md) | Sends a Slack notification when a job fails |
-| [Publish GitHub Release](publish-github-release/README.md) | Publishes a GitHub Release with notes fetched from Jira or provided directly |
-| [Release Jira Version](release-jira-version/README.md) | Releases a Jira version and creates the next one |
-| [Update Analyzer](update-analyzer/README.md) | Updates an analyzer version in SonarQube or SonarCloud and creates a pull request |
-| [Update Release Ticket Status](update-release-ticket-status/README.md) | Updates the status of a Jira release ticket and can change its assignee |
-| [Update Rule Metadata](update-rule-metadata/README.md) | Automates updating rule metadata across all supported languages using the rule-api tooling |
+| Action                                                                  | Description |
+|-------------------------------------------------------------------------|-------------|
+| [Bump Project Version](bump-version/README.md)                          | Updates the version in Maven and Gradle files across your repository, with support for excluding specific modules |
+| [Check Releasability Status](check-releasability-status/README.md)      | Checks the releasability status and extracts the version if successful |
+| [Create Integration Ticket](create-integration-ticket/README.md)        | Creates a Jira integration ticket with a custom summary and links it to another existing ticket |
+| [Create Pull Request](create-pull-request/README.md)                    | Creates or updates a pull request using the `gh` CLI, with vault-based token resolution |
+| [Create Jira Release Ticket](create-jira-release-ticket/README.md)      | Automates the creation of an "Ask for release" ticket in Jira |
+| [Create Jira Version](create-jira-version/README.md)                    | Creates a new version in a Jira project, with the ability to automatically determine the next version number |
+| [Get Jira Release Notes](get-jira-release-notes/README.md)              | Fetches Jira release notes and generates the release notes URL for a given project and version |
+| [Get Jira Version](get-jira-version/README.md)                          | Extracts a Jira-compatible version number from a release version by formatting it appropriately for Jira |
+| [Get Release Version](get-release-version/README.md)                    | Extracts the release version from the repox status on a specified branch |
+| [Lock Branch](lock-branch/README.md)                                    | Locks or unlocks a branch by modifying the `lock_branch` setting in branch protection rules |
+| [Notify Slack on Failure](notify-slack/README.md)                       | Sends a Slack notification when a job fails |
+| [Publish GitHub Release](publish-github-release/README.md)              | Publishes a GitHub Release with notes fetched from Jira or provided directly |
+| [Release Jira Version](release-jira-version/README.md)                  | Releases a Jira version and creates the next one |
+| [Update Analyzer](update-analyzer/README.md)                            | Updates an analyzer version in SonarQube or SonarCloud and creates a pull request |
+| [Update Release Ticket Status](update-release-ticket-status/README.md)  | Updates the status of a Jira release ticket and can change its assignee |
+| [Update Rule Metadata](update-rule-metadata/README.md)                  | Automates updating rule metadata across all supported languages using the rule-api tooling |
 
 ## Available Workflows
 
