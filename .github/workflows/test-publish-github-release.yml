@@ -124,11 +124,9 @@ jobs:
           release-notes: |
             # Release notes - Test - 1.0.3
 
-            ### New Feature
+            ### Feature
             [SONARIAC-2361](https://example.com) S4830: Server certificates should be verified during SSL/TLS connections
             [SONARIAC-2366](https://example.com) S6573: Expanded filenames should not become options
-
-            ### Improvement
             [SONARIAC-2230](https://example.com) S6596 should have different message when tag is present but not compliant
             [SONARIAC-2301](https://example.com) Improve "ShellCmdDetector" performance
 
