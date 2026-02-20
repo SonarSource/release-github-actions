@@ -30,7 +30,7 @@ runs:
     run: |
       bash "${GITHUB_ACTION_PATH}/bump_version.sh"
   - name: Create Pull Request for Version Bump
-    uses: SonarSource/release-github-actions/create-pull-request@nw/new-pr-creation-action
+    uses: SonarSource/release-github-actions/create-pull-request@v1
     id: create-pr
     env:
       TITLE_MESSAGE: Prepare next development iteration ${{ inputs.version }}
