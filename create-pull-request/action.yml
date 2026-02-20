@@ -1,0 +1,435 @@
+name: 'Create Pull Request'
+description: 'Creates or updates a pull request using the gh CLI, with optional vault-based token resolution.'
+author: 'SonarSource'
+
+inputs:
+  token:
+    description: 'GitHub token for authentication. The action prefers a vault token when available, falling back to this input.'
+    required: false
+    default: ${{ github.token }}
+  add-paths:
+    description: 'Comma or newline-separated list of file paths to stage. If empty, all changes are staged.'
+    required: false
+    default: ''
+  commit-message:
+    description: 'The commit message for the changes.'
+    required: false
+    default: '[create-pull-request] automated change'
+  committer:
+    description: 'The committer name and email in the format "Name <email>".'
+    required: false
+    default: 'github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>'
+  author:
+    description: 'The author name and email in the format "Name <email>".'
+    required: false
+    default: '${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>'
+  signoff:
+    description: 'Add Signed-off-by trailer to the commit message.'
+    required: false
+    default: 'false'
+  branch:
+    description: 'The name of the branch for the pull request.'
+    required: false
+    default: 'create-pull-request/patch'
+  branch-suffix:
+    description: 'Suffix to append to the branch name. Options: random, timestamp, short-commit-hash.'
+    required: false
+    default: ''
+  base:
+    description: 'The base branch for the pull request. Defaults to the current branch.'
+    required: false
+    default: ''
+  title:
+    description: 'The title of the pull request.'
+    required: false
+    default: 'Changes by create-pull-request action'
+  body:
+    description: 'The body of the pull request.'
+    required: false
+    default: ''
+  body-path:
+    description: 'Path to a file containing the pull request body.'
+    required: false
+    default: ''
+  labels:
+    description: 'Comma or newline-separated list of labels to apply.'
+    required: false
+    default: ''
+  assignees:
+    description: 'Comma or newline-separated list of assignees.'
+    required: false
+    default: ''
+  reviewers:
+    description: 'Comma or newline-separated list of reviewers.'
+    required: false
+    default: ''
+  team-reviewers:
+    description: 'Comma or newline-separated list of team reviewers.'
+    required: false
+    default: ''
+  milestone:
+    description: 'The milestone number to associate with the pull request.'
+    required: false
+    default: ''
+  draft:
+    description: 'Create the pull request as a draft.'
+    required: false
+    default: 'false'
+  delete-branch:
+    description: 'Delete the branch after the pull request is merged.'
+    required: false
+    default: 'false'
+  maintainer-can-modify:
+    description: 'Allow maintainers to modify the pull request.'
+    required: false
+    default: 'true'
+
+outputs:
+  pull-request-number:
+    description: 'The number of the created or updated pull request.'
+    value: ${{ steps.create-or-update-pr.outputs.pull-request-number || steps.set-noop.outputs.pull-request-number }}
+  pull-request-url:
+    description: 'The URL of the created or updated pull request.'
+    value: ${{ steps.create-or-update-pr.outputs.pull-request-url || steps.set-noop.outputs.pull-request-url }}
+  pull-request-operation:
+    description: 'The operation performed: created, updated, or none.'
+    value: ${{ steps.create-or-update-pr.outputs.pull-request-operation || steps.set-noop.outputs.pull-request-operation }}
+  pull-request-head-sha:
+    description: 'The SHA of the head commit of the pull request branch.'
+    value: ${{ steps.stage-commit-push.outputs.head-sha }}
+  pull-request-branch:
+    description: 'The name of the pull request branch.'
+    value: ${{ steps.configure-branch.outputs.branch }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Get vault token
+      id: secrets
+      continue-on-error: true
+      uses: SonarSource/vault-action-wrapper@v3
+      with:
+        secrets: |
+          development/github/token/{REPO_OWNER_NAME_DASH}-release-automation token | VAULT_GITHUB_TOKEN;
+
+    - name: Resolve token
+      id: resolve-token
+      shell: bash
+      env:
+        VAULT_OUTCOME: ${{ steps.secrets.outcome }}
+        VAULT_TOKEN: ${{ steps.secrets.outcome == 'success' && fromJSON(steps.secrets.outputs.vault).VAULT_GITHUB_TOKEN || '' }}
+        INPUT_TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+        if [[ "$VAULT_OUTCOME" == "success" && -n "$VAULT_TOKEN" ]]; then
+          echo "Using vault token"
+          echo "token=${VAULT_TOKEN}" >> "$GITHUB_OUTPUT"
+        elif [[ -n "$INPUT_TOKEN" ]]; then
+          echo "Vault token not available, using input token"
+          echo "token=${INPUT_TOKEN}" >> "$GITHUB_OUTPUT"
+        else
+          echo "::error::No token available. Vault token retrieval failed and no input token provided."
+          exit 1
+        fi
+
+    - name: Configure git and compute branch
+      id: configure-branch
+      shell: bash
+      env:
+        INPUT_COMMITTER: ${{ inputs.committer }}
+        INPUT_BRANCH: ${{ inputs.branch }}
+        INPUT_BRANCH_SUFFIX: ${{ inputs.branch-suffix }}
+      run: |
+        set -euo pipefail
+
+        # Parse committer name and email
+        if [[ "$INPUT_COMMITTER" =~ ^(.+)\ \<(.+)\>$ ]]; then
+          COMMITTER_NAME="${BASH_REMATCH[1]}"
+          COMMITTER_EMAIL="${BASH_REMATCH[2]}"
+        else
+          echo "::error::Invalid committer format. Expected 'Name <email>'."
+          exit 1
+        fi
+        git config user.name "$COMMITTER_NAME"
+        git config user.email "$COMMITTER_EMAIL"
+
+        # Compute branch name with optional suffix
+        BRANCH="$INPUT_BRANCH"
+        case "$INPUT_BRANCH_SUFFIX" in
+          timestamp)
+            BRANCH="${BRANCH}-$(date +%s)"
+            ;;
+          random)
+            BRANCH="${BRANCH}-$(head -c 6 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 8)"
+            ;;
+          short-commit-hash)
+            BRANCH="${BRANCH}-$(git rev-parse --short HEAD)"
+            ;;
+          "")
+            ;; # no suffix
+          *)
+            echo "::error::Invalid branch-suffix '${INPUT_BRANCH_SUFFIX}'. Must be one of: random, timestamp, short-commit-hash."
+            exit 1
+            ;;
+        esac
+
+        echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+        echo "Computed branch name: ${BRANCH}"
+
+    - name: Stage, commit, and push
+      id: stage-commit-push
+      shell: bash
+      env:
+        INPUT_BASE: ${{ inputs.base }}
+        INPUT_ADD_PATHS: ${{ inputs.add-paths }}
+        INPUT_COMMIT_MESSAGE: ${{ inputs.commit-message }}
+        INPUT_AUTHOR: ${{ inputs.author }}
+        INPUT_SIGNOFF: ${{ inputs.signoff }}
+        PR_BRANCH: ${{ steps.configure-branch.outputs.branch }}
+        RESOLVED_TOKEN: ${{ steps.resolve-token.outputs.token }}
+      run: |
+        set -euo pipefail
+
+        # Determine base branch
+        if [[ -n "$INPUT_BASE" ]]; then
+          BASE_BRANCH="$INPUT_BASE"
+        else
+          BASE_BRANCH="$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse HEAD)"
+        fi
+        echo "base-branch=${BASE_BRANCH}" >> "$GITHUB_OUTPUT"
+        echo "Base branch: ${BASE_BRANCH}"
+
+        # Create and checkout PR branch from the base
+        git checkout -B "$PR_BRANCH"
+
+        # Stage files
+        if [[ -n "$INPUT_ADD_PATHS" ]]; then
+          echo "Staging specified paths..."
+          # Handle comma or newline-separated paths
+          while IFS=$',\n' read -r path; do
+            path=$(echo "$path" | xargs)
+            if [[ -n "$path" ]]; then
+              git add "$path"
+            fi
+          done <<< "$INPUT_ADD_PATHS"
+        else
+          echo "Staging all changes..."
+          git add -A
+        fi
+
+        # Check for changes
+        if git diff --cached --quiet; then
+          echo "No changes to commit."
+          echo "has-changes=false" >> "$GITHUB_OUTPUT"
+          echo "head-sha=" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        echo "has-changes=true" >> "$GITHUB_OUTPUT"
+
+        # Build commit command
+        COMMIT_ARGS=(-m "$INPUT_COMMIT_MESSAGE")
+
+        # Set author if provided
+        if [[ -n "$INPUT_AUTHOR" ]]; then
+          COMMIT_ARGS+=(--author "$INPUT_AUTHOR")
+        fi
+
+        # Add signoff if requested
+        if [[ "$INPUT_SIGNOFF" == "true" ]]; then
+          COMMIT_ARGS+=(--signoff)
+        fi
+
+        git commit "${COMMIT_ARGS[@]}"
+
+        HEAD_SHA=$(git rev-parse HEAD)
+        echo "head-sha=${HEAD_SHA}" >> "$GITHUB_OUTPUT"
+        echo "Head SHA: ${HEAD_SHA}"
+
+        # Configure remote URL with token for push
+        REPO_URL="https://x-access-token:${RESOLVED_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+        git remote set-url origin "$REPO_URL"
+
+        # Push to remote
+        git push --force-with-lease origin "$PR_BRANCH"
+        echo "Pushed branch '${PR_BRANCH}' to origin."
+
+    - name: Create or update pull request
+      id: create-or-update-pr
+      if: steps.stage-commit-push.outputs.has-changes == 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+        INPUT_TITLE: ${{ inputs.title }}
+        INPUT_BODY: ${{ inputs.body }}
+        INPUT_BODY_PATH: ${{ inputs.body-path }}
+        INPUT_LABELS: ${{ inputs.labels }}
+        INPUT_ASSIGNEES: ${{ inputs.assignees }}
+        INPUT_REVIEWERS: ${{ inputs.reviewers }}
+        INPUT_TEAM_REVIEWERS: ${{ inputs.team-reviewers }}
+        INPUT_MILESTONE: ${{ inputs.milestone }}
+        INPUT_DRAFT: ${{ inputs.draft }}
+        INPUT_MAINTAINER_CAN_MODIFY: ${{ inputs.maintainer-can-modify }}
+        PR_BRANCH: ${{ steps.configure-branch.outputs.branch }}
+        BASE_BRANCH: ${{ steps.stage-commit-push.outputs.base-branch }}
+      run: |
+        set -euo pipefail
+
+        # Resolve PR body
+        PR_BODY=""
+        if [[ -n "$INPUT_BODY_PATH" && -f "$INPUT_BODY_PATH" ]]; then
+          PR_BODY=$(cat "$INPUT_BODY_PATH")
+        elif [[ -n "$INPUT_BODY" ]]; then
+          PR_BODY="$INPUT_BODY"
+        fi
+
+        # Check for existing PR on this branch
+        EXISTING_PR=$(gh pr list --head "$PR_BRANCH" --base "$BASE_BRANCH" --state open --json number,url --jq '.[0]' 2>/dev/null || echo "")
+
+        if [[ -n "$EXISTING_PR" && "$EXISTING_PR" != "null" ]]; then
+          # Update existing PR
+          PR_NUMBER=$(echo "$EXISTING_PR" | jq -r '.number')
+          PR_URL=$(echo "$EXISTING_PR" | jq -r '.url')
+          echo "Updating existing PR #${PR_NUMBER}..."
+
+          EDIT_ARGS=(gh pr edit "$PR_NUMBER")
+          EDIT_ARGS+=(--title "$INPUT_TITLE")
+          if [[ -n "$PR_BODY" ]]; then
+            EDIT_ARGS+=(--body "$PR_BODY")
+          fi
+          if [[ -n "$BASE_BRANCH" ]]; then
+            EDIT_ARGS+=(--base "$BASE_BRANCH")
+          fi
+
+          # Add labels
+          if [[ -n "$INPUT_LABELS" ]]; then
+            while IFS=$',\n' read -r label; do
+              label=$(echo "$label" | xargs)
+              if [[ -n "$label" ]]; then
+                EDIT_ARGS+=(--add-label "$label")
+              fi
+            done <<< "$INPUT_LABELS"
+          fi
+
+          # Add reviewers
+          if [[ -n "$INPUT_REVIEWERS" ]]; then
+            while IFS=$',\n' read -r reviewer; do
+              reviewer=$(echo "$reviewer" | xargs)
+              if [[ -n "$reviewer" ]]; then
+                EDIT_ARGS+=(--add-reviewer "$reviewer")
+              fi
+            done <<< "$INPUT_REVIEWERS"
+          fi
+
+          "${EDIT_ARGS[@]}"
+
+          echo "pull-request-operation=updated" >> "$GITHUB_OUTPUT"
+          echo "pull-request-number=${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "pull-request-url=${PR_URL}" >> "$GITHUB_OUTPUT"
+        else
+          # Create new PR
+          echo "Creating new PR..."
+
+          CREATE_ARGS=(gh pr create)
+          CREATE_ARGS+=(--head "$PR_BRANCH")
+          CREATE_ARGS+=(--base "$BASE_BRANCH")
+          CREATE_ARGS+=(--title "$INPUT_TITLE")
+
+          if [[ -n "$PR_BODY" ]]; then
+            CREATE_ARGS+=(--body "$PR_BODY")
+          else
+            CREATE_ARGS+=(--body "")
+          fi
+
+          if [[ "$INPUT_DRAFT" == "true" ]]; then
+            CREATE_ARGS+=(--draft)
+          fi
+
+          # Add labels
+          if [[ -n "$INPUT_LABELS" ]]; then
+            while IFS=$',\n' read -r label; do
+              label=$(echo "$label" | xargs)
+              if [[ -n "$label" ]]; then
+                CREATE_ARGS+=(--label "$label")
+              fi
+            done <<< "$INPUT_LABELS"
+          fi
+
+          # Add assignees
+          if [[ -n "$INPUT_ASSIGNEES" ]]; then
+            while IFS=$',\n' read -r assignee; do
+              assignee=$(echo "$assignee" | xargs)
+              if [[ -n "$assignee" ]]; then
+                CREATE_ARGS+=(--assignee "$assignee")
+              fi
+            done <<< "$INPUT_ASSIGNEES"
+          fi
+
+          # Add reviewers
+          if [[ -n "$INPUT_REVIEWERS" ]]; then
+            while IFS=$',\n' read -r reviewer; do
+              reviewer=$(echo "$reviewer" | xargs)
+              if [[ -n "$reviewer" ]]; then
+                CREATE_ARGS+=(--reviewer "$reviewer")
+              fi
+            done <<< "$INPUT_REVIEWERS"
+          fi
+
+          # Add team reviewers
+          if [[ -n "$INPUT_TEAM_REVIEWERS" ]]; then
+            while IFS=$',\n' read -r team; do
+              team=$(echo "$team" | xargs)
+              if [[ -n "$team" ]]; then
+                CREATE_ARGS+=(--reviewer "$team")
+              fi
+            done <<< "$INPUT_TEAM_REVIEWERS"
+          fi
+
+          # Add milestone
+          if [[ -n "$INPUT_MILESTONE" ]]; then
+            CREATE_ARGS+=(--milestone "$INPUT_MILESTONE")
+          fi
+
+          PR_URL=$("${CREATE_ARGS[@]}")
+          PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$')
+
+          echo "pull-request-operation=created" >> "$GITHUB_OUTPUT"
+          echo "pull-request-number=${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "pull-request-url=${PR_URL}" >> "$GITHUB_OUTPUT"
+          echo "Created PR #${PR_NUMBER}: ${PR_URL}"
+
+          # Handle maintainer-can-modify
+          if [[ "$INPUT_MAINTAINER_CAN_MODIFY" == "false" ]]; then
+            echo "Disabling maintainer edits on PR #${PR_NUMBER}..."
+            gh api --method PATCH "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" \
+              -f maintainer_can_modify=false
+          fi
+        fi
+
+    - name: Set no-op outputs
+      id: set-noop
+      if: steps.stage-commit-push.outputs.has-changes != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "pull-request-operation=none" >> "$GITHUB_OUTPUT"
+        echo "pull-request-number=" >> "$GITHUB_OUTPUT"
+        echo "pull-request-url=" >> "$GITHUB_OUTPUT"
+
+    - name: Delete branch if requested
+      if: inputs.delete-branch == 'true' && steps.stage-commit-push.outputs.has-changes == 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+        PR_BRANCH: ${{ steps.configure-branch.outputs.branch }}
+        PR_NUMBER: ${{ steps.create-or-update-pr.outputs.pull-request-number }}
+      run: |
+        set -euo pipefail
+        # Only delete branch if the PR is merged
+        PR_STATE=$(gh pr view "$PR_NUMBER" --json state --jq '.state' 2>/dev/null || echo "")
+        if [[ "$PR_STATE" == "MERGED" ]]; then
+          echo "PR #${PR_NUMBER} is merged. Deleting branch '${PR_BRANCH}'..."
+          git push origin --delete "$PR_BRANCH" 2>/dev/null || echo "Branch already deleted."
+        else
+          echo "PR #${PR_NUMBER} is not merged (state: ${PR_STATE}). Skipping branch deletion."
+        fi

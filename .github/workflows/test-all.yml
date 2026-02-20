@@ -47,3 +47,6 @@ jobs:
 
   test-lock-branch:
     uses: ./.github/workflows/test-lock-branch.yml
+
+  test-create-pull-request:
+    uses: ./.github/workflows/test-create-pull-request.yml

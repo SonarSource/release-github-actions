@@ -1,0 +1,186 @@
+name: Test Create Pull Request Action
+
+on:
+  workflow_call:
+  pull_request:
+    paths:
+      - 'create-pull-request/**'
+      - '.github/workflows/test-create-pull-request.yml'
+  push:
+    branches:
+      - branch-*
+    paths:
+      - 'create-pull-request/**'
+      - '.github/workflows/test-create-pull-request.yml'
+  workflow_dispatch:
+
+jobs:
+  schema-validation:
+    name: Schema Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify composite action type
+        run: |
+          set -euo pipefail
+          if grep -q 'using: .composite.' create-pull-request/action.yml; then
+            echo "PASS: using: composite found"
+          else
+            echo "FAIL: using: composite not found"
+            exit 1
+          fi
+
+      - name: Verify expected inputs exist
+        run: |
+          set -euo pipefail
+          INPUTS=(
+            token commit-message committer author signoff
+            branch branch-suffix base title body body-path
+            labels assignees reviewers team-reviewers milestone
+            draft delete-branch add-paths maintainer-can-modify
+          )
+          for input in "${INPUTS[@]}"; do
+            if grep -q "^  ${input}:" create-pull-request/action.yml; then
+              echo "PASS: input '${input}' found"
+            else
+              echo "FAIL: input '${input}' not found"
+              exit 1
+            fi
+          done
+
+      - name: Verify expected outputs exist
+        run: |
+          set -euo pipefail
+          OUTPUTS=(
+            pull-request-number pull-request-url
+            pull-request-operation pull-request-head-sha
+            pull-request-branch
+          )
+          for output in "${OUTPUTS[@]}"; do
+            if grep -q "^  ${output}:" create-pull-request/action.yml; then
+              echo "PASS: output '${output}' found"
+            else
+              echo "FAIL: output '${output}' not found"
+              exit 1
+            fi
+          done
+
+      - name: Verify bash steps use set -euo pipefail
+        run: |
+          set -euo pipefail
+          # Count bash steps (shell: bash) and verify they use set -euo pipefail
+          BASH_STEPS=$(grep -c 'shell: bash' create-pull-request/action.yml)
+          PIPEFAIL_COUNT=$(grep -c 'set -euo pipefail' create-pull-request/action.yml)
+          echo "Bash steps: ${BASH_STEPS}, pipefail occurrences: ${PIPEFAIL_COUNT}"
+          if [ "$PIPEFAIL_COUNT" -ge "$BASH_STEPS" ]; then
+            echo "PASS: all bash steps use set -euo pipefail"
+          else
+            echo "FAIL: not all bash steps use set -euo pipefail"
+            exit 1
+          fi
+
+      - name: Verify vault step has continue-on-error
+        run: |
+          set -euo pipefail
+          if grep -B5 -A5 'vault-action-wrapper' create-pull-request/action.yml | grep -q 'continue-on-error: true'; then
+            echo "PASS: vault step has continue-on-error: true"
+          else
+            echo "FAIL: vault step missing continue-on-error: true"
+            exit 1
+          fi
+
+      - name: Verify inputs are passed via env (no direct interpolation in run blocks)
+        env:
+          PATTERN: '\$\{\{ inputs\.'
+        run: |
+          set -euo pipefail
+          # Check that run: blocks do not contain direct input interpolation
+          in_run_block=false
+          found_violation=false
+          while IFS= read -r line; do
+            # Detect start of run block
+            if echo "$line" | grep -qE '^\s+run: \|'; then
+              in_run_block=true
+              continue
+            fi
+            # Detect end of run block (new key at same or lower indent)
+            if $in_run_block && echo "$line" | grep -qE '^\s{4,6}[a-z]'; then
+              in_run_block=false
+            fi
+            # Check for violation inside run blocks
+            if $in_run_block && echo "$line" | grep -qE "$PATTERN"; then
+              # Allow only in comments
+              if ! echo "$line" | grep -qE '^\s*#'; then
+                echo "FAIL: direct input interpolation in run block: $line"
+                found_violation=true
+              fi
+            fi
+          done < create-pull-request/action.yml
+          if $found_violation; then
+            exit 1
+          else
+            echo "PASS: no direct input interpolation in run blocks"
+          fi
+
+      - name: Summary of Schema Validation
+        run: |
+          echo "================================"
+          echo "Schema Validation Results:"
+          echo "================================"
+          echo "All schema checks passed"
+          echo "================================"
+
+  no-changes-test:
+    name: No Changes Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run action with no file changes
+        id: create-pr
+        uses: ./create-pull-request
+        with:
+          token: ${{ github.token }}
+          branch: test/no-changes-${{ github.run_number }}
+
+      - name: Verify no-op when no changes
+        env:
+          PR_OPERATION: ${{ steps.create-pr.outputs.pull-request-operation }}
+        run: |
+          set -euo pipefail
+          echo "pull-request-operation: ${PR_OPERATION}"
+          if [ "$PR_OPERATION" = "none" ]; then
+            echo "PASS: operation is 'none' when no files changed"
+          else
+            echo "FAIL: expected operation 'none', got '${PR_OPERATION}'"
+            exit 1
+          fi
+
+  summary:
+    name: Test Summary
+    if: always()
+    needs: [schema-validation, no-changes-test]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Report results
+        env:
+          SCHEMA_RESULT: ${{ needs.schema-validation.result }}
+          NO_CHANGES_RESULT: ${{ needs.no-changes-test.result }}
+        run: |
+          echo "================================"
+          echo "Test Results Summary:"
+          echo "================================"
+          echo "Schema Validation: ${SCHEMA_RESULT}"
+          echo "No Changes Test:   ${NO_CHANGES_RESULT}"
+          echo "================================"
+          if [ "$SCHEMA_RESULT" != "success" ] || [ "$NO_CHANGES_RESULT" != "success" ]; then
+            echo "Some tests failed!"
+            exit 1
+          fi
+          echo "All tests passed!"
