@@ -170,17 +170,17 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
         mock_issue2 = Mock()
         mock_issue2.key = "TEST-2"
         mock_issue2.fields.summary = "Add new feature"
-        mock_issue2.fields.issuetype.name = "New Feature"
+        mock_issue2.fields.issuetype.name = "Feature"
 
         issues = [mock_issue1, mock_issue2]
-        category_order = ["New Feature", "Bug"]
+        category_order = ["Feature", "Bug"]
 
         result = format_notes_as_markdown(issues, 'https://jira.com', 'Test Project', '1.0.0', category_order)
 
         expected_lines = [
             "# Release notes - Test Project - 1.0.0",
             "",
-            "### New Feature",
+            "### Feature",
             "[TEST-2](https://jira.com/browse/TEST-2) Add new feature",
             "",
             "### Bug",
@@ -288,7 +288,7 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
         'get_jira_release_notes.py',
         '--project-key', 'TEST',
         '--version-name', '1.0.0',
-        '--issue-types', 'Bug,New Feature',
+        '--issue-types', 'Bug,Feature',
         '--jira-url', 'https://test.jira.com'
     ])
     @patch('get_jira_release_notes.get_jira_instance')
@@ -314,11 +314,11 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
         mock_format_notes.assert_called_once()
         args = mock_format_notes.call_args[0]
         category_order = args[4]  # Fifth argument is category_order
-        self.assertEqual(category_order, ['Bug', 'New Feature'])
+        self.assertEqual(category_order, ['Bug', 'Feature'])
 
         # Verify stderr shows custom issue types
         stderr_output = mock_stderr.getvalue()
-        self.assertIn("Using custom issue type order: ['Bug', 'New Feature']", stderr_output)
+        self.assertIn("Using custom issue type order: ['Bug', 'Feature']", stderr_output)
 
     @patch('sys.argv', [
         'get_jira_release_notes.py',
@@ -338,7 +338,7 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
 
         # Verify stderr shows default issue types
         stderr_output = mock_stderr.getvalue()
-        expected_default = ["New Feature", "False Positive", "False Negative", "Bug", "Improvement"]
+        expected_default = ["Feature", "New Feature", "False Positive", "False Negative", "Bug", "Improvement", "Security"]
         self.assertIn(f"Using default issue type order: {expected_default}", stderr_output)
 
     @patch('sys.argv', [
@@ -385,12 +385,12 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
         mock_issue2 = Mock()
         mock_issue2.key = "TEST-2"
         mock_issue2.fields.summary = "Add dashboard feature"
-        mock_issue2.fields.issuetype.name = "New Feature"
+        mock_issue2.fields.issuetype.name = "Feature"
 
         mock_issue3 = Mock()
         mock_issue3.key = "TEST-3"
-        mock_issue3.fields.summary = "Improve performance"
-        mock_issue3.fields.issuetype.name = "Improvement"
+        mock_issue3.fields.summary = "Fix security concern"
+        mock_issue3.fields.issuetype.name = "Security"
 
         mock_issue4 = Mock()
         mock_issue4.key = "TEST-4"
@@ -398,28 +398,28 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
         mock_issue4.fields.issuetype.name = "Bug"
 
         issues = [mock_issue1, mock_issue2, mock_issue3, mock_issue4]
-        category_order = ["New Feature", "Bug", "Improvement"]
+        category_order = ["Feature", "Bug", "Security"]
 
         result = format_notes_as_markdown(issues, 'https://jira.com', 'Test Project', '1.0.0', category_order)
 
         # Verify the structure and ordering
         self.assertIn("# Release notes - Test Project - 1.0.0", result)
-        self.assertIn("### New Feature", result)
+        self.assertIn("### Feature", result)
         self.assertIn("### Bug", result)
-        self.assertIn("### Improvement", result)
+        self.assertIn("### Security", result)
 
         # Verify issues appear in correct sections
         self.assertIn("[TEST-2](https://jira.com/browse/TEST-2) Add dashboard feature", result)
         self.assertIn("[TEST-1](https://jira.com/browse/TEST-1) Fix critical bug", result)
         self.assertIn("[TEST-4](https://jira.com/browse/TEST-4) Another bug fix", result)
-        self.assertIn("[TEST-3](https://jira.com/browse/TEST-3) Improve performance", result)
+        self.assertIn("[TEST-3](https://jira.com/browse/TEST-3) Fix security concern", result)
 
-        # Verify New Feature section comes before Bug section
-        new_feature_pos = result.find("### New Feature")
+        # Verify Feature section comes before Bug section
+        feature_pos = result.find("### Feature")
         bug_pos = result.find("### Bug")
-        improvement_pos = result.find("### Improvement")
-        self.assertLess(new_feature_pos, bug_pos)
-        self.assertLess(bug_pos, improvement_pos)
+        security_pos = result.find("### Security")
+        self.assertLess(feature_pos, bug_pos)
+        self.assertLess(bug_pos, security_pos)
 
     def test_format_notes_as_jira_markup_empty_issues(self):
         """Test Jira markup formatting with no issues."""
@@ -438,17 +438,17 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
         mock_issue2 = Mock()
         mock_issue2.key = "TEST-2"
         mock_issue2.fields.summary = "Add new feature"
-        mock_issue2.fields.issuetype.name = "New Feature"
+        mock_issue2.fields.issuetype.name = "Feature"
 
         issues = [mock_issue1, mock_issue2]
-        category_order = ["New Feature", "Bug"]
+        category_order = ["Feature", "Bug"]
 
         result = format_notes_as_jira_markup(issues, 'https://jira.com', 'Test Project', '1.0.0', category_order)
 
         expected_lines = [
             "h1. Release notes - Test Project - 1.0.0",
             "",
-            "h3. New Feature",
+            "h3. Feature",
             "[TEST-2|https://jira.com/browse/TEST-2] Add new feature",
             "",
             "h3. Bug",
