@@ -161,13 +161,19 @@ runs:
       shell: bash
       run: |
         rm rule-api.jar
-      
+
     - name: Generate summary
       id: generate-summary
       shell: bash
       run: |
-        summary=""
+        summary_file="rule-api-summary.md"
         current_sonarpedia=""
+        has_entries=false
+        total_rules=0
+        
+        # Build a markdown table
+        echo "| Sonarpedia | Rules to update |" > "$summary_file"
+        echo "|---|---:|" >> "$summary_file"
         
         while IFS= read -r line; do
           if [[ $line == "=== "* ]]; then
@@ -175,29 +181,31 @@ runs:
           elif [[ $line == *"Found "* && $line == *" rule(s) to update"* ]]; then
             rule_count=$(echo "$line" | grep -o 'Found [0-9]\+' | grep -o '[0-9]\+')
             if [[ -n "$rule_count" && "$rule_count" != "0" && -n "$current_sonarpedia" ]]; then
-              if [[ -n "$summary" ]]; then
-                summary="${summary},\n"
-              fi
-              summary="${summary} ${rule_count} rules for ${current_sonarpedia}"
+              echo "| \`${current_sonarpedia}\` | ${rule_count} |" >> "$summary_file"
+              total_rules=$((total_rules + rule_count))
+              has_entries=true
             fi
           fi
         done < rule-api-logs.txt
         
-        if [[ -z "$summary" ]]; then
-          summary="Update rule metadata"
-        else
-          summary="Check rule metadata for:\n ${summary}"
+        if [[ "$has_entries" == "true" ]]; then
+          echo "| **Total** | **${total_rules}** |" >> "$summary_file"
         fi
         
-        echo "summary=${summary}" >> $GITHUB_OUTPUT
-        rm rule-api-logs.txt
-
-    - name: Prepare summary for PR
-      id: pr-summary
-      shell: bash
-      run: |
-        echo "summary=${{ steps.generate-summary.outputs.summary }}" | sed ':a;N;$!ba;s/\n/<br>/g' >> $GITHUB_OUTPUT
+        # Write summary to output using delimiter to preserve newlines
+        if [[ "$has_entries" == "false" ]]; then
+          echo "summary=Update rule metadata" >> $GITHUB_OUTPUT
+        else
+          {
+            echo "summary<<EOF"
+            cat "$summary_file"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+        fi
         
+        rm rule-api-logs.txt
+        rm -f "$summary_file"
+
     - name: Check Rule Metadata Changes
       id: check-changes
       shell: bash
@@ -221,14 +229,14 @@ runs:
     - name: Create PR
       if: ${{ steps.check-changes.outputs.has-changes == 'true' }}
       id: create-pr
-      uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+      uses: SonarSource/release-github-actions/create-pull-request@v1
       with:
         commit-message: Update rule metadata
         title: Update rule metadata
         body: |
           ## Rule Metadata Update Summary
 
-          ${{ steps.pr-summary.outputs.summary }}
+          ${{ steps.generate-summary.outputs.summary }}
 
           This PR was automatically generated to update rule metadata across all supported languages.
         base: ${{ inputs.branch }}

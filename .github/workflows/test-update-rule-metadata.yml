@@ -117,7 +117,7 @@ jobs:
           fi
 
           # Test that PR creation uses the branch input for base
-          if grep -A20 "peter-evans/create-pull-request" update-rule-metadata/action.yml | grep -q "base.*inputs.branch"; then
+          if grep -A20 "create-pull-request" update-rule-metadata/action.yml | grep -q "base.*inputs.branch"; then
             echo "✓ PR creation uses branch input for base"
           else
             echo "✗ PR creation does not use branch input for base"
