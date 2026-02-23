@@ -130,6 +130,19 @@ on:
         required: false
         type: string
         default: "Feature,False Positive,False Negative,Bug,Security"
+      bump-version:
+        description: "Whether to bump the version after the release. If false, the workflow will just output the next version without modifying any files."
+        required: false
+        type: boolean
+        default: false
+      bump-version-pr-lables:
+        description: "Labels to apply to the version bump pull request if bump-version is true. For example, 'update-next-dev,skip-qa'."
+        required: false
+        type: string
+      bump-version-exlusions:
+        description: "Comma-separated list of module to exclude from the version bump commit."
+        required: false
+        type: string
 
     outputs:
       new-version:
@@ -457,6 +470,25 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Results" >> $GITHUB_STEP_SUMMARY
           echo "- New Jira version: \`${{ steps.create-jira-version.outputs.jira-new-version-name }}\`." >> $GITHUB_STEP_SUMMARY
+
+  # This step bumps the version in the codebase and creates a pull request for the next development iteration.
+  bump-version:
+    name: Bump Version
+    needs: [ release-in-jira ]
+    if: ${{ inputs.bump-version }}
+    runs-on: ${{ inputs.runner-environment }}
+    permissions:
+      id-token: write
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Bump version and create PR
+        uses: SonarSource/release-github-actions/bump-version@v1
+        with:
+          version: ${{ needs.release-in-jira.outputs.new-version }}
+          pr-labels: ${{ inputs.bump-version-pr-lables }}
+          excluded-modules: ${{ inputs.bump-version-exlusions }}
+          base-branch: ${{ inputs.branch }}
 
   # This step creates integration tickets in various Jira projects based on the inputs provided.
   # It creates tickets for SLVS, SLVSCODE, SLE, SLI, SQC, and SQS as specified.

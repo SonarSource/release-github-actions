@@ -26,6 +26,8 @@ Ask the user for the following details using AskUserQuestion:
    - **SLVSCode** (SonarLint for VS Code)
    - **SLE** (SonarLint for Eclipse)
    - **SLI** (SonarLint for IntelliJ)
+8. **Version Bump**: Whether the automated release workflow should bump the project version after the release (i.e., prepare the next development iteration). If yes, also ask:
+   - **Bump Version PR Labels**: Optional comma-separated list of labels to apply to the version bump pull request (e.g., `update-next-dev,skip-qa`). Leave empty if no labels are needed.
 
 ### Step 1b: Check Existing release.yml
 
@@ -33,6 +35,20 @@ Before asking for all information, read the existing `.github/workflows/release.
 - **slackChannel**: Reuse the existing Slack channel configuration for the automated release workflow
 
 This ensures consistency between the release and automated-release workflows.
+
+### Step 1c: Detect Workflow File Extension
+
+Before creating any workflow files, check whether the existing workflows in `.github/workflows/` use `.yml` or `.yaml` as the file extension:
+
+```bash
+ls .github/workflows/
+```
+
+- If most existing files use `.yml`, create new workflow files with the `.yml` extension.
+- If most existing files use `.yaml`, create new workflow files with the `.yaml` extension.
+- If there is a mix, prefer `.yml` (GitHub Actions default).
+
+Apply this detected extension consistently when naming all new workflow files (e.g., `automated-release.yml` or `automated-release.yaml`).
 
 ### Step 2: Check Prerequisites
 
@@ -59,11 +75,9 @@ Remind the user of these prerequisites and **ask for confirmation** using AskUse
 
 ### Step 3: Create Workflow Files
 
-Create two workflow files in `.github/workflows/`:
+Create only the `automated-release` workflow file (using the detected extension from Step 1c). **Do not create a separate `bump-versions` workflow** — version bumping is handled directly by the reusable workflow when `bump-version: true` is passed.
 
-#### 3.1 Create `automated-release.yml`
-
-**Standard workflow (SQS/SQC only):**
+#### 3.1 Create `automated-release{EXT}` (standard, no SonarLint, no version bump)
 
 ```yaml
 name: Automated Release
@@ -130,19 +144,82 @@ jobs:
       verbose: ${{ github.event.inputs.verbose == 'true' }}
       use-jira-sandbox: ${{ github.event.inputs.dry-run == 'true' }}
       is-draft-release: ${{ github.event.inputs.dry-run == 'true' }}
-
-  bump_versions:
-    name: Bump versions
-    needs: release
-    uses: ./.github/workflows/bump-versions.yaml
-    permissions:
-      contents: write
-      pull-requests: write
-    with:
-      version: ${{ needs.release.outputs.new-version }}
 ```
 
-**Workflow with SonarLint integration (includes IDE ticket creation):**
+#### 3.2 Create `automated-release{EXT}` (standard, no SonarLint, **with version bump**)
+
+When the user wants version bumping, add `bump-version: true` (and optionally `bump-version-pr-lables`) to the `with:` block:
+
+```yaml
+name: Automated Release
+on:
+  workflow_dispatch:
+    inputs:
+      short-description:
+        description: "Short description for the REL ticket"
+        required: true
+        type: string
+      sqc-integration:
+        description: "Integrate into SQC"
+        type: boolean
+        default: true
+      sqs-integration:
+        description: "Integrate into SQS"
+        type: boolean
+        default: true
+      branch:
+        description: "Branch from which to do the release"
+        required: true
+        default: "master"
+        type: string
+      new-version:
+        description: "New version to release (without -SNAPSHOT; if left empty, the current minor version will be auto-incremented)"
+        required: false
+        type: string
+      rule-props-changed:
+        description: >
+          "@RuleProperty" changed? See SC-4654
+        type: boolean
+        default: false
+      verbose:
+        description: "Enable verbose logging"
+        type: boolean
+        default: false
+      dry-run:
+        description: "Test mode: uses Jira sandbox and creates draft GitHub release"
+        type: boolean
+        default: false
+
+jobs:
+  release:
+    name: Release
+    uses: SonarSource/release-github-actions/.github/workflows/automated-release.yml@v1
+    permissions:
+      statuses: read
+      id-token: write
+      contents: write
+      actions: write
+      pull-requests: write
+    with:
+      project-name: "${PROJECT_NAME}"
+      plugin-name: "${PLUGIN_NAME}"
+      jira-project-key: "${JIRA_PROJECT_KEY}"
+      rule-props-changed: ${{ github.event.inputs.rule-props-changed }}
+      short-description: ${{ github.event.inputs.short-description }}
+      new-version: ${{ github.event.inputs.new-version }}
+      sqc-integration: ${{ github.event.inputs.sqc-integration == 'true' }}
+      sqs-integration: ${{ github.event.inputs.sqs-integration == 'true' }}
+      branch: ${{ github.event.inputs.branch }}
+      pm-email: "${PM_EMAIL}"
+      slack-channel: "${SLACK_CHANNEL}"
+      verbose: ${{ github.event.inputs.verbose == 'true' }}
+      use-jira-sandbox: ${{ github.event.inputs.dry-run == 'true' }}
+      is-draft-release: ${{ github.event.inputs.dry-run == 'true' }}
+      bump-version: true
+      bump-version-pr-lables: "${BUMP_VERSION_PR_LABELS}"  # omit this line if no labels
+```
+
+#### 3.3 Create `automated-release{EXT}` (with SonarLint integration, no version bump)
 
 ```yaml
 name: Automated Release
@@ -234,99 +311,11 @@ jobs:
       verbose: ${{ github.event.inputs.verbose == 'true' }}
       use-jira-sandbox: ${{ github.event.inputs.dry-run == 'true' }}
       is-draft-release: ${{ github.event.inputs.dry-run == 'true' }}
-
-  bump_versions:
-    name: Bump versions
-    needs: release
-    uses: ./.github/workflows/bump-versions.yaml
-    permissions:
-      contents: write
-      pull-requests: write
-    with:
-      version: ${{ needs.release.outputs.new-version }}
 ```
 
-#### 3.2 Create `bump-versions.yaml`
+#### 3.4 Create `automated-release{EXT}` (with SonarLint integration **and** version bump)
 
-**For Maven projects (pom.xml):**
-
-```yaml
-name: bump-versions
-on:
-  workflow_call:
-    inputs:
-      version:
-        required: true
-        type: string
-  workflow_dispatch:
-    inputs:
-      version:
-        description: The new version (without -SNAPSHOT)
-        required: true
-        type: string
-
-jobs:
-  bump-version:
-    runs-on: sonar-xs
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v4
-      - env:
-          VERSION: "${{ inputs.version }}-SNAPSHOT"
-        run: |
-          find . -type f -name "pom.xml" -exec sed -i "s/<version>.*-SNAPSHOT<\/version>/<version>${VERSION}<\/version>/" {} +
-      - uses: peter-evans/create-pull-request@v7
-        with:
-          author: ${{ github.actor }} <${{ github.actor }}>
-          commit-message: Prepare next development iteration
-          title: Prepare next development iteration
-          branch: bot/bump-project-version
-          branch-suffix: timestamp
-          base: master
-          reviewers: ${{ github.actor }}
-```
-
-**For Gradle projects (gradle.properties):**
-
-```yaml
-name: bump-versions
-on:
-  workflow_call:
-    inputs:
-      version:
-        required: true
-        type: string
-  workflow_dispatch:
-    inputs:
-      version:
-        description: The new version (without -SNAPSHOT)
-        required: true
-        type: string
-
-jobs:
-  bump-version:
-    runs-on: sonar-xs
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v4
-      - env:
-          VERSION: "${{ inputs.version }}-SNAPSHOT"
-        run: |
-          sed -i "s/version=.*-SNAPSHOT/version=${VERSION}/" gradle.properties
-      - uses: peter-evans/create-pull-request@v7
-        with:
-          author: ${{ github.actor }} <${{ github.actor }}>
-          commit-message: Prepare next development iteration
-          title: Prepare next development iteration
-          branch: bot/bump-project-version
-          branch-suffix: timestamp
-          base: master
-          reviewers: ${{ github.actor }}
-```
+Add `bump-version: true` (and optionally `bump-version-pr-lables`) to the SonarLint variant's `with:` block, same as in 3.2.
 
 ### Step 4: Update release.yml
 
@@ -382,15 +371,14 @@ After creating/modifying all workflow files, create a branch and commit the chan
 # Create a new branch
 git checkout -b add-automated-release-workflow
 
-# Stage the workflow files
-git add .github/workflows/automated-release.yml .github/workflows/bump-versions.yaml .github/workflows/release.yml
+# Stage the workflow files (use the correct extension detected in Step 1c)
+git add .github/workflows/automated-release.yml .github/workflows/release.yml
 
 # Commit with descriptive message
 git commit -m "Add automated release workflow
 
-Add workflows for automated release process:
+Add workflow for automated release process:
 - automated-release.yml: Main workflow that orchestrates the release
-- bump-versions.yaml: Bumps version file after release
 - Update release.yml to support workflow_dispatch for automated releases
 "
 ```
@@ -460,7 +448,7 @@ Provide these instructions to the user:
 ### Step 7: Post-Release Checklist
 
 Remind user of post-release tasks:
-- Review and merge the bump-version PR
+- Review and merge the bump-version PR (if version bumping was enabled)
 - Review and merge the SQS PR in sonar-enterprise
 - Review and merge the SQC PR in sonarcloud-core
 - Update integration ticket statuses in Jira
