@@ -178,7 +178,11 @@ jobs:
           echo "Testing that vault secrets include GitHub token..."
 
           # Test that the vault step retrieves a GitHub token for private rspec repo access
-          if grep -A10 "Get vault secrets" update-rule-metadata/action.yml | grep -q "development/github/token/{REPO_OWNER_NAME_DASH}-rspec-read"; then
+          # The string is build gradually to escaple GitHub string interpolation.
+          TOKEN='${'
+          TOKEN+="{ inputs.rspec-token-suffix || 'rspec-read' }"
+          TOKEN+='}'
+          if grep -A10 "Get vault secrets" update-rule-metadata/action.yml | grep -q "development/github/token/{REPO_OWNER_NAME_DASH}-${TOKEN}"; then
             echo "✓ GitHub token vault secret path found"
           else
             echo "✗ GitHub token vault secret path not found in vault step"

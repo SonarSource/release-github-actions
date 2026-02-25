@@ -5,7 +5,10 @@ description: |
 
 inputs:
   rule-api-version:
-    description: Version of the rule-api tooling to be used for the workflow.
+    description: |
+      Version of the rule-api tooling to be used for the workflow.
+      Leave empty to use the latest.
+    required: false
   sonarpedia-files:
     description: |
       Comma-separated list of sonarpedia files to be updated.
@@ -19,6 +22,15 @@ inputs:
       Branch of the rspec repository to be used.
       If not specified, the 'master' branch of the rspec repository will be used.
     default: master
+  labels:
+    description: 'Labels to add to the PR'
+    default: skip-qa
+  post-update:
+    description: 'Additional commands to run after rule-api.jar update'
+    required: false
+  rspec-token-suffix:
+    description: 'Suffix for the RSpec token if different from "rspec-read".'
+    required: false
 
 outputs:
   has-changes:
@@ -44,26 +56,43 @@ runs:
         secrets: |
           development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader access_token | ARTIFACTORY_ACCESS_TOKEN;
           development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader role | ARTIFACTORY_ROLE;
-          development/github/token/{REPO_OWNER_NAME_DASH}-rspec-read token | GITHUB_TOKEN;
+          development/github/token/{REPO_OWNER_NAME_DASH}-${{ inputs.rspec-token-suffix || 'rspec-read' }} token | GITHUB_TOKEN;
 
     - name: Cache rule-api jar
       id: cache-rule-api
+      if: ${{ inputs.rule-api-version != '' }}
       uses: actions/cache@v4
       with:
         path: rule-api.jar
-        key: rule-api-${{ inputs.rule-api-version || '2.18.0.5734' }}
+        key: rule-api-${{ inputs.rule-api-version }}
+
+    - name: Setup JFrog
+      if: ${{ inputs.rule-api-version == '' }}
+      uses: SonarSource/jfrog-setup-wrapper@v3
+      with:
+        artifactoryRoleSuffix: private-reader
 
     - name: Download rule-api jar
+      id: download
       if: ${{ steps.cache-rule-api.outputs.cache-hit != 'true' }}
       env:
         REPOX_USER: vault-${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_ROLE }}
         REPOX_PASS: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_ACCESS_TOKEN }}
-        RULE_API_VERSION: ${{ inputs.rule-api-version || '2.18.0.5734' }}
+        RULE_API_VERSION: ${{ inputs.rule-api-version }}
       shell: bash
       run: |
-        echo "Downloading rule-api.jar version '$RULE_API_VERSION' from Artifactory"
-        curl -u $REPOX_USER:$REPOX_PASS -o rule-api.jar "https://repox.jfrog.io/artifactory/sonarsource-private-releases/com/sonarsource/rule-api/rule-api/$RULE_API_VERSION/rule-api-$RULE_API_VERSION.jar"
-        echo "Downloaded rule-api.jar ($(ls -lh rule-api.jar | awk '{print $5}'))"
+        if [[ -n "$RULE_API_VERSION" ]]; then
+          echo "Downloading rule-api.jar version '$RULE_API_VERSION' from Artifactory"
+          curl -u $REPOX_USER:$REPOX_PASS -o rule-api.jar "https://repox.jfrog.io/artifactory/sonarsource-private-releases/com/sonarsource/rule-api/rule-api/$RULE_API_VERSION/rule-api-$RULE_API_VERSION.jar"
+          echo "Downloaded rule-api.jar ($(ls -lh rule-api.jar | awk '{print $5}'))"
+          echo "rule-api-version=$RULE_API_VERSION" >> $GITHUB_OUTPUT
+        else
+          echo "Downloading the latest rule-api release."
+          jfrog rt curl -sLf "sonarsource-private-releases/com/sonarsource/rule-api/rule-api/%5BRELEASE%5D/rule-api-%5BRELEASE%5D.jar" -o rule-api.jar
+          jar xf rule-api.jar META-INF/MANIFEST.MF
+          grep 'Implementation-Version' META-INF/MANIFEST.MF | sed 's/Implementation-Version: /rule-api-version=/' >> $GITHUB_OUTPUT
+          rm -rf META-INF
+        fi
 
     - name: Install Java to run rule-api
       uses: actions/setup-java@v4
@@ -157,6 +186,11 @@ runs:
           fi
         done <<< "$sonarpedia_dirs"
 
+    - name: Run Post Update Script
+      if: ${{ inputs.post-update }}
+      shell: bash
+      run: ${{ inputs.post-update }}
+
     - name: Remove rule-api jar
       shell: bash
       run: |
@@ -192,6 +226,8 @@ runs:
           echo "| **Total** | **${total_rules}** |" >> "$summary_file"
         fi
         
+        echo -e "\nRule API Version: ${{ steps.download.outputs.rule-api-version }}" >> "$summary_file"
+
         # Write summary to output using delimiter to preserve newlines
         if [[ "$has_entries" == "false" ]]; then
           echo "summary=Update rule metadata" >> $GITHUB_OUTPUT
@@ -242,4 +278,4 @@ runs:
         base: ${{ inputs.branch }}
         branch: bot/update-rule-metadata
         branch-suffix: timestamp
-        labels: skip-qa
+        labels: ${{ inputs.labels }}
