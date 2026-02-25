@@ -51,21 +51,6 @@ on:
         value: ${{ jobs.release-in-jira.outputs.new-version }}
 
 jobs:
-  pre-release-checks:
-    name: Pre-release checks
-    runs-on: github-ubuntu-latest-s
-    permissions:
-      statuses: read
-      contents: write
-      pull-requests: write
-      id-token: write
-    steps:
-      - name: Check Releasability Status
-        uses: SonarSource/release-github-actions/check-releasability-status@v1
-        with:
-          branch: ${{ inputs.branch }}
-          with-optional-checks: ${{ inputs.with-optional-checks }}
-
   prepare-release:
     name: Prepare release
     runs-on: github-ubuntu-latest-s
