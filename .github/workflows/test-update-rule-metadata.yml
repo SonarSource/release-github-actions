@@ -178,6 +178,7 @@ jobs:
           echo "Testing that vault secrets include GitHub token..."
 
           # Test that the vault step retrieves a GitHub token for private rspec repo access
+          # The string is build gradually to escaple GitHub string interpolation.
           TOKEN='${'
           TOKEN+="{ inputs.rspec-token-suffix || 'rspec-read' }"
           TOKEN+='}'
