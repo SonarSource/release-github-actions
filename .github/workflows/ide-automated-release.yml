@@ -39,11 +39,6 @@ on:
         required: false
         type: string
         default: 'N/A'
-      with-optional-checks:
-        description: "True if you want the workflow to fail on releasability optional checks, false to ignore optional checks"
-        required: false
-        type: boolean
-        default: true
 
     outputs:
       new-version:
@@ -54,7 +49,6 @@ jobs:
   prepare-release:
     name: Prepare release
     runs-on: github-ubuntu-latest-s
-    needs: pre-release-checks
     permissions:
       statuses: read
       contents: read
@@ -167,12 +161,11 @@ jobs:
     name: Release
     runs-on: github-ubuntu-latest-s
     if: always()
-    needs: [ pre-release-checks, prepare-release, publish-github-release, create-release-ticket, release-in-jira ]
+    needs: [ prepare-release, publish-github-release, create-release-ticket, release-in-jira ]
     steps:
       - name: Post Summary to Workflow
         run: |
-          ALL_SUCCESS=$([[ "${{ needs.pre-release-checks.result }}" == "success" && \
-                          "${{ needs.prepare-release.result }}" == "success" && \
+          ALL_SUCCESS=$([[ "${{ needs.prepare-release.result }}" == "success" && \
                           "${{ needs.publish-github-release.result }}" == "success" && \
                           "${{ needs.create-release-ticket.result }}" == "success" && \
                           "${{ needs.release-in-jira.result }}" == "success" ]] && echo "true" || echo "false")
