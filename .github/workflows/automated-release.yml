@@ -494,8 +494,8 @@ jobs:
         shell: bash
         env:
           NORMALIZE: ${{ inputs.bump-version-normalize }}
+          INPUT: ${{ needs.release-in-jira.outputs.new-version }}
         run: |
-          INPUT="${{ needs.release-in-jira.outputs.new-version }}"
           if [[ $NORMALIZE == 'true' && $INPUT =~ ^[0-9]+\.[0-9]+$ ]]; then
             OUTPUT="${INPUT}.0"
           else
