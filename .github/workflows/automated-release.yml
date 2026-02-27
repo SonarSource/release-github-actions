@@ -135,6 +135,11 @@ on:
         required: false
         type: boolean
         default: false
+      bump-version-normalize:
+        description: "If true, the version will have full major.minor.patch format, otherwise the final .0 is dropped."
+        required: false
+        type: boolean
+        default: false
       bump-version-pr-lables:
         description: "Labels to apply to the version bump pull request if bump-version is true. For example, 'update-next-dev,skip-qa'."
         required: false
@@ -482,15 +487,16 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      # We need the full "major.minor.patch" format,
-      # but release-in-jira step drops the patch if it is 0.
+      # If requested, convert the version returned by release-in-jira
+      # to the full "major.minor.patch" format (it drops the patch if it is 0).
       - name: Normalize Version
         id: normalize
         shell: bash
         env:
+          NORMALIZE: ${{ inputs.bump-version-normalize }}
           INPUT: ${{ needs.release-in-jira.outputs.new-version }}
         run: |
-          if [[ $INPUT =~ ^[0-9]+\.[0-9]+$ ]]; then
+          if [[ $NORMALIZE == 'true' && $INPUT =~ ^[0-9]+\.[0-9]+$ ]]; then
             OUTPUT="${INPUT}.0"
           else
             OUTPUT="$INPUT"
