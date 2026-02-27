@@ -487,16 +487,15 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      # If requested, convert the version returned by release-in-jira
-      # to the full "major.minor.patch" format (it drops the patch if it is 0).
+      # Convert the version returned by release-in-jira to the full "major.minor.patch" format
+      # (it drops the patch if it is 0).
       - name: Normalize Version
         id: normalize
+        if: ${{ inputs.bump-version-normalize }}
         shell: bash
-        env:
-          NORMALIZE: ${{ inputs.bump-version-normalize }}
-          INPUT: ${{ needs.release-in-jira.outputs.new-version }}
         run: |
-          if [[ $NORMALIZE == 'true' && $INPUT =~ ^[0-9]+\.[0-9]+$ ]]; then
+          INPUT="${{ needs.release-in-jira.outputs.new-version }}"
+          if [[ $INPUT =~ ^[0-9]+\.[0-9]+$ ]]; then
             OUTPUT="${INPUT}.0"
           else
             OUTPUT="$INPUT"
@@ -506,7 +505,7 @@ jobs:
       - name: Bump version and create PR
         uses: SonarSource/release-github-actions/bump-version@v1
         with:
-          version: ${{ steps.normalize.outputs.version }}
+          version: ${{ steps.normalize.outputs.version || needs.release-in-jira.outputs.new-version }}
           pr-labels: ${{ inputs.bump-version-pr-lables }}
           excluded-modules: ${{ inputs.bump-version-exlusions }}
           base-branch: ${{ inputs.branch }}
