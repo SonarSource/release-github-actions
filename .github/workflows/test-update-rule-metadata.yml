@@ -109,7 +109,7 @@ jobs:
           fi
 
           # Test that checkout uses the branch input
-          if grep -A2 "actions/checkout@v4" update-rule-metadata/action.yml | grep -q "ref.*inputs.branch"; then
+          if grep -A2 "actions/checkout@" update-rule-metadata/action.yml | grep -q "ref.*inputs.branch"; then
             echo "✓ checkout step uses branch input"
           else
             echo "✗ checkout step does not use branch input"
