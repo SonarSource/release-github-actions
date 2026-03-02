@@ -24,7 +24,6 @@ inputs:
     default: master
   labels:
     description: 'Labels to add to the PR'
-    default: skip-qa
   post-update:
     description: 'Additional commands to run after rule-api.jar update'
     required: false
