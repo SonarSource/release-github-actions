@@ -1,0 +1,74 @@
+name: Sonar Update Center Release
+description: "For automating updates of files in sonar-update-center-properties"
+author: 'SonarSource'
+
+inputs:
+  file:
+    description: "File to update, e.g.'scannermaven.properties"
+    required: true
+    type: string
+  version:
+    description: "New version field"
+    required: true
+    type: string
+  description:
+    description: "Description field"
+    required: true
+    type: string
+  date:
+    description: "Date field"
+    required: true
+    type: string
+  changelogUrl:
+    description: "changelogUrl field"
+    required: true
+    type: string
+  downloadUrl:
+    description: "downloadUrl field"
+    required: true
+    type: string
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Get GitHub token from Vault
+      id: secrets
+      uses: SonarSource/vault-action-wrapper@v3
+      with:
+        secrets: |
+          development/github/token/{REPO_OWNER_NAME_DASH}-release-automation token | GITHUB_TOKEN;
+
+    - name: Checkout target repository
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        repository: SonarSource/sonar-update-center-properties
+        fetch-depth: 0
+        token: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
+
+    - name: Set up Python
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      with:
+        python-version: '3.x'
+
+    - name: Update File
+      shell: bash
+      run: |
+        python ${{ github.action_path }}/update.py \
+          --file "${{ inputs.file }}" \
+          --version "${{ inputs.version }}" \
+          --description "${{ inputs.description }}" \
+          --date "${{ inputs.date }}" \
+          --changelogUrl "${{ inputs.changelogUrl }}" \
+          --downloadUrl "${{ inputs.downloadUrl }}"
+
+    - name: Create Pull Request
+      id: create-pr
+      uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
+      with:
+        author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+        commit-message: Update ${{ inputs.file }} with version ${{ inputs.version }}
+        title: Update ${{ inputs.file }} with version ${{ inputs.version }}
+        body: ""
+        base: "master"
+        branch: "bot/update-${{ inputs.file }}-${{ inputs.version }}-${{ github.run_id }}"
+        token: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
