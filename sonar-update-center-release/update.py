@@ -3,6 +3,9 @@ import sys
 
 # The entire file was written by AI.
 
+PUBLIC_VERSION = 'publicVersions='
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Update a .properties file with a new version entry.'
@@ -19,8 +22,8 @@ def main():
     old_public_version = None
     with open(args.file, 'r') as f:
         for line in f:
-            if line.startswith('publicVersions='):
-                old_public_version = line.rstrip('\n')[len('publicVersions='):]
+            if line.startswith(PUBLIC_VERSION):
+                old_public_version = line.rstrip('\n')[len(PUBLIC_VERSION):]
                 break
 
     if old_public_version is None:
@@ -41,8 +44,8 @@ def main():
             output_lines.append(f'{stripped},{old_public_version}\n')
             continue
 
-        if stripped.startswith('publicVersions='):
-            output_lines.append(f'publicVersions={args.version}\n')
+        if stripped.startswith(PUBLIC_VERSION):
+            output_lines.append(f'{PUBLIC_VERSION}{args.version}\n')
             insert_block_after_next_blank = True
             continue
 
