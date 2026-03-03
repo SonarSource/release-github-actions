@@ -12,6 +12,10 @@ inputs:
   plugin-name:
     description: 'The language key of the plugin to update (e.g., architecture, java, csharp).'
     required: true
+  plugin-suffix:
+    description: 'The suffix pattern to match after the plugin name. Set to empty to prevent, for example, `java` matching `javascript`'
+    required: false
+    default: '.*'
   secret-name:
     description: 'Name of the secret to fetch from the vault that has access to the target repository.'
     required: true
@@ -87,6 +91,7 @@ runs:
       env:
         PLUGIN_ARTIFACTS: ${{ inputs.plugin-artifacts }}
         PLUGIN_NAME: ${{ inputs.plugin-name }}
+        PLUGIN_SUFFIX: ${{ inputs.plugin-suffix }}
         RELEASE_VERSION: ${{ inputs.release-version }}
       run: |
         set -euo pipefail
@@ -103,7 +108,7 @@ runs:
         for plugin in "${PLUGINS[@]}"; do
           plugin=$(echo "$plugin" | xargs)
           echo "Updating analyzer version in ${{ env.BUILD_GRADLE_FILE }} for plugin $plugin"
-          sed -i "s/\(:sonar-$plugin.*-plugin:\)[0-9.]*/\1$RELEASE_VERSION/g" ${{ env.BUILD_GRADLE_FILE }}
+          sed -i "s/\(:sonar-$plugin$PLUGIN_SUFFIX-plugin:\)[0-9.]*/\1$RELEASE_VERSION/g" ${{ env.BUILD_GRADLE_FILE }}
         done
 
         echo "Showing diff:"
