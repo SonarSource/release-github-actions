@@ -115,7 +115,7 @@ runs:
       with:
         author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
         commit-message: '${{ steps.setup_env.outputs.commit-prefix }} Update `${{ inputs.plugin-name }}` plugins to version ${{ inputs.release-version }}'
-        title: '${{ inputs.ticket-key }} Update `${{ inputs.plugin-name }}` to version ${{ inputs.release-version }}'
+        title: '${{ steps.setup_env.outputs.commit-prefix }} Update `${{ inputs.plugin-name }}` to version ${{ inputs.release-version }}'
         body: ${{ inputs.pull-request-body }}
         base: ${{ inputs.base-branch }}
         branch: '${{ inputs.plugin-name }}/update-analyzer-${{ inputs.release-version }}'
