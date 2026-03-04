@@ -96,14 +96,14 @@ runs:
           IFS=',' read -ra PLUGINS <<< "$PLUGIN_ARTIFACTS"
         else
           echo "Using plugin-name: $PLUGIN_NAME"
-          PLUGINS=("$PLUGIN_NAME")
+          PLUGINS=("${PLUGIN_NAME}.*")
         fi
 
         # Update each plugin
         for plugin in "${PLUGINS[@]}"; do
           plugin=$(echo "$plugin" | xargs)
           echo "Updating analyzer version in ${{ env.BUILD_GRADLE_FILE }} for plugin $plugin"
-          sed -i "s/\(:sonar-$plugin.*-plugin:\)[0-9.]*/\1$RELEASE_VERSION/g" ${{ env.BUILD_GRADLE_FILE }}
+          sed -i "s/\(:sonar-$plugin-plugin:\)[0-9.]*/\1$RELEASE_VERSION/g" ${{ env.BUILD_GRADLE_FILE }}
         done
 
         echo "Showing diff:"

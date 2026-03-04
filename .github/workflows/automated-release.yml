@@ -644,7 +644,7 @@ jobs:
           ticket-key: ${{ needs.create-integration-tickets.outputs.sqs-ticket-key }}
           plugin-name: ${{ inputs.plugin-name }}
           secret-name: ${{ inputs.release-automation-secret-name || format('sonar-{0}-release-automation', inputs.plugin-name) }}
-          plugin-artifacts: ${{inputs.plugin-artifacts-sqs || inputs.plugin-name }}
+          plugin-artifacts: ${{inputs.plugin-artifacts-sqs }}
           draft: ${{ inputs.is-draft-release }}
           reviewers: ${{ github.actor }}
 
@@ -657,7 +657,7 @@ jobs:
           ticket-key: ${{ needs.create-integration-tickets.outputs.sqc-ticket-key }}
           plugin-name: ${{ inputs.plugin-name }}
           secret-name: ${{ inputs.release-automation-secret-name || format('sonar-{0}-release-automation', inputs.plugin-name) }}
-          plugin-artifacts: ${{inputs.plugin-artifacts-sqc || inputs.plugin-name }}
+          plugin-artifacts: ${{inputs.plugin-artifacts-sqc }}
           draft: ${{ inputs.is-draft-release }}
           reviewers: ${{ github.actor }}
 
