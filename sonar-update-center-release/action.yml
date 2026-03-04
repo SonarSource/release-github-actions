@@ -10,16 +10,16 @@ inputs:
     description: "New version field"
     required: true
   description:
-    description: "Description field"
+    description: "description field"
     required: true
   date:
-    description: "Date field"
+    description: "date field"
     required: true
   changelog-url:
-    description: "changelog-url field"
+    description: "changelogUrl field"
     required: true
   download-url:
-    description: "download-url field"
+    description: "downloadUrl field"
     required: true
 
 outputs:

@@ -14,14 +14,14 @@ The action uses a Python script (`update.py`) that performs an in-place update o
 
 ## Inputs
 
-| Input           | Description                                                              | Required |
-|-----------------|--------------------------------------------------------------------------|----------|
-| `file`          | The `.properties` file to update (e.g., `scannermaven.properties`).      | `true`   |
-| `version`       | The new version string (e.g., `5.5.0.6356`).                             | `true`   |
-| `description`   | The release description.                                                 | `true`   |
-| `date`          | The release date in `YYYY-MM-DD` format.                                 | `true`   |
-| `changelog-url` | The URL to the changelog for this release.                               | `true`   |
-| `download-url`  | The URL to download this release.                                        | `true`   |
+| Input           | Description                                                                           | Required |
+|-----------------|---------------------------------------------------------------------------------------|----------|
+| `file`          | The `.properties` file to update (e.g., `scannermaven.properties`).                  | `true`   |
+| `version`       | The new version string (e.g., `5.5.0.6356`).                                         | `true`   |
+| `description`   | Value for the `description` field of the new version entry.                           | `true`   |
+| `date`          | Value for the `date` field of the new version entry (e.g., `2026-03-04`).             | `true`   |
+| `changelog-url` | Value for the `changelogUrl` field of the new version entry.                          | `true`   |
+| `download-url`  | Value for the `downloadUrl` field of the new version entry.                           | `true`   |
 
 ## Outputs
 
