@@ -208,53 +208,53 @@ jobs:
         with:
           branch: ${{ inputs.branch }}
 
-      # - uses: SonarSource/gh-action_releasability@v3
-      #   id: releasability
-      #   with:
-      #     branch: ${{ github.ref_name }}
-      #     commit-sha: ${{ github.sha }}
-      #     organization: ${{ github.repository_owner }}
-      #     repository: ${{ github.event.repository.name }}
-      #     version: ${{ steps.get-version.outputs.release-version }}
+      - uses: SonarSource/gh-action_releasability@v3
+        id: releasability
+        with:
+          branch: ${{ github.ref_name }}
+          commit-sha: ${{ github.sha }}
+          organization: ${{ github.repository_owner }}
+          repository: ${{ github.event.repository.name }}
+          version: ${{ steps.get-version.outputs.release-version }}
 
-      # - name: Summary
-      #   if: ${{ always() && inputs.verbose }}
-      #   shell: bash
-      #   env:
-      #     BRANCH: ${{ inputs.branch }}
-      #     VERSION: ${{ steps.get-version.outputs.release-version }}
-      #     CHECK_OUTCOME: ${{ steps.releasability.outcome }}
-      #     CHECK_DEPENDENCIES: ${{ steps.releasability.outputs.releasabilityCheckDependencies }}
-      #     CHECK_QA: ${{ steps.releasability.outputs.releasabilityQA }}
-      #     CHECK_JIRA: ${{ steps.releasability.outputs.releasabilityJira }}
-      #     CHECK_PEACHEE: ${{ steps.releasability.outputs.releasabilityCheckPeacheeLanguagesStatistics }}
-      #     CHECK_QUALITY_GATE: ${{ steps.releasability.outputs.releasabilityQualityGate }}
-      #     CHECK_PARENT_POM: ${{ steps.releasability.outputs.releasabilityParentPOM }}
-      #     CHECK_GITHUB: ${{ steps.releasability.outputs.releasabilityGitHub }}
-      #     CHECK_MANIFEST: ${{ steps.releasability.outputs.releasabilityCheckManifestValues }}
-      #     CHECK_LICENSES: ${{ steps.releasability.outputs.releasabilityCheckLicenses }}
-      #   run: |
-      #     if [ "$CHECK_OUTCOME" = "success" ]; then
-      #       echo "## ✅ Releasability Check" >> $GITHUB_STEP_SUMMARY
-      #     else
-      #       echo "## ❌ Releasability Check Failed" >> $GITHUB_STEP_SUMMARY
-      #     fi
-      #     echo "" >> $GITHUB_STEP_SUMMARY
-      #     echo "### What happened" >> $GITHUB_STEP_SUMMARY
-      #     echo "- Executed releasability check on branch \`$BRANCH\` for version \`$VERSION\`." >> $GITHUB_STEP_SUMMARY
-      #     if [ "$CHECK_OUTCOME" != "success" ]; then
-      #       echo "" >> $GITHUB_STEP_SUMMARY
-      #       echo "### Failed Checks" >> $GITHUB_STEP_SUMMARY
-      #       [ "$CHECK_DEPENDENCIES" = "FAILED" ] && echo "- ❌ CheckDependencies" >> $GITHUB_STEP_SUMMARY
-      #       [ "$CHECK_QA" = "FAILED" ] && echo "- ❌ QA" >> $GITHUB_STEP_SUMMARY
-      #       [ "$CHECK_JIRA" = "FAILED" ] && echo "- ❌ Jira" >> $GITHUB_STEP_SUMMARY
-      #       [ "$CHECK_PEACHEE" = "FAILED" ] && echo "- ❌ CheckPeacheeLanguagesStatistics" >> $GITHUB_STEP_SUMMARY
-      #       [ "$CHECK_QUALITY_GATE" = "FAILED" ] && echo "- ❌ QualityGate" >> $GITHUB_STEP_SUMMARY
-      #       [ "$CHECK_PARENT_POM" = "FAILED" ] && echo "- ❌ ParentPOM" >> $GITHUB_STEP_SUMMARY
-      #       [ "$CHECK_GITHUB" = "FAILED" ] && echo "- ❌ GitHub" >> $GITHUB_STEP_SUMMARY
-      #       [ "$CHECK_MANIFEST" = "FAILED" ] && echo "- ❌ CheckManifestValues" >> $GITHUB_STEP_SUMMARY
-      #       [ "$CHECK_LICENSES" = "FAILED" ] && echo "- ❌ CheckLicenses" >> $GITHUB_STEP_SUMMARY
-      #     fi
+      - name: Summary
+        if: ${{ always() && inputs.verbose }}
+        shell: bash
+        env:
+          BRANCH: ${{ inputs.branch }}
+          VERSION: ${{ steps.get-version.outputs.release-version }}
+          CHECK_OUTCOME: ${{ steps.releasability.outcome }}
+          CHECK_DEPENDENCIES: ${{ steps.releasability.outputs.releasabilityCheckDependencies }}
+          CHECK_QA: ${{ steps.releasability.outputs.releasabilityQA }}
+          CHECK_JIRA: ${{ steps.releasability.outputs.releasabilityJira }}
+          CHECK_PEACHEE: ${{ steps.releasability.outputs.releasabilityCheckPeacheeLanguagesStatistics }}
+          CHECK_QUALITY_GATE: ${{ steps.releasability.outputs.releasabilityQualityGate }}
+          CHECK_PARENT_POM: ${{ steps.releasability.outputs.releasabilityParentPOM }}
+          CHECK_GITHUB: ${{ steps.releasability.outputs.releasabilityGitHub }}
+          CHECK_MANIFEST: ${{ steps.releasability.outputs.releasabilityCheckManifestValues }}
+          CHECK_LICENSES: ${{ steps.releasability.outputs.releasabilityCheckLicenses }}
+        run: |
+          if [ "$CHECK_OUTCOME" = "success" ]; then
+            echo "## ✅ Releasability Check" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Releasability Check Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### What happened" >> $GITHUB_STEP_SUMMARY
+          echo "- Executed releasability check on branch \`$BRANCH\` for version \`$VERSION\`." >> $GITHUB_STEP_SUMMARY
+          if [ "$CHECK_OUTCOME" != "success" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Failed Checks" >> $GITHUB_STEP_SUMMARY
+            [ "$CHECK_DEPENDENCIES" = "FAILED" ] && echo "- ❌ CheckDependencies" >> $GITHUB_STEP_SUMMARY
+            [ "$CHECK_QA" = "FAILED" ] && echo "- ❌ QA" >> $GITHUB_STEP_SUMMARY
+            [ "$CHECK_JIRA" = "FAILED" ] && echo "- ❌ Jira" >> $GITHUB_STEP_SUMMARY
+            [ "$CHECK_PEACHEE" = "FAILED" ] && echo "- ❌ CheckPeacheeLanguagesStatistics" >> $GITHUB_STEP_SUMMARY
+            [ "$CHECK_QUALITY_GATE" = "FAILED" ] && echo "- ❌ QualityGate" >> $GITHUB_STEP_SUMMARY
+            [ "$CHECK_PARENT_POM" = "FAILED" ] && echo "- ❌ ParentPOM" >> $GITHUB_STEP_SUMMARY
+            [ "$CHECK_GITHUB" = "FAILED" ] && echo "- ❌ GitHub" >> $GITHUB_STEP_SUMMARY
+            [ "$CHECK_MANIFEST" = "FAILED" ] && echo "- ❌ CheckManifestValues" >> $GITHUB_STEP_SUMMARY
+            [ "$CHECK_LICENSES" = "FAILED" ] && echo "- ❌ CheckLicenses" >> $GITHUB_STEP_SUMMARY
+          fi
 
   # This step determines the release version, Jira version name, and gathers release notes.
   # It sets up the necessary outputs for subsequent steps.
