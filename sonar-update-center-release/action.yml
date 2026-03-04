@@ -13,8 +13,8 @@ inputs:
     description: "description field"
     required: true
   date:
-    description: "date field"
-    required: true
+    description: "date field in YYYY-MM-DD format, defaults to today"
+    required: false
   changelog-url:
     description: "changelogUrl field"
     required: true
@@ -59,11 +59,12 @@ runs:
         INPUT_DOWNLOAD_URL: ${{ inputs.download-url }}
       run: |
         set -euo pipefail
+        DATE="${INPUT_DATE:-$(date +%Y-%m-%d)}"
         python "$GITHUB_ACTION_PATH/update.py" \
           --file "$INPUT_FILE" \
           --version "$INPUT_VERSION" \
           --description "$INPUT_DESCRIPTION" \
-          --date "$INPUT_DATE" \
+          --date "$DATE" \
           --changelogUrl "$INPUT_CHANGELOG_URL" \
           --downloadUrl "$INPUT_DOWNLOAD_URL"
 
