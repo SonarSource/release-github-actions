@@ -23,7 +23,7 @@ inputs:
     required: false
     default: 'master'
   draft:
-    description: 'A boolean value to control if the pull request is created as a draft.'
+    description: 'A boolean value to control if the pull request is created as a draft. It also implies DO NOT MERGE'
     required: false
     default: 'false'
   reviewers:
@@ -51,16 +51,25 @@ runs:
     - name: Set up environment
       id: setup_env
       shell: bash
+      env:
+        TICKET_KEY: ${{ inputs.ticket-key }}
+        DRAFT: ${{ inputs.draft }}
       run: |
-        if [[ "${{ inputs.ticket-key }}" == SONAR-* ]]; then
+        if [[ "$TICKET_KEY" == SONAR-* ]]; then
           echo "PRODUCT_REPOSITORY=sonar-enterprise" >> $GITHUB_ENV
           echo "BUILD_GRADLE_FILE=build.gradle" >> $GITHUB_ENV
-        elif [[ "${{ inputs.ticket-key }}" == SC-* ]]; then
+        elif [[ "$TICKET_KEY" == SC-* ]]; then
           echo "PRODUCT_REPOSITORY=sonarcloud-core" >> $GITHUB_ENV
           echo "BUILD_GRADLE_FILE=private/edition-sonarcloud/build.gradle" >> $GITHUB_ENV
         else
           echo "::error::Invalid ticket format. Must start with SONAR- or SC-."
           exit 1
+        fi
+
+        if [[ "$DRAFT" == "true" ]]; then
+          echo "commit-prefix=[DO NOT MERGE]" >> $GITHUB_OUTPUT
+        else
+          echo "commit-prefix=$TICKET_KEY" >> $GITHUB_OUTPUT
         fi
 
     - name: Checkout target repository
@@ -105,8 +114,8 @@ runs:
       uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
       with:
         author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
-        commit-message: '${{ inputs.ticket-key }} Update `${{ inputs.plugin-name }}` plugins to version ${{ inputs.release-version }}'
-        title: '${{ inputs.ticket-key }} Update `${{ inputs.plugin-name }}` to version ${{ inputs.release-version }}'
+        commit-message: '${{ steps.setup_env.outputs.commit-prefix }} Update `${{ inputs.plugin-name }}` plugins to version ${{ inputs.release-version }}'
+        title: '${{ steps.setup_env.outputs.commit-prefix }} Update `${{ inputs.plugin-name }}` to version ${{ inputs.release-version }}'
         body: ${{ inputs.pull-request-body }}
         base: ${{ inputs.base-branch }}
         branch: '${{ inputs.plugin-name }}/update-analyzer-${{ inputs.release-version }}'
