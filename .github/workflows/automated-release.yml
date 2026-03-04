@@ -96,10 +96,6 @@ on:
         required: false
         type: boolean
         default: true
-      plugin-suffix:
-        description: 'The suffix pattern to match after the plugin name in SQS and SQC. Set to empty to prevent, for example, `java` matching `javascript`'
-        required: false
-        default: '.*'
       runner-environment:
         description: "Environment where the workflow will run"
         required: false
@@ -647,9 +643,8 @@ jobs:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           ticket-key: ${{ needs.create-integration-tickets.outputs.sqs-ticket-key }}
           plugin-name: ${{ inputs.plugin-name }}
-          plugin-suffix: ${{ inputs.plugin-suffix}}
           secret-name: ${{ inputs.release-automation-secret-name || format('sonar-{0}-release-automation', inputs.plugin-name) }}
-          plugin-artifacts: ${{inputs.plugin-artifacts-sqs || inputs.plugin-name }}
+          plugin-artifacts: ${{inputs.plugin-artifacts-sqs }}
           draft: ${{ inputs.is-draft-release }}
           reviewers: ${{ github.actor }}
 
@@ -661,9 +656,8 @@ jobs:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           ticket-key: ${{ needs.create-integration-tickets.outputs.sqc-ticket-key }}
           plugin-name: ${{ inputs.plugin-name }}
-          plugin-suffix: ${{ inputs.plugin-suffix}}
           secret-name: ${{ inputs.release-automation-secret-name || format('sonar-{0}-release-automation', inputs.plugin-name) }}
-          plugin-artifacts: ${{inputs.plugin-artifacts-sqc || inputs.plugin-name }}
+          plugin-artifacts: ${{inputs.plugin-artifacts-sqc }}
           draft: ${{ inputs.is-draft-release }}
           reviewers: ${{ github.actor }}
 
