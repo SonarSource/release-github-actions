@@ -16,10 +16,10 @@ inputs:
     description: "Date field"
     required: true
   changelog-url:
-    description: "changelogUrl field"
+    description: "changelog-url field"
     required: true
-  downloadUrl:
-    description: "downloadUrl field"
+  download-url:
+    description: "download-url field"
     required: true
 
 outputs:
@@ -55,8 +55,8 @@ runs:
         INPUT_VERSION: ${{ inputs.version }}
         INPUT_DESCRIPTION: ${{ inputs.description }}
         INPUT_DATE: ${{ inputs.date }}
-        INPUT_CHANGELOG_URL: ${{ inputs.changelogUrl }}
-        INPUT_DOWNLOAD_URL: ${{ inputs.downloadUrl }}
+        INPUT_CHANGELOG_URL: ${{ inputs.changelog-url }}
+        INPUT_DOWNLOAD_URL: ${{ inputs.download-url }}
       run: |
         set -euo pipefail
         python "$GITHUB_ACTION_PATH/update.py" \
@@ -69,6 +69,7 @@ runs:
 
     - name: Create Pull Request
       id: create-pr
+      # TODO: Switch to our own create-pull-request when it supports other repos.
       uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
       with:
         author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
