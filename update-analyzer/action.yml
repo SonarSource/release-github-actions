@@ -51,11 +51,14 @@ runs:
     - name: Set up environment
       id: setup_env
       shell: bash
+      env:
+        TICKET_KEY: ${{ inputs.ticket-key }}
+        DRAFT: ${{ inputs.draft }}
       run: |
-        if [[ "${{ inputs.ticket-key }}" == SONAR-* ]]; then
+        if [[ "$TICKET_KEY" == SONAR-* ]]; then
           echo "PRODUCT_REPOSITORY=sonar-enterprise" >> $GITHUB_ENV
           echo "BUILD_GRADLE_FILE=build.gradle" >> $GITHUB_ENV
-        elif [[ "${{ inputs.ticket-key }}" == SC-* ]]; then
+        elif [[ "$TICKET_KEY" == SC-* ]]; then
           echo "PRODUCT_REPOSITORY=sonarcloud-core" >> $GITHUB_ENV
           echo "BUILD_GRADLE_FILE=private/edition-sonarcloud/build.gradle" >> $GITHUB_ENV
         else
@@ -63,10 +66,10 @@ runs:
           exit 1
         fi
 
-        if [[ "${{ inputs.draft }}" == "true" ]]; then
+        if [[ "$DRAFT" == "true" ]]; then
           echo "commit-prefix=[DO NOT MERGE]" >> $GITHUB_OUTPUT
         else
-          echo "commit-prefix=${{ inputs.ticket-key }}" >> $GITHUB_OUTPUT
+          echo "commit-prefix=$TICKET_KEY" >> $GITHUB_OUTPUT
         fi
 
     - name: Checkout target repository
