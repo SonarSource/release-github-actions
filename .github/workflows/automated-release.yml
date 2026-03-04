@@ -638,7 +638,7 @@ jobs:
       - name: Update analyzer in SQS
         id: update-sqs
         if: ${{ inputs.sqs-integration }}
-        uses: SonarSource/release-github-actions/update-analyzer@v1
+        uses: SonarSource/release-github-actions/update-analyzer@tt/dry-run
         with:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           ticket-key: ${{ needs.create-integration-tickets.outputs.sqs-ticket-key }}
@@ -651,7 +651,7 @@ jobs:
       - name: Update analyzer in SQC
         id: update-sqc
         if: ${{ inputs.sqc-integration }}
-        uses: SonarSource/release-github-actions/update-analyzer@v1
+        uses: SonarSource/release-github-actions/update-analyzer@tt/dry-run
         with:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           ticket-key: ${{ needs.create-integration-tickets.outputs.sqc-ticket-key }}
