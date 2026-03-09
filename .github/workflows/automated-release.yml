@@ -489,6 +489,8 @@ jobs:
       id-token: write
       contents: write
       pull-requests: write
+    outputs:
+      pull-request-url: ${{ steps.bump.outputs.pull-request-url }}
     steps:
       # Convert the version returned by release-in-jira to the full "major.minor.patch" format
       # (it drops the patch if it is 0).
@@ -506,6 +508,7 @@ jobs:
           echo "version=${OUTPUT}" >> "$GITHUB_OUTPUT"
 
       - name: Bump version and create PR
+        id: bump
         uses: SonarSource/release-github-actions/bump-version@v1
         with:
           version: ${{ steps.normalize.outputs.version || needs.release-in-jira.outputs.new-version }}
@@ -694,9 +697,15 @@ jobs:
     name: Release Results
     runs-on: ${{ inputs.runner-environment }}
     if: always()
-    # NOTE: When adding a job to the needs list below, also add its result
-    # to the RESULT_* env vars in the "Post Summary to Workflow" step.
-    needs: [ check-releasability, prepare-release, publish-github-release, create-release-ticket, release-in-jira, create-integration-tickets, update-analyzers ]
+    needs:
+      - check-releasability
+      - prepare-release
+      - publish-github-release
+      - create-release-ticket
+      - release-in-jira
+      - bump-version
+      - create-integration-tickets
+      - update-analyzers
     env:
         RELEASE_PROCESS: ${{ inputs.release-process != '' && inputs.release-process || 'https://xtranet-sonarsource.atlassian.net/wiki/spaces/CSD/pages/4325048388/Release+Instructions+-+Cloud+Security' }}
     steps:
@@ -712,6 +721,7 @@ jobs:
           SQC_TICKET_URL: ${{ needs.create-integration-tickets.outputs.sqc-ticket-url || 'not created' }}
           SQS_PR_URL: ${{ needs.update-analyzers.outputs.sqs-pull-request-url || 'not created' }}
           SQC_PR_URL: ${{ needs.update-analyzers.outputs.sqc-pull-request-url || 'not created' }}
+          BUMP_VERSION_PR_URL: ${{ needs.bump-version.outputs.pull-request-url || 'not created' }}
           RESULT_CHECK_RELEASABILITY: ${{ needs.check-releasability.result }}
           RESULT_PREPARE_RELEASE: ${{ needs.prepare-release.result }}
           RESULT_PUBLISH_GITHUB_RELEASE: ${{ needs.publish-github-release.result }}
@@ -747,6 +757,7 @@ jobs:
           - SQC Integration Ticket: $SQC_TICKET_URL
           - SQS Analyzer PR: $SQS_PR_URL
           - SQC Analyzer PR: $SQC_PR_URL
+          - Bump Version PR: $BUMP_VERSION_PR_URL
           EOF
 
           echo "## Guidance" >> $GITHUB_STEP_SUMMARY
