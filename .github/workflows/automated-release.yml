@@ -694,6 +694,8 @@ jobs:
     name: Release Results
     runs-on: ${{ inputs.runner-environment }}
     if: always()
+    # NOTE: When adding a job to the needs list below, also add its result
+    # to the RESULT_* env vars in the "Post Summary to Workflow" step.
     needs: [ check-releasability, prepare-release, publish-github-release, create-release-ticket, release-in-jira, create-integration-tickets, update-analyzers ]
     env:
         RELEASE_PROCESS: ${{ inputs.release-process != '' && inputs.release-process || 'https://xtranet-sonarsource.atlassian.net/wiki/spaces/CSD/pages/4325048388/Release+Instructions+-+Cloud+Security' }}
@@ -710,8 +712,21 @@ jobs:
           SQC_TICKET_URL: ${{ needs.create-integration-tickets.outputs.sqc-ticket-url || 'not created' }}
           SQS_PR_URL: ${{ needs.update-analyzers.outputs.sqs-pull-request-url || 'not created' }}
           SQC_PR_URL: ${{ needs.update-analyzers.outputs.sqc-pull-request-url || 'not created' }}
+          RESULT_CHECK_RELEASABILITY: ${{ needs.check-releasability.result }}
+          RESULT_PREPARE_RELEASE: ${{ needs.prepare-release.result }}
+          RESULT_PUBLISH_GITHUB_RELEASE: ${{ needs.publish-github-release.result }}
+          RESULT_CREATE_RELEASE_TICKET: ${{ needs.create-release-ticket.result }}
+          RESULT_RELEASE_IN_JIRA: ${{ needs.release-in-jira.result }}
+          RESULT_CREATE_INTEGRATION_TICKETS: ${{ needs.create-integration-tickets.result }}
+          RESULT_UPDATE_ANALYZERS: ${{ needs.update-analyzers.result }}
         run: |
-          ALL_SUCCESS=$(echo '${{ toJson(needs) }}' | jq -r 'to_entries | all(.value.result == "success" or .value.result == "skipped")')
+          ALL_SUCCESS=true
+          for result in "$RESULT_CHECK_RELEASABILITY" "$RESULT_PREPARE_RELEASE" "$RESULT_PUBLISH_GITHUB_RELEASE" "$RESULT_CREATE_RELEASE_TICKET" "$RESULT_RELEASE_IN_JIRA" "$RESULT_CREATE_INTEGRATION_TICKETS" "$RESULT_UPDATE_ANALYZERS"; do
+            if [[ "$result" != "success" && "$result" != "skipped" ]]; then
+              ALL_SUCCESS=false
+              break
+            fi
+          done
           
           if [[ "$ALL_SUCCESS" == "true" ]]; then
             echo "# 🎉 Release Successful" >> $GITHUB_STEP_SUMMARY
