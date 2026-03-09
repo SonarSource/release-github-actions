@@ -17,18 +17,28 @@ inputs:
   pr-labels:
     description: Comma-separated list of labels to add to the pull request
     required: false
+  script:
+    description: Custom script to perform the version bump. The target version is available in the VERSION environment variable.
+    required: false
 
 runs:
   using: 'composite'
   steps:
   - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
   - name: Bump version
     shell: bash
     env:
+      SCRIPT: ${{ inputs.script }}
       VERSION: "${{ inputs.version }}-SNAPSHOT"
       EXCLUDED_MODULES: ${{ inputs.excluded-modules || '' }}
     run: |
-      bash "${GITHUB_ACTION_PATH}/bump_version.sh"
+      if [ -n "$SCRIPT" ]; then
+        eval "$SCRIPT"
+      else
+        bash "${GITHUB_ACTION_PATH}/bump_version.sh"
+      fi
+
   - name: Create Pull Request for Version Bump
     uses: SonarSource/release-github-actions/create-pull-request@v1
     id: create-pr
