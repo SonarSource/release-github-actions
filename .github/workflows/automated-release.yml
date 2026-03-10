@@ -513,7 +513,7 @@ jobs:
 
       - name: Bump version and create PR
         id: bump
-        uses: SonarSource/release-github-actions/bump-version@tt/bump-version-command
+        uses: SonarSource/release-github-actions/bump-version@v1
         with:
           version: ${{ steps.normalize.outputs.version || needs.release-in-jira.outputs.new-version }}
           pr-labels: ${{ inputs.bump-version-pr-lables }}
