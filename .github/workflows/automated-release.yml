@@ -148,8 +148,8 @@ on:
         description: "Comma-separated list of module to exclude from the version bump commit."
         required: false
         type: string
-      bump-version-script:
-        description: "Custom script to perform the version bump. The target version is available in the VERSION environment variable."
+      bump-version-tool:
+        description: "Version bumping tool to use. Supported values: 'maven'. Leave empty to use the default shell-based solution."
         required: false
         type: string
 
@@ -519,7 +519,7 @@ jobs:
           pr-labels: ${{ inputs.bump-version-pr-lables }}
           excluded-modules: ${{ inputs.bump-version-exlusions }}
           base-branch: ${{ inputs.branch }}
-          script: ${{ inputs.bump-version-script }}
+          tool: ${{ inputs.bump-version-tool }}
 
   # This step creates integration tickets in various Jira projects based on the inputs provided.
   # It creates tickets for SLVS, SLVSCODE, SLE, SLI, SQC, and SQS as specified.
