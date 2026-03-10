@@ -315,34 +315,34 @@ jobs:
 
       - name: Verify Release Notes Content
         run: |
-          if grep -q "### Improvement" <<< "${{ steps.test-sandbox.outputs.release-notes }}"; then
+          if grep -q "### Feature" <<< "${{ steps.test-sandbox.outputs.release-notes }}"; then
             echo "✅ Release Notes contain default issue categories"
           else
             echo "❌ Release Notes are missing some default issue categories"
             exit 1
           fi
-          
-          if grep -q "### Task" <<< "${{ steps.test-sandbox.outputs.release-notes }}"; then
-            echo "❌ Release Notes should not contain Task category with default settings"
+
+          if grep -q "### Maintenance" <<< "${{ steps.test-sandbox.outputs.release-notes }}"; then
+            echo "❌ Release Notes should not contain Maintenance category with default settings (no such issues in SONARPHP 3.49)"
             exit 1
           else
-            echo "✅ Release Notes correctly exclude Task category"
+            echo "✅ Release Notes correctly exclude Maintenance category"
           fi
 
       - name: Verify Jira Release Notes Content
         run: |
-          if grep -q "h3. Improvement" <<< "${{ steps.test-sandbox.outputs.jira-release-notes }}"; then
+          if grep -q "h3. Feature" <<< "${{ steps.test-sandbox.outputs.jira-release-notes }}"; then
             echo "✅ Jira Release Notes contain default issue category"
           else
             echo "❌ Jira Release Notes are missing some default issue categories"
             exit 1
           fi
-          
-          if grep -q "h3. Task" <<< "${{ steps.test-sandbox.outputs.jira-release-notes }}"; then
-            echo "❌ Jira Release Notes should not contain Task category with default settings"
+
+          if grep -q "h3. Maintenance" <<< "${{ steps.test-sandbox.outputs.jira-release-notes }}"; then
+            echo "❌ Jira Release Notes should not contain Maintenance category with default settings (no such issues in SONARPHP 3.49)"
             exit 1
           else
-            echo "✅ Jira Release Notes correctly exclude Task category"
+            echo "✅ Jira Release Notes correctly exclude Maintenance category"
           fi
 
   test-custom-issue-categories-deprecated-taxonomy:
@@ -362,7 +362,7 @@ jobs:
           jira-project-key: 'SONARPHP'
           jira-version-name: '3.49'
           use-jira-sandbox: 'true'
-          issue-types: 'Task,Bug,New Feature'
+          issue-types: 'Feature,Bug,Maintenance'
 
       - name: Output results
         run: |
@@ -374,13 +374,13 @@ jobs:
 
       - name: Verify Release Notes Content
         run: |
-          if grep -q "### Task" <<< "${{ steps.test-sandbox-custom.outputs.release-notes }}"; then
-            echo "✅ Release Notes contain Task category as specified"
+          if grep -q "### Feature" <<< "${{ steps.test-sandbox-custom.outputs.release-notes }}"; then
+            echo "✅ Release Notes contain Feature category as specified"
           else
-            echo "❌ Release Notes are missing Task category"
+            echo "❌ Release Notes are missing Feature category"
             exit 1
           fi
-          
+
           if grep -q "### Improvement" <<< "${{ steps.test-sandbox-custom.outputs.release-notes }}"; then
             echo "❌ Release Notes should not contain Improvement category with custom settings"
             exit 1
@@ -390,13 +390,13 @@ jobs:
 
       - name: Verify Jira Release Notes Content
         run: |
-          if grep -q "h3. Task" <<< "${{ steps.test-sandbox-custom.outputs.jira-release-notes }}"; then
-            echo "✅ Jira Release Notes contain Task category as specified"
+          if grep -q "h3. Feature" <<< "${{ steps.test-sandbox-custom.outputs.jira-release-notes }}"; then
+            echo "✅ Jira Release Notes contain Feature category as specified"
           else
-            echo "❌ Jira Release Notes are missing Task category"
+            echo "❌ Jira Release Notes are missing Feature category"
             exit 1
           fi
-          
+
           if grep -q "h3. Improvement" <<< "${{ steps.test-sandbox-custom.outputs.jira-release-notes }}"; then
             echo "❌ Jira Release Notes should not contain Improvement category with custom settings"
             exit 1

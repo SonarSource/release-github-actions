@@ -178,7 +178,9 @@ def main():
             "Bug",
             # Added for backwards compatibility of old Jira taxonomy
             "Improvement",
-            "Security"
+            "Security",
+            # Added for JET taxonomy (replaces Task)
+            "Maintenance"
         ]
         eprint(f"Using default issue type order: {category_order}")
 
