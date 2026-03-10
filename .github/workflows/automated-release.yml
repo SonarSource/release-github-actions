@@ -697,6 +697,8 @@ jobs:
     name: Release Results
     runs-on: ${{ inputs.runner-environment }}
     if: always()
+    # NOTE: When adding a job to the needs list below, also add its result
+    # to the RESULT_* env vars in the "Post Summary to Workflow" step.
     needs:
       - check-releasability
       - prepare-release
