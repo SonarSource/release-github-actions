@@ -157,3 +157,6 @@ cython_debug/
 
 /tools/tools.iml
 /.idea/
+
+# Jira sandbox test state (generated at runtime, never committed)
+scripts/jira-sandbox/test_state.json
