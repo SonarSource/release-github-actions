@@ -11,6 +11,7 @@ This action updates the version in Maven and Gradle files across your repository
 | excluded-modules | Comma-separated list of modules to exclude from version bumping  | No       |          |
 | base-branch      | The base branch for the pull request                             | No       | `master` |
 | pr-labels        | Comma-separated list of labels to add to the pull request        | No       |          |
+| tool             | Version bumping tool to use. Supported values: `maven`. Leave empty to use the default shell-based solution. | No | |
 
 ## Outputs
 
@@ -34,6 +35,6 @@ This action updates the version in Maven and Gradle files across your repository
 ```
 
 ## How it works
-- Updates all `pom.xml` and `gradle.properties` files to the new version.
-- Skips files in modules listed in `excluded-modules`.
+- If `tool` is set to `maven`, runs `mvn versions:set` to update the version.
+- Otherwise, updates all `pom.xml` and `gradle.properties` files to the new version, skipping modules listed in `excluded-modules`.
 - Commits changes and creates a pull request.

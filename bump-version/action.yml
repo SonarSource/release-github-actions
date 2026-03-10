@@ -17,18 +17,35 @@ inputs:
   pr-labels:
     description: Comma-separated list of labels to add to the pull request
     required: false
+  tool:
+    description: "Version bumping tool to use. Supported values: 'maven'. Leave empty to use the default shell-based solution."
+    required: false
 
 runs:
   using: 'composite'
   steps:
   - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
   - name: Bump version
     shell: bash
     env:
+      TOOL: ${{ inputs.tool }}
       VERSION: "${{ inputs.version }}-SNAPSHOT"
       EXCLUDED_MODULES: ${{ inputs.excluded-modules || '' }}
     run: |
-      bash "${GITHUB_ACTION_PATH}/bump_version.sh"
+      case "$TOOL" in
+        maven)
+          mvn versions:set -DgenerateBackupPoms=false -DnewVersion="${VERSION}"
+          ;;
+        '')
+          bash "${GITHUB_ACTION_PATH}/bump_version.sh"
+          ;;
+        *)
+          echo "Unsupported version bumping tool: $TOOL"
+          exit 1
+          ;;
+      esac
+
   - name: Create Pull Request for Version Bump
     uses: SonarSource/release-github-actions/create-pull-request@v1
     id: create-pr
