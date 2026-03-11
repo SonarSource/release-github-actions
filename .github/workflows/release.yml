@@ -1,0 +1,32 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-version-branch:
+    name: Update version branch
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          # Pass token so that git push is authenticated without needing to rewrite the remote URL manually
+          token: ${{ github.token }}
+
+      - name: Update version branch
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          MAJOR=$(echo "$RELEASE_TAG" | cut -d. -f1)
+          VERSION_BRANCH="v${MAJOR}"
+
+          git fetch --all --tags
+          git checkout "$VERSION_BRANCH"
+          git reset --hard "$RELEASE_TAG"
+          git push origin "$VERSION_BRANCH" --force-with-lease
