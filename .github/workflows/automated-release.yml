@@ -798,7 +798,7 @@ jobs:
 
       - name: Post Summary to Slack
         if: ${{ inputs.slack-channel != '' }}
-        uses: SonarSource/release-github-actions/slack-message@tt/slack
+        uses: SonarSource/release-github-actions/slack-message@v1
         with:
           channel: ${{ inputs.slack-channel }}
           message-markdown: ${{ steps.create-message.outputs.message }}
