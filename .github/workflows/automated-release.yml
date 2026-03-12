@@ -753,7 +753,7 @@ jobs:
             echo "message<<ENDOFMESSAGE"
 
             if [[ "$USE_JIRA_SANDBOX" == "true" ]]; then
-              echo "# TEST MODE (NOT A REAL RELEASE)"
+              echo "# DRY RUN (NOT A REAL RELEASE)"
             fi
 
             if [[ "$ALL_SUCCESS" == "true" ]]; then
