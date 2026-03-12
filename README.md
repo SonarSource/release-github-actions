@@ -17,6 +17,7 @@ A centralized collection of reusable GitHub Actions designed to streamline and a
 | [Get Release Version](get-release-version/README.md)                    | Extracts the release version from the repox status on a specified branch |
 | [Lock Branch](lock-branch/README.md)                                    | Locks or unlocks a branch by modifying the `lock_branch` setting in branch protection rules |
 | [Notify Slack on Failure](notify-slack/README.md)                       | Sends a Slack notification when a job fails |
+| [Send Slack Message](slack-message/README.md)                           | Sends a markdown message to a Slack channel |
 | [Publish GitHub Release](publish-github-release/README.md)              | Publishes a GitHub Release with notes fetched from Jira or provided directly |
 | [Release Jira Version](release-jira-version/README.md)                  | Releases a Jira version and creates the next one |
 | [Sonar Update Center Release](sonar-update-center-release/README.md)    | Updates a plugin entry in sonar-update-center-properties and creates a pull request |
