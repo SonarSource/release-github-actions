@@ -148,7 +148,7 @@ jobs:
 
 #### 3.2 Create `automated-release{EXT}` (standard, no SonarLint, **with version bump**)
 
-When the user wants version bumping, add `bump-version: true` (and optionally `bump-version-pr-lables`) to the `with:` block:
+When the user wants version bumping, add `bump-version: true` (and optionally `bump-version-pr-labels`) to the `with:` block:
 
 ```yaml
 name: Automated Release
@@ -216,7 +216,7 @@ jobs:
       use-jira-sandbox: ${{ github.event.inputs.dry-run == 'true' }}
       is-draft-release: ${{ github.event.inputs.dry-run == 'true' }}
       bump-version: true
-      bump-version-pr-lables: "${BUMP_VERSION_PR_LABELS}"  # omit this line if no labels
+      bump-version-pr-labels: "${BUMP_VERSION_PR_LABELS}"  # omit this line if no labels
 ```
 
 #### 3.3 Create `automated-release{EXT}` (with SonarLint integration, no version bump)
@@ -315,7 +315,7 @@ jobs:
 
 #### 3.4 Create `automated-release{EXT}` (with SonarLint integration **and** version bump)
 
-Add `bump-version: true` (and optionally `bump-version-pr-lables`) to the SonarLint variant's `with:` block, same as in 3.2.
+Add `bump-version: true` (and optionally `bump-version-pr-labels`) to the SonarLint variant's `with:` block, same as in 3.2.
 
 ### Step 4: Update release.yml
 
