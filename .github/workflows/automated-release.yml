@@ -698,7 +698,7 @@ jobs:
   # This step summarizes the results of the entire release process.
   # It checks the outcomes of all previous steps and generates a summary indicating whether the release was
   # successful or failed, along with relevant links and information.
-  summarize_release:
+  summarize-release:
     name: Release Results
     runs-on: ${{ inputs.runner-environment }}
     if: always()
@@ -714,11 +714,14 @@ jobs:
       - create-integration-tickets
       - update-analyzers
     env:
-        RELEASE_PROCESS: ${{ inputs.release-process != '' && inputs.release-process || 'https://xtranet-sonarsource.atlassian.net/wiki/spaces/CSD/pages/4325048388/Release+Instructions+-+Cloud+Security' }}
+        RELEASE_PROCESS: ${{ inputs.release-process }}
     steps:
-      - name: Post Summary to Workflow
+
+      - name: Create Message
+        id: create-message
         shell: bash
         env:
+          PROJECT_NAME: ${{ inputs.project-name }}
           RELEASE_VERSION: ${{ needs.prepare-release.outputs.release-version }}
           NEW_VERSION: ${{ needs.release-in-jira.outputs.new-version || 'not created' }}
           JIRA_RELEASE_URL: ${{ needs.prepare-release.outputs.jira-release-url || 'not resolved' }}
@@ -734,44 +737,68 @@ jobs:
           RESULT_PUBLISH_GITHUB_RELEASE: ${{ needs.publish-github-release.result }}
           RESULT_CREATE_RELEASE_TICKET: ${{ needs.create-release-ticket.result }}
           RESULT_RELEASE_IN_JIRA: ${{ needs.release-in-jira.result }}
+          RESULT_BUMP_VERSION: ${{ needs.bump-version.result }}
           RESULT_CREATE_INTEGRATION_TICKETS: ${{ needs.create-integration-tickets.result }}
           RESULT_UPDATE_ANALYZERS: ${{ needs.update-analyzers.result }}
         run: |
           ALL_SUCCESS=true
-          for result in "$RESULT_CHECK_RELEASABILITY" "$RESULT_PREPARE_RELEASE" "$RESULT_PUBLISH_GITHUB_RELEASE" "$RESULT_CREATE_RELEASE_TICKET" "$RESULT_RELEASE_IN_JIRA" "$RESULT_CREATE_INTEGRATION_TICKETS" "$RESULT_UPDATE_ANALYZERS"; do
+          for result in "$RESULT_CHECK_RELEASABILITY" "$RESULT_PREPARE_RELEASE" "$RESULT_PUBLISH_GITHUB_RELEASE" "$RESULT_CREATE_RELEASE_TICKET" "$RESULT_RELEASE_IN_JIRA" "$RESULT_CREATE_INTEGRATION_TICKETS" "$RESULT_UPDATE_ANALYZERS" "$RESULT_BUMP_VERSION"; do
             if [[ "$result" != "success" && "$result" != "skipped" ]]; then
               ALL_SUCCESS=false
               break
             fi
           done
-          
-          if [[ "$ALL_SUCCESS" == "true" ]]; then
-            echo "# 🎉 Release Successful" >> $GITHUB_STEP_SUMMARY
-            echo "The automated release completed without errors. Below is a consolidated overview of the run." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "# ❌ Release Failed" >> $GITHUB_STEP_SUMMARY
-            echo "One or more jobs failed. Review the job logs and links below." >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
 
-          cat <<EOF >> $GITHUB_STEP_SUMMARY
-          - Released Version: \`$RELEASE_VERSION\`
-          - New Version: \`$NEW_VERSION\`
-          - Jira Release: $JIRA_RELEASE_URL
-          - Release Ticket: $RELEASE_TICKET_URL
-          - GitHub Release: $GITHUB_RELEASE_URL
-          - SQS Integration Ticket: $SQS_TICKET_URL
-          - SQC Integration Ticket: $SQC_TICKET_URL
-          - SQS Analyzer PR: $SQS_PR_URL
-          - SQC Analyzer PR: $SQC_PR_URL
-          - Bump Version PR: $BUMP_VERSION_PR_URL
-          EOF
+          {
+            echo "message<<ENDOFMESSAGE"
 
-          echo "## Guidance" >> $GITHUB_STEP_SUMMARY
-          if [[ "$ALL_SUCCESS" == "true" ]]; then
-            echo "- Review and merge the bump version, SQS and SQC PRs." >> $GITHUB_STEP_SUMMARY
-            echo "- Update integration ticket statuses (ensure SQS ticket fix versions are set)." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "- Check failed jobs for error messages and re-run as needed." >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "- Reference: $RELEASE_PROCESS" >> $GITHUB_STEP_SUMMARY
+            if [[ "$USE_JIRA_SANDBOX" == "true" ]]; then
+              echo "# DRY RUN (NOT A REAL RELEASE)"
+            fi
+
+            if [[ "$ALL_SUCCESS" == "true" ]]; then
+              echo "# 🎉 ${PROJECT_NAME}: Release Successful"
+              echo "The automated release completed without errors. Below is a consolidated overview of the run."
+            else
+              echo "# ❌ ${PROJECT_NAME}: Release Failed"
+              echo "One or more jobs failed. Review the job logs and links below."
+            fi
+            echo ""
+
+            echo "  - Released Version: \`$RELEASE_VERSION\`"
+            echo "  - Next Iteration Version: \`$NEW_VERSION\`"
+            echo "  - Jira Release: $JIRA_RELEASE_URL"
+            echo "  - Release Ticket: $RELEASE_TICKET_URL"
+            echo "  - GitHub Release: $GITHUB_RELEASE_URL"
+            echo "  - GitHub Action Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "  - SQS Integration Ticket: $SQS_TICKET_URL"
+            echo "  - SQC Integration Ticket: $SQC_TICKET_URL"
+            echo "  - SQS Analyzer PR: $SQS_PR_URL"
+            echo "  - SQC Analyzer PR: $SQC_PR_URL"
+            echo "  - Bump Version PR: $BUMP_VERSION_PR_URL"
+
+            echo "## Guidance"
+            if [[ "$ALL_SUCCESS" == "true" ]]; then
+              echo "- Review and merge the bump version, SQS and SQC PRs."
+              echo "- Update integration ticket statuses (ensure SQS ticket fix versions are set)."
+            else
+              echo "- Check failed jobs for error messages and re-run as needed."
+            fi
+            echo "- Reference: $RELEASE_PROCESS"
+            echo "ENDOFMESSAGE"
+          } >> $GITHUB_OUTPUT
+
+      - name: Post Summary to Workflow
+        id: summary
+        shell: bash
+        env:
+          MESSAGE: ${{ steps.create-message.outputs.message }}
+        run: |
+          echo "${MESSAGE}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Post Summary to Slack
+        if: ${{ inputs.slack-channel != '' }}
+        uses: SonarSource/release-github-actions/slack-message@v1
+        with:
+          channel: ${{ inputs.slack-channel }}
+          message-markdown: ${{ steps.create-message.outputs.message }}

@@ -1,0 +1,43 @@
+name: 'Send Slack Message'
+description: 'Sends a markdown message to a Slack channel.'
+
+inputs:
+  channel:
+    description: 'The Slack channel to send the message to (without #).'
+    required: true
+  message-markdown:
+    description: 'The message to send, in markdown format.'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Vault Secrets
+      id: secrets
+      uses: SonarSource/vault-action-wrapper@v3
+      with:
+        secrets: |
+          development/kv/data/slack token | SLACK_TOKEN;
+
+    - name: Convert Markdown to Slack
+      id: slackify
+      uses: LoveToKnow/slackify-markdown-action@698a1d4d0ff1794152a93c03ee8ca5e03a310d4e # v1.1.1
+      with:
+        text: ${{ inputs.message-markdown }}
+
+    - name: Build Payload
+      id: payload
+      shell: bash
+      env:
+        CHANNEL: ${{ inputs.channel }}
+        MESSAGE: ${{ steps.slackify.outputs.text }}
+      run: |
+        PAYLOAD=$(jq -cn --arg channel "$CHANNEL" --arg text "$MESSAGE" '{channel: $channel, text: $text}')
+        echo "json=$PAYLOAD" >> $GITHUB_OUTPUT
+
+    - name: Send Slack Message
+      uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
+      with:
+        method: chat.postMessage
+        token: ${{ fromJSON(steps.secrets.outputs.vault).SLACK_TOKEN }}
+        payload: ${{ steps.payload.outputs.json }}
