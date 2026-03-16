@@ -171,14 +171,11 @@ def main():
     else:
         category_order = [
             "Feature",
-            # Added for backwards compatibility of old Jira taxonomy
-            "New Feature",
             "False Positive",
             "False Negative",
             "Bug",
-            # Added for backwards compatibility of old Jira taxonomy
-            "Improvement",
-            "Security"
+            "Security",
+            "Maintenance"
         ]
         eprint(f"Using default issue type order: {category_order}")
 
