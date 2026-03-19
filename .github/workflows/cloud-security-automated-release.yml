@@ -95,6 +95,11 @@ on:
         required: false
         type: boolean
         default: true
+      freeze-branch:
+        description: "Freeze the branch during the release"
+        required: false
+        type: boolean
+        default: true
 
 
     outputs:
@@ -103,8 +108,27 @@ on:
         value: ${{ jobs.release-in-jira.outputs.new-version }}
 
 jobs:
+  # This job freezes the specified branch to prevent changes during the release process.
+  freeze-branch:
+    name: Freeze ${{ inputs.branch }} branch
+    if: ${{ inputs.freeze-branch }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - name: Freeze branch
+        uses: SonarSource/release-github-actions/lock-branch@v1
+        with:
+          branch: ${{ inputs.branch }}
+          freeze: true
+          slack-channel: squad-security-cloud-notifs
+
   pre-release-checks:
     name: Pre-release checks
+    if: |
+      !cancelled() && 
+      (needs.freeze-branch.result == 'success' || needs.freeze-branch.result == 'skipped')
+    needs: [ freeze-branch ]
     runs-on: ubuntu-latest
     permissions:
       statuses: read
@@ -205,6 +229,21 @@ jobs:
           release-notes: ${{ inputs.release-notes != '' && inputs.release-notes || needs.prepare-release.outputs.release-notes }}
           draft: ${{ inputs.is-draft-release }}
           branch: ${{ inputs.branch }}
+
+  unfreeze-branch:
+    name: Unfreeze ${{ inputs.branch }} branch
+    if: ${{ inputs.freeze-branch }}
+    runs-on: ubuntu-latest
+    needs: [ publish-github-release ]
+    permissions:
+      id-token: write
+    steps:
+      - name: Unfreeze branch
+        uses: SonarSource/release-github-actions/lock-branch@v1
+        with:
+          branch: ${{ inputs.branch }}
+          freeze: false
+          slack-channel: squad-security-cloud-notifs
 
   release-in-jira:
     name: Release in Jira
