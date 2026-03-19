@@ -232,7 +232,7 @@ jobs:
 
   unfreeze-branch:
     name: Unfreeze ${{ inputs.branch }} branch
-    if: ${{ inputs.freeze-branch }}
+    if: ${{ always() && inputs.freeze-branch }}
     runs-on: ubuntu-latest
     needs: [ publish-github-release ]
     permissions:
