@@ -278,5 +278,4 @@ runs:
           This PR was automatically generated to update rule metadata across all supported languages.
         base: ${{ inputs.branch }}
         branch: bot/update-rule-metadata
-        branch-suffix: timestamp
         labels: ${{ inputs.labels }}
