@@ -27,6 +27,7 @@ This action depends on:
 | `sonarpedia-files` | Comma-separated list of sonarpedia files to be updated. By default, it will update all Sonarpedia files in the repository. | No       | Auto-discovered |
 | `branch`           | Branch to run the check against and create the PR for. By default, it will use master.                                     | No       | `master`        |
 | `rspec-branch`     | Branch of the rspec repository to be used. If not specified, the `master` branch will be used by default.                  | No       | `master`        |
+| `slack-channel`    | Slack channel to notify when a PR is created or updated. If empty, no notification is sent.                                | No       | -               |
 
 ## Outputs
 
@@ -81,6 +82,15 @@ permissions:
     branch: 'develop'
 ```
 
+### Notify a Slack channel when a PR is created or updated
+
+```yaml
+- name: Update Rule Metadata
+  uses: SonarSource/release-github-actions/update-rule-metadata@v1
+  with:
+    slack-channel: 'team-channel'
+```
+
 ### Complete example with all inputs
 
 ```yaml
@@ -99,6 +109,7 @@ jobs:
           sonarpedia-files: 'frontend/java/sonarpedia.json,frontend/csharp/sonarpedia.json'
           branch: 'develop'
           rspec-branch: 'feature/my-rspec-branch'
+          slack-channel: 'team-channel'
 ```
 
 ## Implementation Details

@@ -1,15 +1,14 @@
-# Notify Slack on Failure Action
+# Notify Slack Action
 
-This GitHub Action sends a Slack notification summarizing failed jobs in a workflow run when used with an `if: failure()` condition.
+This GitHub Action sends a Slack notification. It supports two modes:
+- **Failure mode** (default): summarizes failed jobs in a workflow run, intended for use with `if: failure()`.
+- **Custom message mode**: sends a free-text message directly, useful for informational notifications such as PR creation alerts.
 
 ## Description
 
-The action posts a concise message to a Slack channel containing:
-1. A link to the failed GitHub Actions run
-2. A list of failed jobs provided by the workflow
-3. A custom project-branded username and icon
-
-It is intended to be used as the last step (or in a dedicated job) guarded by `if: failure()` so that it only triggers on failures.
+The action posts a message to a Slack channel containing either:
+- A link to the failed GitHub Actions run and a list of failed jobs (failure mode), or
+- A custom message provided by the caller (custom message mode).
 
 ## Dependencies
 
@@ -19,14 +18,14 @@ This action depends on:
 
 ## Inputs
 
-| Input           | Description                                                            | Required | Default   |
-|-----------------|------------------------------------------------------------------------|----------|-----------|
-| `project-name`  | The display name of the project; used in the Slack username.           | Yes      | -         |
-| `icon`          | Emoji icon for the Slack message (Slack emoji code).                   | No       | `:alert:` |
-| `slack-channel` | Slack channel (without `#`) to post the notification into.             | Yes      | -         |
-| `jobs`          | Comma-separated list of job names to report as failed (provided by you). | Yes    | -         |
-
-Note: The list of failed jobs must be provided via the `jobs` input by your workflow logic.
+| Input           | Description                                                                                            | Required | Default   |
+|-----------------|--------------------------------------------------------------------------------------------------------|----------|-----------|
+| `project-name`  | The display name of the project; used in the Slack username.                                           | Yes      | -         |
+| `icon`          | Emoji icon for the Slack message (Slack emoji code).                                                   | No       | `:alert:` |
+| `slack-channel` | Slack channel (without `#`) to post the notification into.                                             | Yes      | -         |
+| `jobs`          | A GitHub needs-like object string of jobs and their results (e.g., from `toJSON(needs)`). Required when `message` is not set. | No | - |
+| `message`       | A custom free-text Slack message. When provided, skips job-failure parsing and sends this message directly. | No  | -         |
+| `color`         | Slack attachment color (`good`, `danger`, `warning`, or a hex code).                                   | No       | `danger`  |
 
 ## Outputs
 
@@ -34,7 +33,7 @@ No outputs are produced by this action.
 
 ## Usage
 
-### Basic usage (in a dedicated failure notification job)
+### Failure notification (in a dedicated failure notification job)
 
 ```yaml
 jobs:
@@ -53,18 +52,21 @@ jobs:
           jobs: ${{ toJSON(needs) }}
 ```
 
-### Minimal usage (only required inputs)
+### Custom message (e.g. PR ready for review)
 
 ```yaml
 - uses: SonarSource/release-github-actions/notify-slack@v1
-  if: failure()
   with:
     project-name: 'My Project'
-    slack-channel: 'engineering-alerts'
-    jobs: 'build, test'
+    slack-channel: 'team-channel'
+    icon: ':memo:'
+    color: good
+    message: |
+      *my-repo* rule metadata PR is ready for review:
+      https://github.com/org/my-repo/pull/42
 ```
 
-### Custom icon
+### Custom icon (failure mode)
 
 ```yaml
 - uses: SonarSource/release-github-actions/notify-slack@v1
@@ -73,18 +75,18 @@ jobs:
     project-name: 'My Project'
     slack-channel: 'engineering-alerts'
     icon: ':rocket:'
-    jobs: 'build, test'
+    jobs: ${{ toJSON(needs) }}
 ```
 
 ## Implementation Details
 
 The action is a composite action that:
 - Fetches `SLACK_TOKEN` from Vault path `development/kv/data/slack` using `vault-action-wrapper`
-- Uses a workflow-provided `jobs` input (comma-separated string) to populate the "Failed Jobs" section
-- Constructs a Slack message with run URL and the provided failed jobs list
-- Uses `rtCamp/action-slack-notify` to send a minimal styled message (no title/footer) with danger color
+- When `message` is not set: parses the `jobs` JSON input to extract failed job names and constructs a message with the run URL
+- When `message` is set: sends the provided message directly, skipping job-failure parsing
+- Uses `rtCamp/action-slack-notify` to send a minimal styled message (no title/footer)
+- Sets the attachment color from the `color` input (defaults to `danger`)
 - Sets Slack username to: `<project-name> CI Notifier`
-- If the `jobs` list is empty or not provided, the "Failed Jobs" line will be blank
 
 ## Prerequisites
 
@@ -94,8 +96,6 @@ The action is a composite action that:
 
 ## Notes
 
-- Use `if: failure()` on the step or job; otherwise it will also fire on success.
-- `project-name`, `slack-channel`, and `jobs` are required inputs (no defaults).
+- For failure notifications, use `if: failure()` on the step or job; otherwise it will also fire on success.
 - Do not prefix the channel with `#`.
 - Message formatting is intentionally minimal for quick triage in alert-focused channels.
-- How you compute the failed jobs list is up to your workflow; you can use prior steps to gather job results and pass them to this action via `jobs`.
