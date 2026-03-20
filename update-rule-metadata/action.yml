@@ -30,6 +30,9 @@ inputs:
   rspec-token-suffix:
     description: 'Suffix for the RSpec token if different from "rspec-read".'
     required: false
+  slack-channel:
+    description: 'Slack channel to notify when a PR is created or updated. If empty, no notification is sent.'
+    required: false
 
 outputs:
   has-changes:
@@ -279,3 +282,15 @@ runs:
         base: ${{ inputs.branch }}
         branch: bot/update-rule-metadata
         labels: ${{ inputs.labels }}
+
+    - name: Notify Slack
+      if: ${{ inputs.slack-channel != '' && steps.create-pr.outputs.pull-request-operation != 'none' }}
+      uses: SonarSource/release-github-actions/notify-slack@v1
+      with:
+        project-name: ${{ github.repository }}
+        slack-channel: ${{ inputs.slack-channel }}
+        icon: ':memo:'
+        color: good
+        message: |
+          *${{ github.event.repository.name }}* rule metadata PR is ready for review:
+          ${{ steps.create-pr.outputs.pull-request-url }}

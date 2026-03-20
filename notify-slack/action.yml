@@ -1,5 +1,5 @@
 name: 'Notify Slack on Failure'
-description: 'Sends a Slack notification when a job fails.'
+description: 'Sends a Slack notification when a job fails, or a custom message.'
 
 inputs:
   project-name:
@@ -13,13 +13,21 @@ inputs:
     description: 'The Slack channel to send the notification to.'
     required: true
   jobs:
-    description: 'A GitHub needs-like object string of jobs and their results (e.g., from toJSON(needs)).'
-    required: true
+    description: 'A GitHub needs-like object string of jobs and their results (e.g., from toJSON(needs)). Required when message is not set.'
+    required: false
+  message:
+    description: 'A custom free-text Slack message. When provided, skips job-failure parsing and sends this message directly.'
+    required: false
+  color:
+    description: 'Slack attachment color (e.g. good, danger, warning, or a hex color code).'
+    required: false
+    default: 'danger'
 
 runs:
   using: "composite"
   steps:
     - name: Collect Failed Jobs
+      if: ${{ inputs.message == '' }}
       shell: bash
       id: collect_failed_jobs
       env:
@@ -43,11 +51,9 @@ runs:
         SLACK_MSG_AUTHOR: " "
         SLACK_TITLE: " "
         SLACK_FOOTER: " "
-        SLACK_COLOR: danger
+        SLACK_COLOR: ${{ inputs.color }}
         MSG_MINIMAL: true
-        SLACK_MESSAGE: |
-          *Run:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          *Failed Jobs:* ${{ steps.collect_failed_jobs.outputs.failed-jobs }}
+        SLACK_MESSAGE: ${{ inputs.message != '' && inputs.message || format('*Run:* {0}/{1}/actions/runs/{2}\n*Failed Jobs:* {3}', github.server_url, github.repository, github.run_id, steps.collect_failed_jobs.outputs.failed-jobs) }}
         SLACK_TOKEN: "${{ fromJSON(steps.secrets.outputs.vault).SLACK_TOKEN }}"
         SLACK_ICON_EMOJI: "${{ inputs.icon }}"
         SLACK_USERNAME: "${{ inputs.project-name }} CI Notifier"
