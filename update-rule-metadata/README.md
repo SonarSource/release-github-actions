@@ -34,7 +34,7 @@ This action depends on:
 | Output             | Description                                                                                               |
 |--------------------|-----------------------------------------------------------------------------------------------------------|
 | `has-changes`      | Boolean indicating whether any rule metadata changes were detected (from check-changes step)              |
-| `summary`          | Summary of the rule metadata updates including rule counts for each language (from generate-summary step) |
+| `summary`          | Summary of the rule metadata updates including rules-to-update and rules-updated counts for each language (from generate-summary step) |
 | `pull-request-url` | URL of the created pull request (only available if changes were detected, from create-pr step)            |
 
 ## Usage
