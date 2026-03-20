@@ -86,6 +86,11 @@ on:
         required: false
         type: boolean
         default: false
+      create-cli-ticket:
+        description: "Create CLI integration ticket"
+        required: false
+        type: boolean
+        default: false
       sqs-integration:
         description: "Creat SQS integration ticket and PR"
         required: false
@@ -121,6 +126,11 @@ on:
         required: false
         type: boolean
         default: true
+      require-rule-metadata-update:
+        description: "Run rule metadata update check before release. Fails the release if metadata changes are detected and need to be merged first."
+        required: false
+        type: boolean
+        default: false
       slack-channel:
         description: "Slack channel for notifications"
         required: false
@@ -263,15 +273,67 @@ jobs:
             [ "$CHECK_LICENSES" = "FAILED" ] && echo "- ❌ CheckLicenses" >> $GITHUB_STEP_SUMMARY
           fi
 
+  # This job runs the rule metadata update check to ensure metadata is up to date before release.
+  # If changes are detected, a PR is created and the release is blocked until it is merged.
+  update-rule-metadata:
+    name: Update Rule Metadata
+    if: |
+      inputs.require-rule-metadata-update &&
+      !cancelled() &&
+      (needs.check-releasability.result == 'success' || needs.check-releasability.result == 'skipped')
+    needs: [ check-releasability ]
+    runs-on: ${{ inputs.runner-environment }}
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Update Rule Metadata
+        id: update-rule-metadata
+        uses: SonarSource/release-github-actions/update-rule-metadata@v1
+        with:
+          branch: ${{ inputs.branch }}
+
+      - name: Check Rule Metadata Changes
+        if: steps.update-rule-metadata.outputs.has-changes == 'true'
+        shell: bash
+        env:
+          PR_URL: ${{ steps.update-rule-metadata.outputs.pull-request-url }}
+        run: |
+          echo "::error::Rule metadata changes detected. The generated PR needs to be merged first before continuing with the release."
+          echo "::error::Pull Request URL: $PR_URL"
+          echo "::error::Please merge the PR and run this workflow again (start a new run instead of re-running failed jobs)."
+          exit 1
+
+      - name: Summary
+        if: ${{ inputs.verbose }}
+        shell: bash
+        env:
+          BRANCH: ${{ inputs.branch }}
+          HAS_CHANGES: ${{ steps.update-rule-metadata.outputs.has-changes }}
+          PR_URL: ${{ steps.update-rule-metadata.outputs.pull-request-url || 'none' }}
+        run: |
+          echo "## 📋 Update Rule Metadata" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### What happened" >> $GITHUB_STEP_SUMMARY
+          echo "- Ran rule metadata update check on branch \`$BRANCH\`." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Changes detected: \`$HAS_CHANGES\`." >> $GITHUB_STEP_SUMMARY
+          if [ "$HAS_CHANGES" = "true" ]; then
+            echo "- Pull Request: $PR_URL" >> $GITHUB_STEP_SUMMARY
+          fi
+
   # This step determines the release version, Jira version name, and gathers release notes.
   # It sets up the necessary outputs for subsequent steps.
   # These outputs include the release version, Jira version name, release notes, Jira release notes, and Jira release URL.
   prepare-release:
     name: Prepare Release
-    needs: [ check-releasability ]
+    needs: [ check-releasability, update-rule-metadata ]
     if: |
       !cancelled() &&
-      (needs.check-releasability.result == 'success' || needs.check-releasability.result == 'skipped')
+      (needs.check-releasability.result == 'success' || needs.check-releasability.result == 'skipped') &&
+      (needs.update-rule-metadata.result == 'success' || needs.update-rule-metadata.result == 'skipped')
     runs-on: ${{ inputs.runner-environment }}
     permissions:
       statuses: read
@@ -527,7 +589,7 @@ jobs:
   create-integration-tickets:
     name: Create Integration Tickets
     needs: [ prepare-release, publish-github-release, create-release-ticket ]
-    if: ${{ inputs.create-slvs-ticket || inputs.create-slvscode-ticket || inputs.create-sle-ticket || inputs.create-sli-ticket || inputs.sqc-integration || inputs.sqs-integration }}
+    if: ${{ inputs.create-slvs-ticket || inputs.create-slvscode-ticket || inputs.create-sle-ticket || inputs.create-sli-ticket || inputs.create-cli-ticket || inputs.sqc-integration || inputs.sqs-integration }}
     permissions:
       statuses: read
       contents: read
@@ -583,6 +645,17 @@ jobs:
           ticket-description: ${{ inputs.sq-ide-short-description != '' && inputs.sq-ide-short-description || inputs.short-description }}
           jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
 
+      - name: Create CLI Ticket
+        if: ${{ inputs.create-cli-ticket }}
+        uses: SonarSource/release-github-actions/create-integration-ticket@v1
+        with:
+          plugin-name: ${{ inputs.plugin-name }}
+          release-version: ${{ needs.prepare-release.outputs.release-version }}
+          release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
+          target-jira-project: "CLI"
+          ticket-description: ${{ inputs.sq-ide-short-description != '' && inputs.sq-ide-short-description || inputs.short-description }}
+          jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
+
       - name: Create SQC Ticket
         if: ${{ inputs.sqc-integration }}
         id: create-sqc-ticket
@@ -616,6 +689,7 @@ jobs:
           CREATE_SLVSCODE_TICKET: ${{ inputs.create-slvscode-ticket == true && 'true' || 'false' }}
           CREATE_SLE_TICKET: ${{ inputs.create-sle-ticket == true && 'true' || 'false' }}
           CREATE_SLI_TICKET: ${{ inputs.create-sli-ticket == true && 'true' || 'false' }}
+          CREATE_CLI_TICKET: ${{ inputs.create-cli-ticket == true && 'true' || 'false' }}
           SQC_INTEGRATION: ${{ inputs.sqc-integration == true && 'true' || 'false' }}
           SQS_INTEGRATION: ${{ inputs.sqs-integration == true && 'true' || 'false' }}
         run: |
@@ -630,6 +704,7 @@ jobs:
           if [ "$CREATE_SLVSCODE_TICKET" = "true" ]; then echo "- SLVSCODE ticket created." >> $GITHUB_STEP_SUMMARY; fi
           if [ "$CREATE_SLE_TICKET" = "true" ]; then echo "- SLE ticket created." >> $GITHUB_STEP_SUMMARY; fi
           if [ "$CREATE_SLI_TICKET" = "true" ]; then echo "- SLI ticket created." >> $GITHUB_STEP_SUMMARY; fi
+          if [ "$CREATE_CLI_TICKET" = "true" ]; then echo "- CLI ticket created." >> $GITHUB_STEP_SUMMARY; fi
           if [ "$SQC_INTEGRATION" = "true" ]; then echo "- SQC ticket \`${{ steps.create-sqc-ticket.outputs.ticket-key }}\` — ${{ steps.create-sqc-ticket.outputs.ticket-url }}" >> $GITHUB_STEP_SUMMARY; fi
           if [ "$SQS_INTEGRATION" = "true" ]; then echo "- SQS ticket \`${{ steps.create-sqs-ticket.outputs.ticket-key }}\` — ${{ steps.create-sqs-ticket.outputs.ticket-url }}" >> $GITHUB_STEP_SUMMARY; fi
 
@@ -706,6 +781,7 @@ jobs:
     # to the RESULT_* env vars in the "Post Summary to Workflow" step.
     needs:
       - check-releasability
+      - update-rule-metadata
       - prepare-release
       - publish-github-release
       - create-release-ticket
@@ -733,6 +809,7 @@ jobs:
           SQC_PR_URL: ${{ needs.update-analyzers.outputs.sqc-pull-request-url || 'not created' }}
           BUMP_VERSION_PR_URL: ${{ needs.bump-version.outputs.pull-request-url || 'not created' }}
           RESULT_CHECK_RELEASABILITY: ${{ needs.check-releasability.result }}
+          RESULT_UPDATE_RULE_METADATA: ${{ needs.update-rule-metadata.result }}
           RESULT_PREPARE_RELEASE: ${{ needs.prepare-release.result }}
           RESULT_PUBLISH_GITHUB_RELEASE: ${{ needs.publish-github-release.result }}
           RESULT_CREATE_RELEASE_TICKET: ${{ needs.create-release-ticket.result }}
@@ -742,7 +819,7 @@ jobs:
           RESULT_UPDATE_ANALYZERS: ${{ needs.update-analyzers.result }}
         run: |
           ALL_SUCCESS=true
-          for result in "$RESULT_CHECK_RELEASABILITY" "$RESULT_PREPARE_RELEASE" "$RESULT_PUBLISH_GITHUB_RELEASE" "$RESULT_CREATE_RELEASE_TICKET" "$RESULT_RELEASE_IN_JIRA" "$RESULT_CREATE_INTEGRATION_TICKETS" "$RESULT_UPDATE_ANALYZERS" "$RESULT_BUMP_VERSION"; do
+          for result in "$RESULT_CHECK_RELEASABILITY" "$RESULT_UPDATE_RULE_METADATA" "$RESULT_PREPARE_RELEASE" "$RESULT_PUBLISH_GITHUB_RELEASE" "$RESULT_CREATE_RELEASE_TICKET" "$RESULT_RELEASE_IN_JIRA" "$RESULT_CREATE_INTEGRATION_TICKETS" "$RESULT_UPDATE_ANALYZERS" "$RESULT_BUMP_VERSION"; do
             if [[ "$result" != "success" && "$result" != "skipped" ]]; then
               ALL_SUCCESS=false
               break
