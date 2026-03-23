@@ -250,6 +250,9 @@ runs:
         REPO_URL="https://x-access-token:${RESOLVED_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
         git remote set-url origin "$REPO_URL"
 
+        # Fetch the remote branch to ensure --force-with-lease has an up-to-date ref
+        git fetch origin "$PR_BRANCH" || true
+
         # Push to remote
         git push --force-with-lease origin "$PR_BRANCH"
         echo "Pushed branch '${PR_BRANCH}' to origin."
