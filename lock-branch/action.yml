@@ -78,15 +78,20 @@ runs:
           ACTION="unfrozen"
           COLOR="good"
         fi
-        NEWLINE=$'\n'
-        MESSAGE="${ICON} Branch \`${INPUT_BRANCH}\` has been ${ACTION} in \`${{ github.repository }}\`${NEWLINE}*Run:* <${RUN_URL}|View workflow run>"
         echo "icon=$ICON" >> $GITHUB_OUTPUT
         echo "color=$COLOR" >> $GITHUB_OUTPUT
-        echo "message=$MESSAGE" >> $GITHUB_OUTPUT
+        DELIMITER="$(openssl rand -hex 8)"
+        {
+          echo "message<<${DELIMITER}"
+          printf '%s Branch `%s` has been %s in `${{ github.repository }}`\n*Run:* <%s|View workflow run>' \
+            "$ICON" "$INPUT_BRANCH" "$ACTION" "$RUN_URL"
+          echo
+          echo "${DELIMITER}"
+        } >> $GITHUB_OUTPUT
 
     - name: Send Slack Notification
       if: ${{ inputs.slack-channel != '' }}
-      uses: SonarSource/release-github-actions/notify-slack@master
+      uses: SonarSource/release-github-actions/notify-slack@v1
       with:
         project-name: ${{ github.repository }}
         slack-channel: ${{ inputs.slack-channel }}

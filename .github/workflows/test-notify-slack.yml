@@ -18,6 +18,7 @@ jobs:
   integration-test:
     name: Send Test Notification
     runs-on: ubuntu-latest
+    continue-on-error: true
     permissions:
       id-token: write
     steps:

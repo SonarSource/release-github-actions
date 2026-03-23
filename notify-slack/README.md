@@ -18,7 +18,7 @@ This action depends on:
 | `project-name`  | The display name of the project; used in the Slack username.                                           | Yes      | -         |
 | `icon`          | Emoji icon for the Slack message (Slack emoji code).                                                   | No       | `:alert:` |
 | `slack-channel` | Slack channel (without `#`) to post the notification into.                                             | Yes      | -         |
-| `message`       | The Slack message to send (mrkdwn format).                                                             | Yes      | -         |
+| `message`       | The Slack message to send (mrkdwn format). Required when not using the deprecated `jobs` input.        | No       | -         |
 | `color`         | Slack attachment color (`good`, `danger`, `warning`, or a hex code).                                   | No       | `danger`  |
 | `jobs`          | **Deprecated.** A GitHub needs-like object of jobs and results. When `message` is not set, a failed-jobs summary is built from this input. Build the message in the caller and pass it via `message` instead. | No | - |
 
@@ -48,8 +48,13 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           FAILED=$(echo "$NEEDS_JSON" | jq -r 'to_entries | map(select(.value.result == "failure") | .key) | join(", ")')
-          NEWLINE=$'\n'
-          echo "message=*Run:* <${RUN_URL}|View run>${NEWLINE}*Failed Jobs:* ${FAILED}" >> $GITHUB_OUTPUT
+          DELIMITER="$(openssl rand -hex 8)"
+          {
+            echo "message<<${DELIMITER}"
+            printf '*Run:* <%s|View run>\n*Failed Jobs:* %s' "$RUN_URL" "$FAILED"
+            echo
+            echo "${DELIMITER}"
+          } >> $GITHUB_OUTPUT
       - uses: SonarSource/release-github-actions/notify-slack@v1
         with:
           project-name: 'My Project'
