@@ -13,6 +13,8 @@ fail=0
 
 INITIAL_COMMIT_MSG="initial"
 OLD_RULE_CONTENT='<rule>old</rule>'
+NEW_RULE_CONTENT='<rule>new</rule>'
+UPDATED_JSON='{"updated":true}'
 
 assert_output_contains() {
   local test_name="$1"
@@ -73,8 +75,8 @@ echo "$OLD_RULE_CONTENT" > rules/S1000.html
 echo '{}' > rules/S1000.json
 git add . && git commit -q -m "$INITIAL_COMMIT_MSG"
 
-echo '<rule>new</rule>' > rules/S1000.html
-echo '{"updated":true}' > rules/S1001.json
+echo "$NEW_RULE_CONTENT" > rules/S1000.html
+echo "$UPDATED_JSON" > rules/S1001.json
 git add .
 
 printf '=== PATH:. ===\nRunning rule-api update\nFound 3 rule(s) to update\n' > rule-api-logs.txt
@@ -100,8 +102,8 @@ echo "$OLD_RULE_CONTENT" > frontend/python/rules/S2000.html
 git add . && git commit -q -m "$INITIAL_COMMIT_MSG"
 
 # Update java rules only; python unchanged.
-echo '<rule>new</rule>' > frontend/java/rules/S1000.html
-echo '{"updated":true}' > frontend/java/rules/S1001.json
+echo "$NEW_RULE_CONTENT" > frontend/java/rules/S1000.html
+echo "$UPDATED_JSON" > frontend/java/rules/S1001.json
 git add .
 
 printf '=== PATH:frontend/java ===\nRunning rule-api update\nFound 5 rule(s) to update\n=== PATH:frontend/python ===\nRunning rule-api update\nFound 2 rule(s) to update\n' > rule-api-logs.txt
@@ -130,8 +132,8 @@ echo '{}' > frontend/dotnet/sonar-security-csharp-frontend-plugin/rules/S3649.js
 echo "$OLD_RULE_CONTENT" > frontend/dotnet/sonar-security-vbnet-frontend-plugin/rules/S3649.html
 git add . && git commit -q -m "$INITIAL_COMMIT_MSG"
 
-echo '<rule>new</rule>' > frontend/dotnet/sonar-security-csharp-frontend-plugin/rules/S3649.html
-echo '{"updated":true}' > frontend/dotnet/sonar-security-csharp-frontend-plugin/rules/S3650.json
+echo "$NEW_RULE_CONTENT" > frontend/dotnet/sonar-security-csharp-frontend-plugin/rules/S3649.html
+echo "$UPDATED_JSON" > frontend/dotnet/sonar-security-csharp-frontend-plugin/rules/S3650.json
 git add .
 
 printf '=== PATH:frontend/dotnet/sonar-security-csharp-frontend-plugin ===\nRunning rule-api update\nFound 4 rule(s) to update\n=== PATH:frontend/dotnet/sonar-security-vbnet-frontend-plugin ===\nRunning rule-api update\nFound 4 rule(s) to update\n' > rule-api-logs.txt
@@ -156,8 +158,8 @@ echo "$OLD_RULE_CONTENT" > rules/S1896.html
 echo '{}' > rules/S1896.json
 git add . && git commit -q -m "$INITIAL_COMMIT_MSG"
 
-echo '<rule>new</rule>' > rules/S1896.html
-echo '{"updated":true}' > rules/S1896.json
+echo "$NEW_RULE_CONTENT" > rules/S1896.html
+echo "$UPDATED_JSON" > rules/S1896.json
 git add .
 
 printf '=== PATH:. ===\nRunning rule-api update\nFound 2 rule(s) to update\n' > rule-api-logs.txt
