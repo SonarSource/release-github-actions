@@ -20,7 +20,7 @@ This action depends on:
 | `slack-channel` | Slack channel (without `#`) to post the notification into.                                             | Yes      | -         |
 | `message`       | The Slack message to send (mrkdwn format).                                                             | Yes      | -         |
 | `color`         | Slack attachment color (`good`, `danger`, `warning`, or a hex code).                                   | No       | `danger`  |
-| `jobs`          | **Deprecated.** Has no effect. Build the message in the caller and pass it via `message` instead.      | No       | -         |
+| `jobs`          | **Deprecated.** A GitHub needs-like object of jobs and results. When `message` is not set, a failed-jobs summary is built from this input. Build the message in the caller and pass it via `message` instead. | No | - |
 
 ## Outputs
 
