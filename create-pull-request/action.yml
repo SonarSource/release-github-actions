@@ -250,8 +250,8 @@ runs:
         REPO_URL="https://x-access-token:${RESOLVED_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
         git remote set-url origin "$REPO_URL"
 
-        # Push to remote
-        git push --force-with-lease origin "$PR_BRANCH"
+        # Push to remote (force is safe here: the branch is bot-owned and managed exclusively by this action)
+        git push --force origin "$PR_BRANCH"
         echo "Pushed branch '${PR_BRANCH}' to origin."
 
     - name: Create or update pull request
