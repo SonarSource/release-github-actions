@@ -14,9 +14,6 @@ inputs:
   github-token:
     description: 'GitHub token with admin permissions (defaults to Vault)'
     required: false
-  slack-token:
-    description: 'Slack token for notifications (defaults to Vault)'
-    required: false
 
 outputs:
   branch:
@@ -34,12 +31,11 @@ runs:
   steps:
     - name: Get Secrets from Vault
       id: secrets
-      if: ${{ !inputs.github-token || (!inputs.slack-token && inputs.slack-channel) }}
+      if: ${{ !inputs.github-token }}
       uses: SonarSource/vault-action-wrapper@v3
       with:
         secrets: |
           development/github/token/{REPO_OWNER_NAME_DASH}-lock token | GITHUB_LOCK_TOKEN;
-          development/kv/data/slack token | SLACK_TOKEN;
 
     - name: Set up Python
       uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
@@ -82,7 +78,8 @@ runs:
           ACTION="unfrozen"
           COLOR="good"
         fi
-        MESSAGE="${ICON} Branch \`${INPUT_BRANCH}\` has been ${ACTION} in \`${{ github.repository }}\`\n*Run:* <${RUN_URL}|View workflow run>"
+        NEWLINE=$'\n'
+        MESSAGE="${ICON} Branch \`${INPUT_BRANCH}\` has been ${ACTION} in \`${{ github.repository }}\`${NEWLINE}*Run:* <${RUN_URL}|View workflow run>"
         echo "icon=$ICON" >> $GITHUB_OUTPUT
         echo "color=$COLOR" >> $GITHUB_OUTPUT
         echo "message=$MESSAGE" >> $GITHUB_OUTPUT

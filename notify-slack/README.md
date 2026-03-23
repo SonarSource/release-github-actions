@@ -43,9 +43,13 @@ jobs:
       - name: Build failure message
         id: msg
         if: failure()
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          FAILED=$(echo '${{ toJSON(needs) }}' | jq -r 'to_entries | map(select(.value.result == "failure") | .key) | join(", ")')
-          echo "message=*Run:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n*Failed Jobs:* $FAILED" >> $GITHUB_OUTPUT
+          FAILED=$(echo "$NEEDS_JSON" | jq -r 'to_entries | map(select(.value.result == "failure") | .key) | join(", ")')
+          NEWLINE=$'\n'
+          echo "message=*Run:* <${RUN_URL}|View run>${NEWLINE}*Failed Jobs:* ${FAILED}" >> $GITHUB_OUTPUT
       - uses: SonarSource/release-github-actions/notify-slack@v1
         with:
           project-name: 'My Project'
