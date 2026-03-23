@@ -5,10 +5,14 @@
 
 set -euo pipefail
 
-SCRIPT="${1:-$(dirname "$0")/generate-summary.sh}"
+_script_arg="${1:-$(dirname "$0")/generate-summary.sh}"
+SCRIPT="$(cd "$(dirname "$_script_arg")" && pwd)/$(basename "$_script_arg")"
 
 pass=0
 fail=0
+
+INITIAL_COMMIT_MSG="initial"
+OLD_RULE_CONTENT='<rule>old</rule>'
 
 assert_output_contains() {
   local test_name="$1"
@@ -24,6 +28,7 @@ assert_output_contains() {
     sed 's/^/    /' "$output_file"
     fail=$((fail + 1))
   fi
+  return 0
 }
 
 # ---------------------------------------------------------------------------
@@ -36,12 +41,14 @@ run_test() {
 
   # Each test receives the work_dir; caller populates it before calling run_script.
   echo "$work_dir"
+  return 0
 }
 
 init_git() {
   git init -q
   git config user.email "test@test.com"
   git config user.name "Test"
+  return 0
 }
 
 run_script() {
@@ -49,6 +56,7 @@ run_script() {
   local gh_output="$work_dir/gh_output"
   (cd "$work_dir" && GITHUB_OUTPUT="$gh_output" bash "$SCRIPT" "2.99.0") || true
   echo "$gh_output"
+  return 0
 }
 
 # ---------------------------------------------------------------------------
@@ -61,9 +69,9 @@ cd "$WORK_DIR"
 init_git
 mkdir -p rules
 echo '{}' > sonarpedia.json
-echo '<rule>old</rule>' > rules/S1000.html
+echo "$OLD_RULE_CONTENT" > rules/S1000.html
 echo '{}' > rules/S1000.json
-git add . && git commit -q -m "initial"
+git add . && git commit -q -m "$INITIAL_COMMIT_MSG"
 
 echo '<rule>new</rule>' > rules/S1000.html
 echo '{"updated":true}' > rules/S1001.json
@@ -86,10 +94,10 @@ init_git
 mkdir -p frontend/java/rules frontend/python/rules
 echo '{}' > frontend/java/sonarpedia.json
 echo '{}' > frontend/python/sonarpedia.json
-echo '<rule>old</rule>' > frontend/java/rules/S1000.html
+echo "$OLD_RULE_CONTENT" > frontend/java/rules/S1000.html
 echo '{}' > frontend/java/rules/S1000.json
-echo '<rule>old</rule>' > frontend/python/rules/S2000.html
-git add . && git commit -q -m "initial"
+echo "$OLD_RULE_CONTENT" > frontend/python/rules/S2000.html
+git add . && git commit -q -m "$INITIAL_COMMIT_MSG"
 
 # Update java rules only; python unchanged.
 echo '<rule>new</rule>' > frontend/java/rules/S1000.html
@@ -117,10 +125,10 @@ mkdir -p frontend/dotnet/sonar-security-csharp-frontend-plugin/rules
 mkdir -p frontend/dotnet/sonar-security-vbnet-frontend-plugin/rules
 echo '{}' > frontend/dotnet/sonar-security-csharp-frontend-plugin/sonarpedia.json
 echo '{}' > frontend/dotnet/sonar-security-vbnet-frontend-plugin/sonarpedia.json
-echo '<rule>old</rule>' > frontend/dotnet/sonar-security-csharp-frontend-plugin/rules/S3649.html
+echo "$OLD_RULE_CONTENT" > frontend/dotnet/sonar-security-csharp-frontend-plugin/rules/S3649.html
 echo '{}' > frontend/dotnet/sonar-security-csharp-frontend-plugin/rules/S3649.json
-echo '<rule>old</rule>' > frontend/dotnet/sonar-security-vbnet-frontend-plugin/rules/S3649.html
-git add . && git commit -q -m "initial"
+echo "$OLD_RULE_CONTENT" > frontend/dotnet/sonar-security-vbnet-frontend-plugin/rules/S3649.html
+git add . && git commit -q -m "$INITIAL_COMMIT_MSG"
 
 echo '<rule>new</rule>' > frontend/dotnet/sonar-security-csharp-frontend-plugin/rules/S3649.html
 echo '{"updated":true}' > frontend/dotnet/sonar-security-csharp-frontend-plugin/rules/S3650.json
@@ -143,7 +151,7 @@ WORK_DIR=$(run_test)
 cd "$WORK_DIR"
 init_git
 echo '{}' > sonarpedia.json
-git add . && git commit -q -m "initial"
+git add . && git commit -q -m "$INITIAL_COMMIT_MSG"
 
 printf '=== PATH:. ===\nRunning rule-api update\nFound 0 rule(s) to update\n' > rule-api-logs.txt
 
