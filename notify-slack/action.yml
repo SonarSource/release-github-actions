@@ -1,5 +1,5 @@
-name: 'Notify Slack on Failure'
-description: 'Sends a Slack notification when a job fails, or a custom message.'
+name: 'Notify Slack'
+description: 'Sends a Slack notification with a custom message.'
 
 inputs:
   project-name:
@@ -13,10 +13,10 @@ inputs:
     description: 'The Slack channel to send the notification to.'
     required: true
   jobs:
-    description: 'A GitHub needs-like object string of jobs and their results (e.g., from toJSON(needs)). Required when message is not set.'
+    description: 'Deprecated. A GitHub needs-like object string of jobs and their results (e.g., from toJSON(needs)). Build a message string in the caller and use the message input instead.'
     required: false
   message:
-    description: 'A custom free-text Slack message. When provided, skips job-failure parsing and sends this message directly.'
+    description: 'The Slack message to send (mrkdwn format). When not set, falls back to a failed-jobs summary built from the jobs input (deprecated).'
     required: false
   color:
     description: 'Slack attachment color (e.g. good, danger, warning, or a hex color code).'
@@ -33,7 +33,7 @@ runs:
       env:
         JOBS: ${{ inputs.jobs }}
       run: |
-        echo "Checking Jobs: $JOBS"
+        echo "::warning::Calling notify-slack without a 'message' input is deprecated. Build the message in the caller and pass it via the 'message' input."
         # Parse the provided jobs JSON and extract keys where result == "failure".
         FAILED_JOBS=$(echo "$JOBS" | jq -r 'to_entries | map(select(.value.result == "failure") | .key) | join(", ")')
         echo "Failed Jobs: $FAILED_JOBS"
@@ -44,17 +44,22 @@ runs:
       with:
         secrets: |
           development/kv/data/slack token | SLACK_TOKEN;
+    - name: Install dependencies
+      shell: bash
+      run: pip install -r "$GITHUB_ACTION_PATH/requirements.txt" --quiet
     - name: Send Slack Notification
-      uses: rtCamp/action-slack-notify@e31e87e03dd19038e411e38ae27cbad084a90661 # v2.3.3
+      shell: bash
       env:
-        SLACK_CHANNEL: ${{ inputs.slack-channel }}
-        SLACK_MSG_AUTHOR: " "
-        SLACK_TITLE: " "
-        SLACK_FOOTER: " "
-        SLACK_COLOR: ${{ inputs.color }}
-        MSG_MINIMAL: true
-        SLACK_MESSAGE: ${{ inputs.message != '' && inputs.message || format('*Run:* {0}/{1}/actions/runs/{2}\n*Failed Jobs:* {3}', github.server_url, github.repository, github.run_id, steps.collect_failed_jobs.outputs.failed-jobs) }}
-        SLACK_TOKEN: "${{ fromJSON(steps.secrets.outputs.vault).SLACK_TOKEN }}"
-        SLACK_ICON_EMOJI: "${{ inputs.icon }}"
-        SLACK_USERNAME: "${{ inputs.project-name }} CI Notifier"
-
+        SLACK_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).SLACK_TOKEN }}
+        INPUT_CHANNEL: ${{ inputs.slack-channel }}
+        INPUT_PROJECT_NAME: ${{ inputs.project-name }}
+        INPUT_ICON: ${{ inputs.icon }}
+        INPUT_COLOR: ${{ inputs.color }}
+        INPUT_MESSAGE: ${{ inputs.message != '' && inputs.message || format('*Run:* {0}/{1}/actions/runs/{2}\n*Failed Jobs:* {3}', github.server_url, github.repository, github.run_id, steps.collect_failed_jobs.outputs.failed-jobs) }}
+      run: |
+        python "$GITHUB_ACTION_PATH/notify_slack.py" \
+          --channel "$INPUT_CHANNEL" \
+          --project-name "$INPUT_PROJECT_NAME" \
+          --icon "$INPUT_ICON" \
+          --color "$INPUT_COLOR" \
+          --message "$INPUT_MESSAGE"

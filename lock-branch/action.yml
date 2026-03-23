@@ -64,18 +64,35 @@ runs:
           --repository "${{ github.repository }}" \
           >> $GITHUB_OUTPUT
 
-    - name: Send Slack Notification
+    - name: Build Slack Message
+      id: slack-message
       if: ${{ inputs.slack-channel != '' }}
       shell: bash
       env:
-        SLACK_TOKEN: ${{ inputs.slack-token || fromJSON(steps.secrets.outputs.vault).SLACK_TOKEN }}
-        INPUT_CHANNEL: ${{ inputs.slack-channel }}
         INPUT_BRANCH: ${{ inputs.branch }}
         INPUT_FREEZE: ${{ inputs.freeze }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       run: |
-        python ${{ github.action_path }}/notify_slack.py \
-          --channel "$INPUT_CHANNEL" \
-          --branch "$INPUT_BRANCH" \
-          --repository "${{ github.repository }}" \
-          --freeze "$INPUT_FREEZE" \
-          --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        if [[ "$INPUT_FREEZE" == "true" ]]; then
+          ICON=":ice_cube:"
+          ACTION="frozen"
+          COLOR="warning"
+        else
+          ICON=":sun_with_face:"
+          ACTION="unfrozen"
+          COLOR="good"
+        fi
+        MESSAGE="${ICON} Branch \`${INPUT_BRANCH}\` has been ${ACTION} in \`${{ github.repository }}\`\n*Run:* <${RUN_URL}|View workflow run>"
+        echo "icon=$ICON" >> $GITHUB_OUTPUT
+        echo "color=$COLOR" >> $GITHUB_OUTPUT
+        echo "message=$MESSAGE" >> $GITHUB_OUTPUT
+
+    - name: Send Slack Notification
+      if: ${{ inputs.slack-channel != '' }}
+      uses: SonarSource/release-github-actions/notify-slack@master
+      with:
+        project-name: ${{ github.repository }}
+        slack-channel: ${{ inputs.slack-channel }}
+        icon: ${{ steps.slack-message.outputs.icon }}
+        color: ${{ steps.slack-message.outputs.color }}
+        message: ${{ steps.slack-message.outputs.message }}
