@@ -1,20 +1,15 @@
 # Notify Slack Action
 
-This GitHub Action sends a Slack notification. It supports two modes:
-- **Failure mode** (default): summarizes failed jobs in a workflow run, intended for use with `if: failure()`.
-- **Custom message mode**: sends a free-text message directly, useful for informational notifications such as PR creation alerts.
+This GitHub Action sends a Slack notification with a custom message.
 
 ## Description
 
-The action posts a message to a Slack channel containing either:
-- A link to the failed GitHub Actions run and a list of failed jobs (failure mode), or
-- A custom message provided by the caller (custom message mode).
+The action posts a message to a Slack channel. The caller is responsible for building the message string.
 
 ## Dependencies
 
 This action depends on:
 - [SonarSource/vault-action-wrapper](https://github.com/SonarSource/vault-action-wrapper) to retrieve the Slack token from Vault
-- [rtCamp/action-slack-notify](https://github.com/rtCamp/action-slack-notify) to send the Slack message
 
 ## Inputs
 
@@ -23,9 +18,9 @@ This action depends on:
 | `project-name`  | The display name of the project; used in the Slack username.                                           | Yes      | -         |
 | `icon`          | Emoji icon for the Slack message (Slack emoji code).                                                   | No       | `:alert:` |
 | `slack-channel` | Slack channel (without `#`) to post the notification into.                                             | Yes      | -         |
-| `jobs`          | A GitHub needs-like object string of jobs and their results (e.g., from `toJSON(needs)`). Required when `message` is not set. | No | - |
-| `message`       | A custom free-text Slack message. When provided, skips job-failure parsing and sends this message directly. | No  | -         |
+| `message`       | The Slack message to send (mrkdwn format). Required when not using the deprecated `jobs` input.        | No       | -         |
 | `color`         | Slack attachment color (`good`, `danger`, `warning`, or a hex code).                                   | No       | `danger`  |
+| `jobs`          | **Deprecated.** A GitHub needs-like object of jobs and results. When `message` is not set, a failed-jobs summary is built from this input. Build the message in the caller and pass it via `message` instead. | No | - |
 
 ## Outputs
 
@@ -45,11 +40,26 @@ jobs:
       statuses: read
       id-token: write
     steps:
+      - name: Build failure message
+        id: msg
+        if: failure()
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          FAILED=$(echo "$NEEDS_JSON" | jq -r 'to_entries | map(select(.value.result == "failure") | .key) | join(", ")')
+          DELIMITER="$(openssl rand -hex 8)"
+          {
+            echo "message<<${DELIMITER}"
+            printf '*Run:* <%s|View run>\n*Failed Jobs:* %s' "$RUN_URL" "$FAILED"
+            echo
+            echo "${DELIMITER}"
+          } >> $GITHUB_OUTPUT
       - uses: SonarSource/release-github-actions/notify-slack@v1
         with:
           project-name: 'My Project'
           slack-channel: 'engineering-alerts'
-          jobs: ${{ toJSON(needs) }}
+          message: ${{ steps.msg.outputs.message }}
 ```
 
 ### Custom message (e.g. PR ready for review)
@@ -66,25 +76,11 @@ jobs:
       https://github.com/org/my-repo/pull/42
 ```
 
-### Custom icon (failure mode)
-
-```yaml
-- uses: SonarSource/release-github-actions/notify-slack@v1
-  if: failure()
-  with:
-    project-name: 'My Project'
-    slack-channel: 'engineering-alerts'
-    icon: ':rocket:'
-    jobs: ${{ toJSON(needs) }}
-```
-
 ## Implementation Details
 
 The action is a composite action that:
 - Fetches `SLACK_TOKEN` from Vault path `development/kv/data/slack` using `vault-action-wrapper`
-- When `message` is not set: parses the `jobs` JSON input to extract failed job names and constructs a message with the run URL
-- When `message` is set: sends the provided message directly, skipping job-failure parsing
-- Uses `rtCamp/action-slack-notify` to send a minimal styled message (no title/footer)
+- Uses a Python script (`notify_slack.py`) with the `requests` library to call the Slack API directly — no Docker dependency
 - Sets the attachment color from the `color` input (defaults to `danger`)
 - Sets Slack username to: `<project-name> CI Notifier`
 
@@ -98,4 +94,4 @@ The action is a composite action that:
 
 - For failure notifications, use `if: failure()` on the step or job; otherwise it will also fire on success.
 - Do not prefix the channel with `#`.
-- Message formatting is intentionally minimal for quick triage in alert-focused channels.
+- Message formatting uses mrkdwn (Slack's markdown dialect).

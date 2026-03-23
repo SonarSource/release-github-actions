@@ -39,4 +39,4 @@ jobs:
       - name: Run unit tests
         run: |
           cd lock-branch
-          python -m pytest test_utils.py test_lock_branch.py test_notify_slack.py -v --cov=utils --cov=lock_branch --cov=notify_slack --cov-report=term-missing
+          python -m pytest test_utils.py test_lock_branch.py -v --cov=utils --cov=lock_branch --cov-report=term-missing

@@ -45,6 +45,9 @@ jobs:
   test-update-rule-metadata:
     uses: ./.github/workflows/test-update-rule-metadata.yml
 
+  test-notify-slack:
+    uses: ./.github/workflows/test-notify-slack.yml
+
   test-lock-branch:
     uses: ./.github/workflows/test-lock-branch.yml
 
