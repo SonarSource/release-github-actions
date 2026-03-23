@@ -31,11 +31,15 @@ while IFS= read -r line; do
   elif [[ $line == *"Found "* && $line == *" rule(s) to update"* ]]; then
     rule_count=$(echo "$line" | grep -oE 'Found [0-9]+' | grep -oE '[0-9]+')
     if [[ -n "$rule_count" && "$rule_count" != "0" && -n "$current_sonarpedia" ]]; then
-      # Count rule files actually changed under this sonarpedia directory.
-      # Rule files are .html and .json files (excluding sonarpedia.json itself).
-      changed_files=$(git diff --name-only HEAD -- "${current_dir}" \
-        | grep -v 'sonarpedia\.json$' || true)
-      updated_count=$(echo "$changed_files" | grep -cE '\.(html|json)$' || true)
+      # Count distinct rule IDs changed under this sonarpedia directory.
+      # Each rule has an .html and a .json file; count unique basenames.
+      updated_count=$(git diff --name-only HEAD -- "${current_dir}" \
+        | grep -v 'sonarpedia\.json$' \
+        | grep -E '\.(html|json)$' \
+        | sed 's/\.[^.]*$//' \
+        | sort -u \
+        | wc -l \
+        | tr -d ' ' || true)
       echo "| \`${current_sonarpedia}\` | ${rule_count} | ${updated_count} |" >> "$summary_file"
       total_rules=$((total_rules + rule_count))
       total_updated=$((total_updated + updated_count))

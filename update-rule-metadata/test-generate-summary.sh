@@ -144,6 +144,30 @@ assert_output_contains "3-level: vbnet row shows 4 to update and 0 updated" \
 rm -rf "$WORK_DIR"
 
 # ---------------------------------------------------------------------------
+# Test 5: deduplication — both .html and .json changed for same rule = 1 rule
+# ---------------------------------------------------------------------------
+echo "--- Test 5: deduplication (.html + .json same rule counts as 1) ---"
+WORK_DIR=$(run_test)
+cd "$WORK_DIR"
+init_git
+mkdir -p rules
+echo '{}' > sonarpedia.json
+echo "$OLD_RULE_CONTENT" > rules/S1896.html
+echo '{}' > rules/S1896.json
+git add . && git commit -q -m "$INITIAL_COMMIT_MSG"
+
+echo '<rule>new</rule>' > rules/S1896.html
+echo '{"updated":true}' > rules/S1896.json
+git add .
+
+printf '=== PATH:. ===\nRunning rule-api update\nFound 2 rule(s) to update\n' > rule-api-logs.txt
+
+OUTPUT=$(run_script "$WORK_DIR")
+assert_output_contains "dedup: S1896.html+S1896.json counts as 1 rule updated" \
+  './sonarpedia.json.*2.*1' "$OUTPUT"
+rm -rf "$WORK_DIR"
+
+# ---------------------------------------------------------------------------
 # Test 4: no rules to update — fallback summary string
 # ---------------------------------------------------------------------------
 echo "--- Test 4: no rules to update (fallback summary) ---"
