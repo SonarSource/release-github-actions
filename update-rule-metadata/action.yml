@@ -160,14 +160,7 @@ runs:
             echo "Processing directory: $dir"
             cd "$dir"
             
-            # Extract a meaningful name for logging (use last part of path)
-            dir_name=$(basename "$dir")
-            parent_dir=$(dirname "$dir")
-            if [ "$parent_dir" != "." ]; then
-              dir_name="${parent_dir##*/}/${dir_name}"
-            fi
-            
-            echo "=== $dir_name/sonarpedia.json ===" >> $log_file
+            echo "=== PATH:$dir ===" >> $log_file
             
             # Calculate relative path to rule-api.jar from current directory
             rel_path=$(realpath --relative-to="$PWD" "$original_dir/rule-api.jar")
@@ -203,59 +196,10 @@ runs:
     - name: Generate summary
       id: generate-summary
       shell: bash
+      env:
+        RULE_API_VERSION: ${{ steps.download.outputs.rule-api-version }}
       run: |
-        summary_file="rule-api-summary.md"
-        current_sonarpedia=""
-        current_dir=""
-        has_entries=false
-        total_rules=0
-        total_updated=0
-
-        # Build a markdown table
-        echo "| Sonarpedia | Rules to update | Rules updated |" > "$summary_file"
-        echo "|---|---:|---:|" >> "$summary_file"
-
-        while IFS= read -r line; do
-          if [[ $line == "=== "* ]]; then
-            current_sonarpedia=$(echo "$line" | sed 's/=== \(.*\) ===/\1/')
-            # Derive the directory path from the sonarpedia label (strip trailing /sonarpedia.json if present)
-            current_dir=$(echo "$current_sonarpedia" | sed 's|/sonarpedia\.json$||')
-          elif [[ $line == *"Found "* && $line == *" rule(s) to update"* ]]; then
-            rule_count=$(echo "$line" | grep -o 'Found [0-9]\+' | grep -o '[0-9]\+')
-            if [[ -n "$rule_count" && "$rule_count" != "0" && -n "$current_sonarpedia" ]]; then
-              # Count rule files actually changed under this sonarpedia directory
-              # Rule files are .html and .json files (excluding sonarpedia.json itself)
-              updated_count=$(git diff --name-only HEAD -- "${current_dir}" \
-                | grep -v 'sonarpedia\.json$' \
-                | grep -E '\.(html|json)$' \
-                | wc -l | tr -d ' ')
-              echo "| \`${current_sonarpedia}\` | ${rule_count} | ${updated_count} |" >> "$summary_file"
-              total_rules=$((total_rules + rule_count))
-              total_updated=$((total_updated + updated_count))
-              has_entries=true
-            fi
-          fi
-        done < rule-api-logs.txt
-
-        if [[ "$has_entries" == "true" ]]; then
-          echo "| **Total** | **${total_rules}** | **${total_updated}** |" >> "$summary_file"
-        fi
-
-        echo -e "\nRule API Version: ${{ steps.download.outputs.rule-api-version }}" >> "$summary_file"
-
-        # Write summary to output using delimiter to preserve newlines
-        if [[ "$has_entries" == "false" ]]; then
-          echo "summary=Update rule metadata" >> $GITHUB_OUTPUT
-        else
-          {
-            echo "summary<<EOF"
-            cat "$summary_file"
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
-        fi
-
-        rm rule-api-logs.txt
-        rm -f "$summary_file"
+        bash "$GITHUB_ACTION_PATH/generate-summary.sh" "$RULE_API_VERSION"
 
     - name: Check Rule Metadata Changes
       id: check-changes
