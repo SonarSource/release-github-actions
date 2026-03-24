@@ -239,7 +239,7 @@ runs:
         labels: ${{ inputs.labels }}
 
     - name: Notify Slack
-      if: ${{ inputs.slack-channel != '' && steps.create-pr.outputs.pull-request-operation != 'none' }}
+      if: ${{ inputs.slack-channel != '' && (steps.create-pr.outputs.pull-request-operation == 'created' || steps.create-pr.outputs.pull-request-operation == 'updated') }}
       uses: SonarSource/release-github-actions/notify-slack@v1
       with:
         project-name: ${{ github.repository }}
