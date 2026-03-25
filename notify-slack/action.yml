@@ -61,7 +61,7 @@ runs:
         INPUT_PROJECT_NAME: ${{ inputs.project-name }}
         INPUT_ICON: ${{ inputs.icon }}
         INPUT_COLOR: ${{ inputs.color }}
-        INPUT_MESSAGE: ${{ inputs.message != '' && inputs.message || format('*Run:* {0}/{1}/actions/runs/{2}\n*Failed Jobs:* {3}', github.server_url, github.repository, github.run_id, steps.collect_failed_jobs.outputs.failed-jobs) }}
+        INPUT_MESSAGE: ${{ inputs.message != '' && inputs.message || format('*Run:* {0}/{1}/actions/runs/{2}%0A*Failed Jobs:* {3}', github.server_url, github.repository, github.run_id, steps.collect_failed_jobs.outputs.failed-jobs) }}
       run: |
         "$GITHUB_ACTION_PATH/.venv/bin/python" "$GITHUB_ACTION_PATH/notify_slack.py" \
           --channel "$INPUT_CHANNEL" \
