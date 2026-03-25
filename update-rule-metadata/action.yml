@@ -106,21 +106,23 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
+        INPUT_SONARPEDIA_FILES: ${{ inputs.sonarpedia-files }}
+        INPUT_RSPEC_BRANCH: ${{ inputs.rspec-branch }}
       run: |
         echo "" > rule-api-logs.txt
-        
+
         # Check if specific sonarpedia-files input is provided
-        if [ -n "${{ inputs.sonarpedia-files}}" ]; then
-          echo "Using specified sonarpedia files: ${{ inputs.sonarpedia-files}}"
-          
+        if [ -n "$INPUT_SONARPEDIA_FILES" ]; then
+          echo "Using specified sonarpedia files: $INPUT_SONARPEDIA_FILES"
+
           # Convert comma-separated list to array and process each file
-          IFS=',' read -ra SONARPEDIA_FILES <<< "${{ inputs.sonarpedia-files}}"
+          IFS=',' read -ra SONARPEDIA_FILES <<< "$INPUT_SONARPEDIA_FILES"
           sonarpedia_dirs=""
-          
+
           for file in "${SONARPEDIA_FILES[@]}"; do
             # Trim whitespace
             file=$(echo "$file" | xargs)
-            
+
             # Check if file exists
             if [ -f "$file" ]; then
               # Get directory containing the file
@@ -130,43 +132,43 @@ runs:
               echo "Warning: Specified sonarpedia file not found: $file"
             fi
           done
-          
+
           # Remove empty lines and duplicates
           sonarpedia_dirs=$(echo "$sonarpedia_dirs" | grep -v '^$' | sort | uniq)
         else
           echo "No specific files provided, discovering all sonarpedia.json files in repository"
-          
+
           # Find all directories containing sonarpedia.json files
           sonarpedia_dirs=$(find . -name "sonarpedia.json" -type f | sed 's|/sonarpedia.json$||' | sort | uniq)
         fi
-        
+
         if [ -z "$sonarpedia_dirs" ]; then
           echo "No sonarpedia.json files found to process"
           exit 1
         fi
-        
+
         echo "Found sonarpedia.json files in the following directories:"
         echo "$sonarpedia_dirs"
         echo ""
-        
+
         # Store the original directory
         original_dir=$(pwd)
-        
+
         log_file="$original_dir/rule-api-logs.txt"
-        
+
         # Loop through each directory containing sonarpedia.json
         while IFS= read -r dir; do
           if [ -d "$dir" ]; then
             echo "Processing directory: $dir"
             cd "$dir"
-            
+
             echo "=== PATH:$dir ===" >> $log_file
-            
+
             # Calculate relative path to rule-api.jar from current directory
             rel_path=$(realpath --relative-to="$PWD" "$original_dir/rule-api.jar")
-            
-            from_branch="${{ inputs.rspec-branch }}"
-            
+
+            from_branch="$INPUT_RSPEC_BRANCH"
+
             # Run rule-api generate if rspec-branch is set and not master, else run update
             if [[ "$from_branch" != "" && "$from_branch" != "master" ]]; then
               echo "Running rule-api generate from branch '$from_branch'" >> $log_file
@@ -175,18 +177,19 @@ runs:
               echo "Running rule-api update" >> $log_file
               java -jar "$rel_path" update 2>&1 | tee -a $log_file
             fi
-            
+
             # Return to the original directory
             cd "$original_dir"
           fi
         done <<< "$sonarpedia_dirs"
 
     - name: Run Post Update Script
-      if: ${{ inputs.post-update }}
+      if: ${{ inputs.post-update != '' }}
       shell: bash
       env:
         GITHUB_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
-      run: ${{ inputs.post-update }}
+        INPUT_POST_UPDATE: ${{ inputs.post-update }}
+      run: eval "$INPUT_POST_UPDATE"
 
     - name: Remove rule-api jar
       shell: bash
@@ -239,7 +242,7 @@ runs:
         labels: ${{ inputs.labels }}
 
     - name: Notify Slack
-      if: ${{ inputs.slack-channel != '' && steps.create-pr.outputs.pull-request-operation != 'none' }}
+      if: ${{ inputs.slack-channel != '' && (steps.create-pr.outputs.pull-request-operation == 'created' || steps.create-pr.outputs.pull-request-operation == 'updated') }}
       uses: SonarSource/release-github-actions/notify-slack@v1
       with:
         project-name: ${{ github.repository }}
