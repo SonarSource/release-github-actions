@@ -27,15 +27,17 @@ All sections are included by default. Individual sections can be excluded via in
 🚨 CI Failure — SonarSource/sonar-php
 
 Workflow: Java CI  •  Branch: `main`  •  Attempt: 2
-Failed Jobs: qa_plugin, build
+Triggered by: janedoe
+PR: #42 Fix authentication bug
+Failed Jobs: qa_plugin (step: Run unit tests), build
 
-Last Commit: `abc1234` Fix authentication bug
-Author: Jane Doe  •  Triggered by: janedoe
+🚨 Flaky: This workflow has failed 3 consecutive times on this branch
 
 🔬 Root Cause: error: method analyze(UCFG) is not public
+🧪 Test Failures: 3 failures, 1 error (across 42 tests)
 📊 Build Scan: View Develocity Scan
 
-🔍 View Run  •  🔁 Re-run Failed Jobs
+🔍 View Run & Re-run Failed Jobs
 ```
 
 ## Inputs
@@ -46,7 +48,10 @@ Author: Jane Doe  •  Triggered by: janedoe
 | `slack-channel` | Slack channel to post to (without `#`). | Yes | - |
 | `needs` | The `toJSON(needs)` object from the caller workflow, used to identify which jobs failed. | Yes | - |
 | `github-token` | GitHub token for API calls (read commits and job logs). | No | `${{ github.token }}` |
-| `include-commit-info` | Include last commit author and message. | No | `true` |
+| `include-pr-info` | Include PR title and link when the run is associated with a pull request. | No | `true` |
+| `include-failed-step` | Include the name of the failed step within each failed job. | No | `true` |
+| `include-test-counts` | Include failed test counts parsed from Maven surefire output in job logs. | No | `true` |
+| `include-flakiness` | Include a flakiness indicator when the workflow has failed consecutively on this branch. | No | `true` |
 | `include-root-cause` | Include a root cause line extracted from failed job logs. | No | `true` |
 | `include-develocity` | Include a Develocity build scan link if found in the logs. | No | `true` |
 | `include-run-attempt` | Include the run attempt number. | No | `true` |
