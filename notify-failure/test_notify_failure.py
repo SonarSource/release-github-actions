@@ -18,8 +18,7 @@ from notify_failure import (
     build_message,
     extract_develocity_url,
     extract_root_cause,
-    get_commit_info,
-    get_job_logs,
+    get_jobs_info,
     is_enabled,
     parse_failed_jobs,
     write_output,
@@ -74,50 +73,17 @@ class TestParseFailedJobs(unittest.TestCase):
         self.assertEqual(parse_failed_jobs("not-json"), [])
 
 
-class TestGetCommitInfo(unittest.TestCase):
-
-    def _mock_response(self, status_code=200, data=None):
-        mock = Mock()
-        mock.status_code = status_code
-        mock.json.return_value = data or {}
-        return mock
-
-    @patch("notify_failure.requests.get")
-    def test_returns_author_and_message(self, mock_get):
-        mock_get.return_value = self._mock_response(data={
-            "commit": {
-                "author": {"name": "Jane Doe"},
-                "message": "Fix authentication bug\n\nDetailed description.",
-            }
-        })
-        author, msg = get_commit_info("token", "SonarSource/repo", "abc1234")
-        self.assertEqual(author, "Jane Doe")
-        self.assertEqual(msg, "Fix authentication bug")
-
-    @patch("notify_failure.requests.get")
-    def test_http_error_returns_fallback(self, mock_get):
-        mock_get.return_value = self._mock_response(status_code=404)
-        author, msg = get_commit_info("token", "SonarSource/repo", "abc1234")
-        self.assertEqual(author, "Unknown")
-        self.assertEqual(msg, "Unknown commit")
-
-    @patch("notify_failure.requests.get")
-    def test_exception_returns_fallback(self, mock_get):
-        mock_get.side_effect = Exception("network error")
-        author, msg = get_commit_info("token", "SonarSource/repo", "abc1234")
-        self.assertEqual(author, "Unknown")
-        self.assertEqual(msg, "Unknown commit")
-
-
-class TestGetJobLogs(unittest.TestCase):
+class TestGetJobsInfo(unittest.TestCase):
 
     def _jobs_response(self):
         mock = Mock()
         mock.status_code = 200
         mock.json.return_value = {
             "jobs": [
-                {"id": 1, "name": "build", "conclusion": "failure"},
-                {"id": 2, "name": "test", "conclusion": "success"},
+                {"id": 1, "name": "build", "conclusion": "failure",
+                 "html_url": "https://github.com/org/repo/actions/runs/1/job/1"},
+                {"id": 2, "name": "test", "conclusion": "success",
+                 "html_url": "https://github.com/org/repo/actions/runs/1/job/2"},
             ]
         }
         return mock
@@ -129,27 +95,32 @@ class TestGetJobLogs(unittest.TestCase):
         return mock
 
     @patch("notify_failure.requests.get")
-    def test_returns_logs_for_failed_jobs_only(self, mock_get):
+    def test_returns_logs_and_urls_for_failed_jobs_only(self, mock_get):
         mock_get.side_effect = [
             self._jobs_response(),
             self._log_response("BUILD FAILURE"),
         ]
-        logs = get_job_logs("token", "SonarSource/repo", "123")
+        logs, job_urls = get_jobs_info("token", "SonarSource/repo", "123")
         self.assertIn("build", logs)
         self.assertNotIn("test", logs)
         self.assertIn("BUILD FAILURE", logs["build"])
+        self.assertIn("build", job_urls)
+        self.assertNotIn("test", job_urls)
+        self.assertEqual(job_urls["build"], "https://github.com/org/repo/actions/runs/1/job/1")
 
     @patch("notify_failure.requests.get")
     def test_jobs_api_error_returns_empty(self, mock_get):
         mock_get.return_value = Mock(status_code=403, json=Mock(return_value={}))
-        logs = get_job_logs("token", "SonarSource/repo", "123")
+        logs, job_urls = get_jobs_info("token", "SonarSource/repo", "123")
         self.assertEqual(logs, {})
+        self.assertEqual(job_urls, {})
 
     @patch("notify_failure.requests.get")
     def test_exception_returns_empty(self, mock_get):
         mock_get.side_effect = Exception("timeout")
-        logs = get_job_logs("token", "SonarSource/repo", "123")
+        logs, job_urls = get_jobs_info("token", "SonarSource/repo", "123")
         self.assertEqual(logs, {})
+        self.assertEqual(job_urls, {})
 
     @patch("notify_failure.requests.get")
     def test_logs_truncated_to_200_lines(self, mock_get):
@@ -158,7 +129,7 @@ class TestGetJobLogs(unittest.TestCase):
             self._jobs_response(),
             self._log_response(long_log),
         ]
-        logs = get_job_logs("token", "SonarSource/repo", "123")
+        logs, _ = get_jobs_info("token", "SonarSource/repo", "123")
         self.assertEqual(len(logs["build"].splitlines()), 200)
 
 
@@ -232,16 +203,17 @@ class TestBuildMessage(unittest.TestCase):
     def _default_kwargs(self, **overrides):
         kwargs = dict(
             repo="SonarSource/sonar-php",
-            sha="abc1234def5678",
             ref_name="main",
             workflow="Java CI",
             run_id="123456789",
             run_attempt="2",
             actor="janedoe",
             server_url="https://github.com",
-            failed_jobs=["qa_plugin", "build"],
-            author="Jane Doe",
-            commit_msg="Fix authentication bug",
+            failed_job_names=["qa_plugin", "build"],
+            job_urls={
+                "qa_plugin": "https://github.com/SonarSource/sonar-php/actions/runs/123456789/job/1",
+                "build": "https://github.com/SonarSource/sonar-php/actions/runs/123456789/job/2",
+            },
             root_cause="error: method analyze(UCFG) is not public",
             develocity_url="https://develocity.sonar.build/s/bobyeotpte5wm",
             include_run_attempt=True,
@@ -257,19 +229,21 @@ class TestBuildMessage(unittest.TestCase):
         msg = build_message(**self._default_kwargs())
         self.assertIn("https://github.com/SonarSource/sonar-php/actions/runs/123456789", msg)
 
-    def test_contains_failed_jobs(self):
+    def test_contains_failed_job_links(self):
         msg = build_message(**self._default_kwargs())
         self.assertIn("qa_plugin", msg)
         self.assertIn("build", msg)
+        self.assertIn("/job/1", msg)
+        self.assertIn("/job/2", msg)
 
-    def test_contains_short_sha(self):
-        msg = build_message(**self._default_kwargs())
-        self.assertIn("abc1234", msg)
-        self.assertNotIn("abc1234def5678", msg)  # full SHA should not appear
+    def test_failed_job_without_url_is_plain_text(self):
+        msg = build_message(**self._default_kwargs(job_urls={}))
+        self.assertIn("qa_plugin", msg)
+        # No angle bracket link
+        self.assertNotIn("<https://", msg.split("*Failed Jobs:*")[1].split("\n")[0])
 
-    def test_contains_author(self):
+    def test_contains_actor(self):
         msg = build_message(**self._default_kwargs())
-        self.assertIn("Jane Doe", msg)
         self.assertIn("janedoe", msg)
 
     def test_contains_root_cause(self):
@@ -289,11 +263,6 @@ class TestBuildMessage(unittest.TestCase):
         msg = build_message(**self._default_kwargs(include_run_attempt=False))
         self.assertNotIn("Attempt", msg)
 
-    def test_commit_omitted_when_none(self):
-        msg = build_message(**self._default_kwargs(author=None, commit_msg=None))
-        self.assertNotIn("Last Commit", msg)
-        self.assertNotIn("Author", msg)
-
     def test_root_cause_omitted_when_none(self):
         msg = build_message(**self._default_kwargs(root_cause=None))
         self.assertNotIn("Root Cause", msg)
@@ -304,8 +273,13 @@ class TestBuildMessage(unittest.TestCase):
         self.assertNotIn("develocity", msg)
 
     def test_unknown_failed_jobs(self):
-        msg = build_message(**self._default_kwargs(failed_jobs=[]))
+        msg = build_message(**self._default_kwargs(failed_job_names=[], job_urls={}))
         self.assertIn("unknown", msg)
+
+    def test_no_commit_info_in_message(self):
+        msg = build_message(**self._default_kwargs())
+        self.assertNotIn("Last Commit", msg)
+        self.assertNotIn("Author", msg)
 
 
 class TestWriteOutput(unittest.TestCase):

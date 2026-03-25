@@ -15,10 +15,6 @@ inputs:
     description: 'GitHub token for API calls (read commits and job logs). Defaults to the built-in GITHUB_TOKEN.'
     required: false
     default: ${{ github.token }}
-  include-commit-info:
-    description: 'Include last commit author and message in the notification.'
-    required: false
-    default: 'true'
   include-root-cause:
     description: 'Include a root cause line extracted from failed job logs.'
     required: false
@@ -58,7 +54,7 @@ runs:
         GH_RUN_ATTEMPT: ${{ github.run_attempt }}
         GH_ACTOR: ${{ github.actor }}
         GH_SERVER_URL: ${{ github.server_url }}
-        INCLUDE_COMMIT_INFO: ${{ inputs.include-commit-info }}
+        GH_HEAD_REF: ${{ github.head_ref }}
         INCLUDE_ROOT_CAUSE: ${{ inputs.include-root-cause }}
         INCLUDE_DEVELOCITY: ${{ inputs.include-develocity }}
         INCLUDE_RUN_ATTEMPT: ${{ inputs.include-run-attempt }}

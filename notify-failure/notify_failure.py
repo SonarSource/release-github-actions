@@ -22,32 +22,6 @@ def is_enabled(env_var):
     return os.environ.get(env_var, "true").lower() not in ("false", "0", "no")
 
 
-def get_commit_info(token, repository, sha):
-    """Fetch commit author name and first line of commit message via GitHub API.
-
-    Returns (author_name, commit_message_first_line) or ("Unknown", "Unknown commit") on error.
-    """
-    url = f"https://api.github.com/repos/{repository}/commits/{sha}"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }
-    try:
-        response = requests.get(url, headers=headers, timeout=10)
-        if response.status_code != 200:
-            eprint(f"Warning: GitHub API returned {response.status_code} for commit {sha}")
-            return "Unknown", "Unknown commit"
-        data = response.json()
-        commit = data.get("commit", {})
-        author = commit.get("author", {}).get("name", "Unknown")
-        message = commit.get("message", "").split("\n")[0]
-        return author, message
-    except Exception as exc:
-        eprint(f"Warning: Failed to fetch commit info: {exc}")
-        return "Unknown", "Unknown commit"
-
-
 def parse_failed_jobs(needs_json):
     """Extract job names where result == 'failure' from toJSON(needs)."""
     try:
@@ -58,11 +32,14 @@ def parse_failed_jobs(needs_json):
         return []
 
 
-def get_job_logs(token, repository, run_id):
-    """Fetch log text for each failed job in the run.
+def get_jobs_info(token, repository, run_id):
+    """Fetch info for all jobs in the run.
 
-    Returns {job_name: log_text} with logs truncated to the last 200 lines.
-    Returns {} on any error.
+    Returns a tuple:
+      - logs: {job_name: log_text} for failed jobs (last 200 lines each)
+      - job_urls: {job_name: html_url} for failed jobs
+
+    Returns ({}, {}) on any error.
     """
     headers = {
         "Authorization": f"Bearer {token}",
@@ -74,13 +51,15 @@ def get_job_logs(token, repository, run_id):
         response = requests.get(jobs_url, headers=headers, timeout=10)
         if response.status_code != 200:
             eprint(f"Warning: Could not fetch jobs list (status {response.status_code})")
-            return {}
+            return {}, {}
         jobs = response.json().get("jobs", [])
     except Exception as exc:
         eprint(f"Warning: Failed to fetch jobs: {exc}")
-        return {}
+        return {}, {}
 
     failed_jobs = [j for j in jobs if j.get("conclusion") == "failure"]
+    job_urls = {j["name"]: j["html_url"] for j in failed_jobs}
+
     logs = {}
     for job in failed_jobs:
         job_id = job["id"]
@@ -96,7 +75,7 @@ def get_job_logs(token, repository, run_id):
                 eprint(f"Warning: Could not fetch logs for job '{job_name}' (status {log_response.status_code})")
         except Exception as exc:
             eprint(f"Warning: Failed to fetch logs for job '{job_name}': {exc}")
-    return logs
+    return logs, job_urls
 
 
 # Patterns that indicate a meaningful error line (order matters — checked top to bottom)
@@ -150,31 +129,30 @@ def extract_develocity_url(logs):
     return None
 
 
-def build_message(repo, sha, ref_name, workflow, run_id, run_attempt,
-                  actor, server_url, failed_jobs,
-                  author, commit_msg,
-                  root_cause,
-                  develocity_url,
-                  include_run_attempt):
+def build_message(repo, ref_name, workflow, run_id, run_attempt,
+                  actor, server_url, failed_job_names, job_urls,
+                  root_cause, develocity_url, include_run_attempt):
     """Assemble the mrkdwn Slack message. Sections are omitted when their value is None."""
-    short_sha = sha[:7]
     repo_url = f"{server_url}/{repo}"
     run_url = f"{repo_url}/actions/runs/{run_id}"
-    failed = ", ".join(failed_jobs) if failed_jobs else "unknown"
+
+    # Build failed jobs as links when a URL is available, plain text otherwise
+    if failed_job_names:
+        failed_parts = [
+            f"<{job_urls[name]}|{name}>" if name in job_urls else name
+            for name in failed_job_names
+        ]
+        failed = ", ".join(failed_parts)
+    else:
+        failed = "unknown"
 
     attempt_part = f"  •  *Attempt:* {run_attempt}" if include_run_attempt else ""
     header = (
         f":alert: *CI Failure* — <{repo_url}|{repo}>\n\n"
         f"*Workflow:* {workflow}  •  *Branch:* `{ref_name}`{attempt_part}\n"
+        f"*Triggered by:* {actor}\n"
         f"*Failed Jobs:* {failed}"
     )
-
-    commit_block = ""
-    if author is not None and commit_msg is not None:
-        commit_block = (
-            f"\n\n*Last Commit:* `{short_sha}` {commit_msg}\n"
-            f"*Author:* {author}  •  *Triggered by:* {actor}"
-        )
 
     extra_block = ""
     if root_cause is not None:
@@ -182,9 +160,9 @@ def build_message(repo, sha, ref_name, workflow, run_id, run_attempt,
     if develocity_url is not None:
         extra_block += f"\n:bar_chart: *Build Scan:* <{develocity_url}|View Develocity Scan>"
 
-    footer = f"\n\n<{run_url}|:mag: View Run>  •  <{run_url}|:repeat: Re-run Failed Jobs>"
+    footer = f"\n\n<{run_url}|:mag: View Run & Re-run Failed Jobs>"
 
-    return header + commit_block + extra_block + footer
+    return header + extra_block + footer
 
 
 def write_output(message):
@@ -203,44 +181,37 @@ def main():
     token = os.environ.get("GITHUB_TOKEN", "")
     needs_json = os.environ.get("NEEDS_JSON", "{}")
     repository = os.environ.get("GH_REPOSITORY", "")
-    sha = os.environ.get("GH_SHA", "")
-    ref_name = os.environ.get("GH_REF_NAME", "")
+    # Use head_ref (PR source branch) when available, fall back to ref_name
+    ref_name = os.environ.get("GH_HEAD_REF") or os.environ.get("GH_REF_NAME", "")
     workflow = os.environ.get("GH_WORKFLOW", "")
     run_id = os.environ.get("GH_RUN_ID", "")
     run_attempt = os.environ.get("GH_RUN_ATTEMPT", "1")
     actor = os.environ.get("GH_ACTOR", "")
     server_url = os.environ.get("GH_SERVER_URL", "https://github.com")
 
-    include_commit_info = is_enabled("INCLUDE_COMMIT_INFO")
     include_root_cause = is_enabled("INCLUDE_ROOT_CAUSE")
     include_develocity = is_enabled("INCLUDE_DEVELOCITY")
     include_run_attempt = is_enabled("INCLUDE_RUN_ATTEMPT")
 
-    failed_jobs = parse_failed_jobs(needs_json)
+    failed_job_names = parse_failed_jobs(needs_json)
 
-    author, commit_msg = None, None
-    if include_commit_info and token and sha:
-        author, commit_msg = get_commit_info(token, repository, sha)
-
-    logs = {}
-    if (include_root_cause or include_develocity) and token and run_id:
-        logs = get_job_logs(token, repository, run_id)
+    logs, job_urls = {}, {}
+    if token and run_id:
+        logs, job_urls = get_jobs_info(token, repository, run_id)
 
     root_cause = extract_root_cause(logs) if include_root_cause else None
     develocity_url = extract_develocity_url(logs) if include_develocity else None
 
     message = build_message(
         repo=repository,
-        sha=sha,
         ref_name=ref_name,
         workflow=workflow,
         run_id=run_id,
         run_attempt=run_attempt,
         actor=actor,
         server_url=server_url,
-        failed_jobs=failed_jobs,
-        author=author,
-        commit_msg=commit_msg,
+        failed_job_names=failed_job_names,
+        job_urls=job_urls,
         root_cause=root_cause,
         develocity_url=develocity_url,
         include_run_attempt=include_run_attempt,
