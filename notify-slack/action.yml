@@ -32,12 +32,19 @@ runs:
       id: collect_failed_jobs
       env:
         JOBS: ${{ inputs.jobs }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       run: |
         echo "::warning::Calling notify-slack without a 'message' input is deprecated. Build the message in the caller and pass it via the 'message' input."
         # Parse the provided jobs JSON and extract keys where result == "failure".
         FAILED_JOBS=$(echo "$JOBS" | jq -r 'to_entries | map(select(.value.result == "failure") | .key) | join(", ")')
         echo "Failed Jobs: $FAILED_JOBS"
-        echo "failed-jobs=$FAILED_JOBS" >> $GITHUB_OUTPUT
+        # Build the message with a real newline using a multiline heredoc.
+        {
+          echo "message<<EOF"
+          printf '*Run:* %s\n*Failed Jobs:* %s' "$RUN_URL" "$FAILED_JOBS"
+          echo ""
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
     - name: Vault Secrets
       id: secrets
       uses: SonarSource/vault-action-wrapper@v3
@@ -61,7 +68,7 @@ runs:
         INPUT_PROJECT_NAME: ${{ inputs.project-name }}
         INPUT_ICON: ${{ inputs.icon }}
         INPUT_COLOR: ${{ inputs.color }}
-        INPUT_MESSAGE: ${{ inputs.message != '' && inputs.message || format('*Run:* {0}/{1}/actions/runs/{2}%0A*Failed Jobs:* {3}', github.server_url, github.repository, github.run_id, steps.collect_failed_jobs.outputs.failed-jobs) }}
+        INPUT_MESSAGE: ${{ inputs.message != '' && inputs.message || steps.collect_failed_jobs.outputs.message }}
       run: |
         "$GITHUB_ACTION_PATH/.venv/bin/python" "$GITHUB_ACTION_PATH/notify_slack.py" \
           --channel "$INPUT_CHANNEL" \
