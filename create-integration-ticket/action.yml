@@ -94,9 +94,10 @@ runs:
         INPUT_TARGET_JIRA_PROJECT: ${{ inputs.target-jira-project }}
         INPUT_RELEASE_TICKET_KEY: ${{ inputs.release-ticket-key }}
         INPUT_LINK_TYPE: ${{ inputs.link-type }}
+        TICKET_SUMMARY: ${{ steps.validate_inputs.outputs.ticket_summary }}
       run: |
         python ${{ github.action_path }}/create_integration_ticket.py \
-          --ticket-summary "${{ steps.validate_inputs.outputs.ticket_summary }}" \
+          --ticket-summary "$TICKET_SUMMARY" \
           --target-jira-project "$INPUT_TARGET_JIRA_PROJECT" \
           --release-ticket-key "$INPUT_RELEASE_TICKET_KEY" \
           --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
