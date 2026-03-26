@@ -30,6 +30,11 @@ No outputs are produced by this action.
 
 ### Failure notification (in a dedicated failure notification job)
 
+> **Tip:** For CI failure notifications, prefer the dedicated
+> [`notify-failure`](../notify-failure/README.md) action — it automatically includes
+> job details, commit author, retry count, root cause analysis, and Develocity scan
+> links without any message-building boilerplate.
+
 ```yaml
 jobs:
   notify_on_failure:

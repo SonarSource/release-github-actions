@@ -16,6 +16,7 @@ A centralized collection of reusable GitHub Actions designed to streamline and a
 | [Get Jira Version](get-jira-version/README.md)                          | Extracts a Jira-compatible version number from a release version by formatting it appropriately for Jira |
 | [Get Release Version](get-release-version/README.md)                    | Extracts the release version from the repox status on a specified branch |
 | [Lock Branch](lock-branch/README.md)                                    | Locks or unlocks a branch by modifying the `lock_branch` setting in branch protection rules |
+| [Notify Failure](notify-failure/README.md)                              | Sends a rich Slack failure notification with job details, commit info, root cause analysis, and run links |
 | [Notify Slack on Failure](notify-slack/README.md)                       | Sends a Slack notification when a job fails |
 | [Send Slack Message](slack-message/README.md)                           | Sends a markdown message to a Slack channel |
 | [Publish GitHub Release](publish-github-release/README.md)              | Publishes a GitHub Release with notes fetched from Jira or provided directly |
