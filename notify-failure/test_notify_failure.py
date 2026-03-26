@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from notify_failure import (
     BuildInfo,
+    JobsInfo,
     NotificationOptions,
     PRInfo,
     build_message,
@@ -374,12 +375,14 @@ class TestBuildMessage(unittest.TestCase):
             "run_attempt": "2",
             "actor": "janedoe",
             "server_url": "https://github.com",
-            "failed_job_names": ["qa_plugin", "build"],
-            "job_urls": {
-                "qa_plugin": "https://github.com/SonarSource/sonar-php/actions/runs/123456789/job/1",
-                "build": "https://github.com/SonarSource/sonar-php/actions/runs/123456789/job/2",
-            },
-            "failed_steps": {"qa_plugin": "Run unit tests"},
+            "jobs_info": JobsInfo(
+                failed_job_names=["qa_plugin", "build"],
+                job_urls={
+                    "qa_plugin": "https://github.com/SonarSource/sonar-php/actions/runs/123456789/job/1",
+                    "build": "https://github.com/SonarSource/sonar-php/actions/runs/123456789/job/2",
+                },
+                failed_steps={"qa_plugin": "Run unit tests"},
+            ),
             "pr_info": PRInfo(number=42, title="Fix authentication bug", url="https://github.com/SonarSource/sonar-php/pull/42"),
             "consecutive_failures": 3,
             "build_info": BuildInfo(
@@ -420,7 +423,14 @@ class TestBuildMessage(unittest.TestCase):
         self.assertNotIn("step:", msg)
 
     def test_failed_step_omitted_when_no_step_info(self):
-        msg = build_message(**self._default_kwargs(failed_steps={}))
+        msg = build_message(**self._default_kwargs(jobs_info=JobsInfo(
+            failed_job_names=["qa_plugin", "build"],
+            job_urls={
+                "qa_plugin": "https://github.com/SonarSource/sonar-php/actions/runs/123456789/job/1",
+                "build": "https://github.com/SonarSource/sonar-php/actions/runs/123456789/job/2",
+            },
+            failed_steps={},
+        )))
         self.assertNotIn("step:", msg)
 
     def test_pr_line_shown(self):
@@ -495,7 +505,7 @@ class TestBuildMessage(unittest.TestCase):
         self.assertNotIn("Attempt", msg)
 
     def test_unknown_failed_jobs(self):
-        msg = build_message(**self._default_kwargs(failed_job_names=[], job_urls={}))
+        msg = build_message(**self._default_kwargs(jobs_info=JobsInfo()))
         self.assertIn("unknown", msg)
 
     def test_no_commit_info_in_message(self):

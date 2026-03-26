@@ -47,6 +47,21 @@ class BuildInfo:
 
 
 @dataclass
+class JobsInfo:
+    failed_job_names: list = None
+    job_urls: dict = None
+    failed_steps: dict = None
+
+    def __post_init__(self):
+        if self.failed_job_names is None:
+            self.failed_job_names = []
+        if self.job_urls is None:
+            self.job_urls = {}
+        if self.failed_steps is None:
+            self.failed_steps = {}
+
+
+@dataclass
 class NotificationOptions:
     include_run_attempt: bool = True
     include_failed_step: bool = True
@@ -280,15 +295,15 @@ def extract_develocity_url(logs):
     return None
 
 
-def _build_failed_jobs_text(failed_job_names, job_urls, failed_steps, include_failed_step, run_url):
-    if not failed_job_names:
+def _build_failed_jobs_text(jobs_info, include_failed_step, run_url):
+    if not jobs_info.failed_job_names:
         return "unknown"
     failed_parts = []
-    for name in failed_job_names:
-        job_link = f"<{job_urls[name]}|{name}>" if name in job_urls else name
-        if include_failed_step and name in failed_steps:
-            step_url = job_urls.get(name, run_url)
-            job_link += f" (step: <{step_url}|{failed_steps[name]}>)"
+    for name in jobs_info.failed_job_names:
+        job_link = f"<{jobs_info.job_urls[name]}|{name}>" if name in jobs_info.job_urls else name
+        if include_failed_step and name in jobs_info.failed_steps:
+            step_url = jobs_info.job_urls.get(name, run_url)
+            job_link += f" (step: <{step_url}|{jobs_info.failed_steps[name]}>)"
         failed_parts.append(job_link)
     return ", ".join(failed_parts)
 
@@ -312,13 +327,12 @@ def _build_extra_block(build_info, opts):
 
 def build_message(repo, ref_name, workflow, run_id, run_attempt,
                   actor, server_url,
-                  failed_job_names, job_urls, failed_steps,
-                  pr_info, consecutive_failures, build_info, opts):
+                  jobs_info, pr_info, consecutive_failures, build_info, opts):
     """Assemble the mrkdwn Slack message. Sections are omitted when their value is None/falsy."""
     repo_url = f"{server_url}/{repo}"
     run_url = f"{repo_url}/actions/runs/{run_id}"
 
-    failed = _build_failed_jobs_text(failed_job_names, job_urls, failed_steps, opts.include_failed_step, run_url)
+    failed = _build_failed_jobs_text(jobs_info, opts.include_failed_step, run_url)
 
     attempt_part = f"  •  *Attempt:* {run_attempt}" if opts.include_run_attempt else ""
     header = (
@@ -395,6 +409,12 @@ def main():
     if token and run_id:
         logs, job_urls, failed_steps = get_jobs_info(token, repository, run_id)
 
+    jobs_info = JobsInfo(
+        failed_job_names=failed_job_names,
+        job_urls=job_urls,
+        failed_steps=failed_steps,
+    )
+
     consecutive_failures = 0
     if include_flakiness and token and workflow_id and ref_name:
         consecutive_failures = get_consecutive_failures(token, repository, workflow_id, ref_name, run_id)
@@ -413,9 +433,7 @@ def main():
         run_attempt=run_attempt,
         actor=actor,
         server_url=server_url,
-        failed_job_names=failed_job_names,
-        job_urls=job_urls,
-        failed_steps=failed_steps,
+        jobs_info=jobs_info,
         pr_info=pr_info,
         consecutive_failures=consecutive_failures,
         build_info=build_info,
