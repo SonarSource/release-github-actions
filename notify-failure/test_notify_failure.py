@@ -15,6 +15,9 @@ from unittest.mock import Mock, patch, call
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from notify_failure import (
+    BuildInfo,
+    NotificationOptions,
+    PRInfo,
     build_message,
     extract_develocity_url,
     extract_root_cause,
@@ -363,32 +366,34 @@ class TestExtractDevelocityUrl(unittest.TestCase):
 class TestBuildMessage(unittest.TestCase):
 
     def _default_kwargs(self, **overrides):
-        kwargs = dict(
-            repo="SonarSource/sonar-php",
-            ref_name="main",
-            workflow="Java CI",
-            run_id="123456789",
-            run_attempt="2",
-            actor="janedoe",
-            server_url="https://github.com",
-            failed_job_names=["qa_plugin", "build"],
-            job_urls={
+        kwargs = {
+            "repo": "SonarSource/sonar-php",
+            "ref_name": "main",
+            "workflow": "Java CI",
+            "run_id": "123456789",
+            "run_attempt": "2",
+            "actor": "janedoe",
+            "server_url": "https://github.com",
+            "failed_job_names": ["qa_plugin", "build"],
+            "job_urls": {
                 "qa_plugin": "https://github.com/SonarSource/sonar-php/actions/runs/123456789/job/1",
                 "build": "https://github.com/SonarSource/sonar-php/actions/runs/123456789/job/2",
             },
-            failed_steps={"qa_plugin": "Run unit tests"},
-            pr_number=42,
-            pr_title="Fix authentication bug",
-            pr_url="https://github.com/SonarSource/sonar-php/pull/42",
-            consecutive_failures=3,
-            root_cause="error: method analyze(UCFG) is not public",
-            test_counts=(42, 3, 1),
-            develocity_url="https://develocity.sonar.build/s/bobyeotpte5wm",
-            include_run_attempt=True,
-            include_failed_step=True,
-            include_flakiness=True,
-            include_test_counts=True,
-        )
+            "failed_steps": {"qa_plugin": "Run unit tests"},
+            "pr_info": PRInfo(number=42, title="Fix authentication bug", url="https://github.com/SonarSource/sonar-php/pull/42"),
+            "consecutive_failures": 3,
+            "build_info": BuildInfo(
+                root_cause="error: method analyze(UCFG) is not public",
+                test_counts=(42, 3, 1),
+                develocity_url="https://develocity.sonar.build/s/bobyeotpte5wm",
+            ),
+            "opts": NotificationOptions(
+                include_run_attempt=True,
+                include_failed_step=True,
+                include_flakiness=True,
+                include_test_counts=True,
+            ),
+        }
         kwargs.update(overrides)
         return kwargs
 
@@ -411,7 +416,7 @@ class TestBuildMessage(unittest.TestCase):
         self.assertIn("step:", msg)
 
     def test_failed_step_omitted_when_disabled(self):
-        msg = build_message(**self._default_kwargs(include_failed_step=False))
+        msg = build_message(**self._default_kwargs(opts=NotificationOptions(include_failed_step=False)))
         self.assertNotIn("step:", msg)
 
     def test_failed_step_omitted_when_no_step_info(self):
@@ -425,7 +430,7 @@ class TestBuildMessage(unittest.TestCase):
         self.assertIn("https://github.com/SonarSource/sonar-php/pull/42", msg)
 
     def test_pr_line_omitted_when_none(self):
-        msg = build_message(**self._default_kwargs(pr_number=None, pr_title=None, pr_url=None))
+        msg = build_message(**self._default_kwargs(pr_info=PRInfo()))
         self.assertNotIn("PR:", msg)
 
     def test_flakiness_shown_when_consecutive_ge_2(self):
@@ -442,22 +447,25 @@ class TestBuildMessage(unittest.TestCase):
         self.assertNotIn("Flaky", msg)
 
     def test_flakiness_omitted_when_disabled(self):
-        msg = build_message(**self._default_kwargs(include_flakiness=False, consecutive_failures=5))
+        msg = build_message(**self._default_kwargs(
+            opts=NotificationOptions(include_flakiness=False), consecutive_failures=5))
         self.assertNotIn("Flaky", msg)
 
     def test_test_counts_shown(self):
-        msg = build_message(**self._default_kwargs(test_counts=(42, 3, 1)))
+        msg = build_message(**self._default_kwargs(
+            build_info=BuildInfo(root_cause="some error", test_counts=(42, 3, 1), develocity_url="https://develocity.sonar.build/s/bobyeotpte5wm")))
         self.assertIn("Test Failures", msg)
         self.assertIn("3 failures", msg)
         self.assertIn("1 error", msg)
         self.assertIn("42 tests", msg)
 
     def test_test_counts_omitted_when_none(self):
-        msg = build_message(**self._default_kwargs(test_counts=None))
+        msg = build_message(**self._default_kwargs(
+            build_info=BuildInfo(root_cause="some error", test_counts=None)))
         self.assertNotIn("Test Failures", msg)
 
     def test_test_counts_omitted_when_disabled(self):
-        msg = build_message(**self._default_kwargs(include_test_counts=False))
+        msg = build_message(**self._default_kwargs(opts=NotificationOptions(include_test_counts=False)))
         self.assertNotIn("Test Failures", msg)
 
     def test_contains_root_cause(self):
@@ -465,7 +473,8 @@ class TestBuildMessage(unittest.TestCase):
         self.assertIn("method analyze(UCFG)", msg)
 
     def test_root_cause_omitted_when_none(self):
-        msg = build_message(**self._default_kwargs(root_cause=None))
+        msg = build_message(**self._default_kwargs(
+            build_info=BuildInfo(root_cause=None, test_counts=(42, 3, 1))))
         self.assertNotIn("Root Cause", msg)
 
     def test_contains_develocity_link(self):
@@ -473,15 +482,16 @@ class TestBuildMessage(unittest.TestCase):
         self.assertIn("develocity.sonar.build", msg)
 
     def test_develocity_omitted_when_none(self):
-        msg = build_message(**self._default_kwargs(develocity_url=None))
+        msg = build_message(**self._default_kwargs(
+            build_info=BuildInfo(root_cause="some error", develocity_url=None)))
         self.assertNotIn("Build Scan", msg)
 
     def test_attempt_shown_when_enabled(self):
-        msg = build_message(**self._default_kwargs(include_run_attempt=True))
+        msg = build_message(**self._default_kwargs(opts=NotificationOptions(include_run_attempt=True)))
         self.assertIn("Attempt", msg)
 
     def test_attempt_omitted_when_disabled(self):
-        msg = build_message(**self._default_kwargs(include_run_attempt=False))
+        msg = build_message(**self._default_kwargs(opts=NotificationOptions(include_run_attempt=False)))
         self.assertNotIn("Attempt", msg)
 
     def test_unknown_failed_jobs(self):
@@ -494,7 +504,8 @@ class TestBuildMessage(unittest.TestCase):
         self.assertNotIn("Author:", msg)
 
     def test_singular_failure_grammar(self):
-        msg = build_message(**self._default_kwargs(test_counts=(10, 1, 1)))
+        msg = build_message(**self._default_kwargs(
+            build_info=BuildInfo(root_cause="some error", test_counts=(10, 1, 1))))
         self.assertIn("1 failure", msg)
         self.assertIn("1 error", msg)
         self.assertNotIn("1 failures", msg)

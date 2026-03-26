@@ -12,6 +12,8 @@ import re
 import requests
 import secrets
 import sys
+from dataclasses import dataclass
+from typing import Optional, Tuple
 
 
 def eprint(*args, **kwargs):
@@ -28,6 +30,28 @@ def _github_headers(token):
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
     }
+
+
+@dataclass
+class PRInfo:
+    number: Optional[int] = None
+    title: Optional[str] = None
+    url: Optional[str] = None
+
+
+@dataclass
+class BuildInfo:
+    root_cause: Optional[str] = None
+    test_counts: Optional[Tuple[int, int, int]] = None
+    develocity_url: Optional[str] = None
+
+
+@dataclass
+class NotificationOptions:
+    include_run_attempt: bool = True
+    include_failed_step: bool = True
+    include_flakiness: bool = True
+    include_test_counts: bool = True
 
 
 def parse_failed_jobs(needs_json):
@@ -99,7 +123,7 @@ def get_jobs_info(token, repository, run_id):
     headers = _github_headers(token)
     jobs_url = f"https://api.github.com/repos/{repository}/actions/runs/{run_id}/jobs"
     try:
-        response = requests.get(jobs_url, headers=headers, timeout=10)
+        response = requests.get(jobs_url, headers=headers, params={"per_page": 100}, timeout=10)
         if response.status_code != 200:
             eprint(f"Warning: Could not fetch jobs list (status {response.status_code})")
             return {}, {}, {}
@@ -188,22 +212,34 @@ _SKIP_PATTERNS = [
 ]
 
 
+def _clean_error_line(stripped):
+    """Strip log timestamps and Maven prefixes, truncate to 120 chars. Returns None if empty."""
+    # Trim log timestamp prefix (GitHub Actions prepends "2024-01-01T00:00:00.000Z ")
+    clean = re.sub(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+", "", stripped)
+    # Trim Maven module prefix like "[ERROR] "
+    clean = re.sub(r"^\[ERROR\]\s*", "", clean).strip()
+    if len(clean) > 120:
+        clean = clean[:117] + "..."
+    return clean or None
+
+
+def _find_error_in_log(log_text):
+    """Return the first meaningful error line in a single log text, or None."""
+    for line in log_text.splitlines():
+        stripped = line.strip()
+        if any(skip.search(stripped) for skip in _SKIP_PATTERNS):
+            continue
+        if any(pat.search(stripped) for pat in _ERROR_PATTERNS):
+            return _clean_error_line(stripped)
+    return None
+
+
 def extract_root_cause(logs):
     """Scan job logs and return the first meaningful error line (≤120 chars), or None."""
     for log_text in logs.values():
-        for line in log_text.splitlines():
-            stripped = line.strip()
-            if any(skip.search(stripped) for skip in _SKIP_PATTERNS):
-                continue
-            if any(pat.search(stripped) for pat in _ERROR_PATTERNS):
-                # Trim log timestamp prefix (GitHub Actions prepends "2024-01-01T00:00:00.000Z ")
-                clean = re.sub(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+", "", stripped)
-                # Trim Maven module prefix like "[ERROR] "
-                clean = re.sub(r"^\[ERROR\]\s*", "", clean).strip()
-                if len(clean) > 120:
-                    clean = clean[:117] + "..."
-                if clean:
-                    return clean
+        result = _find_error_in_log(log_text)
+        if result is not None:
+            return result
     return None
 
 
@@ -244,34 +280,47 @@ def extract_develocity_url(logs):
     return None
 
 
+def _build_failed_jobs_text(failed_job_names, job_urls, failed_steps, include_failed_step, run_url):
+    if not failed_job_names:
+        return "unknown"
+    failed_parts = []
+    for name in failed_job_names:
+        job_link = f"<{job_urls[name]}|{name}>" if name in job_urls else name
+        if include_failed_step and name in failed_steps:
+            step_url = job_urls.get(name, run_url)
+            job_link += f" (step: <{step_url}|{failed_steps[name]}>)"
+        failed_parts.append(job_link)
+    return ", ".join(failed_parts)
+
+
+def _build_extra_block(build_info, opts):
+    extra_block = ""
+    if build_info.root_cause is not None:
+        extra_block += f"\n\n:microscope: *Root Cause:* {build_info.root_cause}"
+    if opts.include_test_counts and build_info.test_counts is not None:
+        total_run, total_failures, total_errors = build_info.test_counts
+        parts = []
+        if total_failures:
+            parts.append(f"{total_failures} failure{'s' if total_failures != 1 else ''}")
+        if total_errors:
+            parts.append(f"{total_errors} error{'s' if total_errors != 1 else ''}")
+        extra_block += f"\n:test_tube: *Test Failures:* {', '.join(parts)} (across {total_run} tests)"
+    if build_info.develocity_url is not None:
+        extra_block += f"\n:bar_chart: *Build Scan:* <{build_info.develocity_url}|View Develocity Scan>"
+    return extra_block
+
+
 def build_message(repo, ref_name, workflow, run_id, run_attempt,
                   actor, server_url,
                   failed_job_names, job_urls, failed_steps,
-                  pr_number, pr_title, pr_url,
-                  consecutive_failures,
-                  root_cause,
-                  test_counts,
-                  develocity_url,
-                  include_run_attempt, include_failed_step,
-                  include_flakiness, include_test_counts):
+                  pr_info, consecutive_failures, build_info, opts):
     """Assemble the mrkdwn Slack message. Sections are omitted when their value is None/falsy."""
     repo_url = f"{server_url}/{repo}"
     run_url = f"{repo_url}/actions/runs/{run_id}"
 
-    # Build failed jobs as links with optional failed step annotation
-    if failed_job_names:
-        failed_parts = []
-        for name in failed_job_names:
-            job_link = f"<{job_urls[name]}|{name}>" if name in job_urls else name
-            if include_failed_step and name in failed_steps:
-                step_url = job_urls.get(name, run_url)
-                job_link += f" (step: <{step_url}|{failed_steps[name]}>)"
-            failed_parts.append(job_link)
-        failed = ", ".join(failed_parts)
-    else:
-        failed = "unknown"
+    failed = _build_failed_jobs_text(failed_job_names, job_urls, failed_steps, opts.include_failed_step, run_url)
 
-    attempt_part = f"  •  *Attempt:* {run_attempt}" if include_run_attempt else ""
+    attempt_part = f"  •  *Attempt:* {run_attempt}" if opts.include_run_attempt else ""
     header = (
         f":alert: *CI Failure* — <{repo_url}|{repo}>\n\n"
         f"*Workflow:* {workflow}  •  *Branch:* `{ref_name}`{attempt_part}\n"
@@ -279,29 +328,16 @@ def build_message(repo, ref_name, workflow, run_id, run_attempt,
     )
 
     pr_line = ""
-    if pr_number is not None and pr_url is not None and pr_title is not None:
-        pr_line = f"\n*PR:* <{pr_url}|#{pr_number} {pr_title}>"
+    if pr_info.number is not None and pr_info.url is not None and pr_info.title is not None:
+        pr_line = f"\n*PR:* <{pr_info.url}|#{pr_info.number} {pr_info.title}>"
 
     header += pr_line + f"\n*Failed Jobs:* {failed}"
 
     flakiness_block = ""
-    if include_flakiness and consecutive_failures >= 2:
+    if opts.include_flakiness and consecutive_failures >= 2:
         flakiness_block = f"\n\n:rotating_light: *Flaky:* This workflow has failed {consecutive_failures} consecutive times on this branch"
 
-    extra_block = ""
-    if root_cause is not None:
-        extra_block += f"\n\n:microscope: *Root Cause:* {root_cause}"
-    if include_test_counts and test_counts is not None:
-        total_run, total_failures, total_errors = test_counts
-        parts = []
-        if total_failures:
-            parts.append(f"{total_failures} failure{'s' if total_failures != 1 else ''}")
-        if total_errors:
-            parts.append(f"{total_errors} error{'s' if total_errors != 1 else ''}")
-        extra_block += f"\n:test_tube: *Test Failures:* {', '.join(parts)} (across {total_run} tests)"
-    if develocity_url is not None:
-        extra_block += f"\n:bar_chart: *Build Scan:* <{develocity_url}|View Develocity Scan>"
-
+    extra_block = _build_extra_block(build_info, opts)
     footer = f"\n\n<{run_url}|:mag: View Run & Re-run Failed Jobs>"
 
     return header + flakiness_block + extra_block + footer
@@ -333,11 +369,14 @@ def main():
 
     include_root_cause = is_enabled("INCLUDE_ROOT_CAUSE")
     include_develocity = is_enabled("INCLUDE_DEVELOCITY")
-    include_run_attempt = is_enabled("INCLUDE_RUN_ATTEMPT")
     include_pr_info = is_enabled("INCLUDE_PR_INFO")
-    include_failed_step = is_enabled("INCLUDE_FAILED_STEP")
-    include_test_counts = is_enabled("INCLUDE_TEST_COUNTS")
     include_flakiness = is_enabled("INCLUDE_FLAKINESS")
+    opts = NotificationOptions(
+        include_run_attempt=is_enabled("INCLUDE_RUN_ATTEMPT"),
+        include_failed_step=is_enabled("INCLUDE_FAILED_STEP"),
+        include_flakiness=include_flakiness,
+        include_test_counts=is_enabled("INCLUDE_TEST_COUNTS"),
+    )
 
     failed_job_names = parse_failed_jobs(needs_json)
 
@@ -345,9 +384,11 @@ def main():
     if token and run_id and (include_pr_info or include_flakiness):
         run_info = get_run_info(token, repository, run_id)
 
-    pr_number = run_info.get("pr_number") if include_pr_info else None
-    pr_title = run_info.get("pr_title") if include_pr_info else None
-    pr_url = run_info.get("pr_url") if include_pr_info else None
+    pr_info = PRInfo(
+        number=run_info.get("pr_number") if include_pr_info else None,
+        title=run_info.get("pr_title") if include_pr_info else None,
+        url=run_info.get("pr_url") if include_pr_info else None,
+    )
     workflow_id = run_info.get("workflow_id")
 
     logs, job_urls, failed_steps = {}, {}, {}
@@ -358,9 +399,11 @@ def main():
     if include_flakiness and token and workflow_id and ref_name:
         consecutive_failures = get_consecutive_failures(token, repository, workflow_id, ref_name, run_id)
 
-    root_cause = extract_root_cause(logs) if include_root_cause else None
-    test_counts = extract_test_counts(logs) if include_test_counts else None
-    develocity_url = extract_develocity_url(logs) if include_develocity else None
+    build_info = BuildInfo(
+        root_cause=extract_root_cause(logs) if include_root_cause else None,
+        test_counts=extract_test_counts(logs) if opts.include_test_counts else None,
+        develocity_url=extract_develocity_url(logs) if include_develocity else None,
+    )
 
     message = build_message(
         repo=repository,
@@ -373,17 +416,10 @@ def main():
         failed_job_names=failed_job_names,
         job_urls=job_urls,
         failed_steps=failed_steps,
-        pr_number=pr_number,
-        pr_title=pr_title,
-        pr_url=pr_url,
+        pr_info=pr_info,
         consecutive_failures=consecutive_failures,
-        root_cause=root_cause,
-        test_counts=test_counts,
-        develocity_url=develocity_url,
-        include_run_attempt=include_run_attempt,
-        include_failed_step=include_failed_step,
-        include_flakiness=include_flakiness,
-        include_test_counts=include_test_counts,
+        build_info=build_info,
+        opts=opts,
     )
 
     eprint("Built failure message successfully.")
