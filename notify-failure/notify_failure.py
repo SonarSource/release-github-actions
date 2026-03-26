@@ -12,8 +12,8 @@ import re
 import requests
 import secrets
 import sys
-from dataclasses import dataclass
-from typing import Optional, Tuple
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Tuple
 
 
 def eprint(*args, **kwargs):
@@ -48,17 +48,9 @@ class BuildInfo:
 
 @dataclass
 class JobsInfo:
-    failed_job_names: list = None
-    job_urls: dict = None
-    failed_steps: dict = None
-
-    def __post_init__(self):
-        if self.failed_job_names is None:
-            self.failed_job_names = []
-        if self.job_urls is None:
-            self.job_urls = {}
-        if self.failed_steps is None:
-            self.failed_steps = {}
+    failed_job_names: List[str] = field(default_factory=list)
+    job_urls: Dict[str, str] = field(default_factory=dict)
+    failed_steps: Dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
