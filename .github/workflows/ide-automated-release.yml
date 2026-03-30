@@ -39,6 +39,11 @@ on:
         required: false
         type: string
         default: 'N/A'
+      slack-channel:
+        description: "Slack channel to notify about the release"
+        required: false
+        type: string
+        default: 'squad-ide-slcore-bots'
 
     outputs:
       new-version:
@@ -49,9 +54,21 @@ on:
         value: ${{ jobs.prepare-release.outputs.release-version }}
 
 jobs:
+  freeze-branch:
+    runs-on: github-ubuntu-latest-s
+    permissions:
+      id-token: write
+    steps:
+      - uses: SonarSource/release-github-actions/lock-branch@v1
+        with:
+          branch: ${{ inputs.branch }}
+          freeze: true
+          slack-channel: ${{ inputs.slack-channel }}
+
   prepare-release:
     name: Prepare release
     runs-on: github-ubuntu-latest-s
+    needs: freeze-branch
     permissions:
       statuses: read
       contents: read
@@ -90,7 +107,7 @@ jobs:
   create-release-ticket:
     name: Create release ticket
     runs-on: github-ubuntu-latest-s
-    needs: prepare-release
+    needs: [freeze-branch, prepare-release]
     permissions:
       statuses: read
       contents: read
@@ -114,7 +131,7 @@ jobs:
   publish-github-release:
     name: Publish github release
     runs-on: github-ubuntu-latest-s
-    needs: [ prepare-release, create-release-ticket ]
+    needs: [ freeze-branch, prepare-release, create-release-ticket ]
     permissions:
       id-token: write
       contents: write
@@ -134,7 +151,7 @@ jobs:
   release-in-jira:
     name: Release in Jira
     runs-on: github-ubuntu-latest-s
-    needs: [ prepare-release, publish-github-release, create-release-ticket ]
+    needs: [ freeze-branch, prepare-release, publish-github-release, create-release-ticket ]
     permissions:
       statuses: read
       contents: read
@@ -160,18 +177,34 @@ jobs:
           status: "Technical Release Done"
           assignee: ${{ inputs.pm-email }} # TODO take it from vault
 
+  unfreeze-branch:
+    needs: [ freeze-branch, prepare-release, publish-github-release, create-release-ticket, release-in-jira ]
+    # keep branch frozen if the release failed, we need to fix something before allowing merges. 
+    # the branch can be unfrozen manually with breakglass if needed.
+    # if: always()
+    runs-on: github-ubuntu-latest-s
+    permissions:
+      id-token: write
+    steps:
+      - uses: SonarSource/release-github-actions/lock-branch@v1
+        with:
+          branch: ${{ inputs.branch }}
+          freeze: false
+          slack-channel: ${{ inputs.slack-channel }}
+
   summarize_release:
     name: Release
     runs-on: github-ubuntu-latest-s
     if: always()
-    needs: [ prepare-release, publish-github-release, create-release-ticket, release-in-jira ]
+    needs: [ freeze-branch, prepare-release, publish-github-release, create-release-ticket, release-in-jira, unfreeze-branch ]
     steps:
       - name: Post Summary to Workflow
         run: |
           ALL_SUCCESS=$([[ "${{ needs.prepare-release.result }}" == "success" && \
                           "${{ needs.publish-github-release.result }}" == "success" && \
                           "${{ needs.create-release-ticket.result }}" == "success" && \
-                          "${{ needs.release-in-jira.result }}" == "success" ]] && echo "true" || echo "false")
+                          "${{ needs.release-in-jira.result }}" == "success" && \
+                          "${{ needs.unfreeze-branch.result }}" == "success" ]] && echo "true" || echo "false")
           
           if [[ "$ALL_SUCCESS" == "true" ]]; then
             echo "### 🎉🚀 Congratulations! Release Successful! 🚀🎉" >> $GITHUB_STEP_SUMMARY
