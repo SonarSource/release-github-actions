@@ -396,6 +396,7 @@ jobs:
     name: Create Release Ticket
     runs-on: ${{ inputs.runner-environment }}
     needs: prepare-release
+    if: ${{ !cancelled() && needs.prepare-release.result == 'success' }}
     permissions:
       statuses: read
       contents: read
@@ -438,6 +439,7 @@ jobs:
     name: Publish Github Release
     runs-on: ${{ inputs.runner-environment }}
     needs: [ prepare-release, create-release-ticket ]
+    if: ${{ !cancelled() && needs.prepare-release.result == 'success' && needs.create-release-ticket.result == 'success' }}
     permissions:
       id-token: write
       contents: write
@@ -504,6 +506,11 @@ jobs:
     name: Release Version In Jira
     runs-on: ${{ inputs.runner-environment }}
     needs: [ prepare-release, publish-github-release, create-release-ticket ]
+    if: |
+      !cancelled() && 
+      needs.prepare-release.result == 'success' &&
+      needs.publish-github-release.result == 'success' &&
+      needs.create-release-ticket.result == 'success'
     permissions:
       statuses: read
       contents: read
@@ -549,7 +556,7 @@ jobs:
   bump-version:
     name: Bump Version
     needs: [ release-in-jira ]
-    if: ${{ inputs.bump-version }}
+    if: ${{ inputs.bump-version && !cancelled() && needs.release-in-jira.result == 'success' }}
     runs-on: ${{ inputs.runner-environment }}
     permissions:
       id-token: write
@@ -589,7 +596,12 @@ jobs:
   create-integration-tickets:
     name: Create Integration Tickets
     needs: [ prepare-release, publish-github-release, create-release-ticket ]
-    if: ${{ inputs.create-slvs-ticket || inputs.create-slvscode-ticket || inputs.create-sle-ticket || inputs.create-sli-ticket || inputs.create-cli-ticket || inputs.sqc-integration || inputs.sqs-integration }}
+    if: |
+      (inputs.create-slvs-ticket || inputs.create-slvscode-ticket || inputs.create-sle-ticket || inputs.create-sli-ticket || inputs.create-cli-ticket || inputs.sqc-integration || inputs.sqs-integration) && 
+      !cancelled() && 
+      needs.prepare-release.result == 'success' &&
+      needs.publish-github-release.result == 'success' &&
+      needs.create-release-ticket.result == 'success'
     permissions:
       statuses: read
       contents: read
@@ -714,7 +726,11 @@ jobs:
     name: Update Analyzers in SQS and SQC
     runs-on: ${{ inputs.runner-environment }}
     needs: [ prepare-release, create-integration-tickets ]
-    if: ${{ (inputs.sqs-integration || inputs.sqc-integration) }}
+    if: |
+      (inputs.sqs-integration || inputs.sqc-integration) &&
+      !cancelled() && 
+      needs.prepare-release.result == 'success' &&
+      needs.create-integration-tickets.result == 'success'
     permissions:
       id-token: write
     outputs:
