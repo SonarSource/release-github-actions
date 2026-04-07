@@ -475,7 +475,7 @@ jobs:
   # This job unfreezes the specified branch after the GitHub release is published.
   unfreeze-branch:
     name: Unfreeze ${{ inputs.branch }} branch
-    if: ${{ inputs.freeze-branch }}
+    if: ${{ always() && inputs.freeze-branch }}
     runs-on: ${{ inputs.runner-environment }}
     needs: [ publish-github-release ]
     permissions:
