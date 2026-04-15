@@ -19,7 +19,7 @@ on:
         description: "Product manager email to assign the REL ticket after release is done, defaults to IDE XP PM"
         required: false
         type: string
-        default: "alexander.rage@sonarsource.com"
+        default: "farah.bouassida@sonarsource.com"
       short-description:
         description: "A brief summary of what the release contains"
         required: true
