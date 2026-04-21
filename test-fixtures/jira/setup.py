@@ -11,10 +11,19 @@ Usage:
 
 import argparse
 import json
+import os
 import sys
 
 from jira_client import get_jira_instance, eprint
 from config import VERSION_PREFIX, ISSUE_TYPES
+
+STATE_FILE = "/tmp/jira-fixtures.json"
+
+
+def write_state(state):
+    """Writes the current state to STATE_FILE so cleanup can run even on partial failure."""
+    with open(STATE_FILE, "w") as f:
+        json.dump(state, f)
 
 
 def create_test_version(jira, project_key, run_id):
@@ -52,13 +61,14 @@ def main():
     jira = get_jira_instance(args.jira_url)
 
     version = create_test_version(jira, args.project_key, args.run_id)
+
+    # Write partial state immediately so cleanup can delete the version even if issue creation fails.
+    write_state({"version_id": version.id, "version_name": version.name, "issue_keys": []})
+
     issues = create_test_issues(jira, args.project_key, version, args.run_id)
 
-    state = {
-        "version_id": version.id,
-        "version_name": version.name,
-        "issue_keys": [issue.key for issue in issues],
-    }
+    state = {"version_id": version.id, "version_name": version.name, "issue_keys": [issue.key for issue in issues]}
+    write_state(state)
 
     print(json.dumps(state))
 

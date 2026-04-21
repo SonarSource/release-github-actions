@@ -42,8 +42,8 @@ jobs:
   integration-test:
     name: Integration Test (Jira Sandbox)
     # Requires 'Jira Tech User GitHub' to be Administrator on SONARIAC in the sandbox.
-    # Only runs on workflow_dispatch and branch-* pushes until that is configured.
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+    # Until that is configured, this job may fail with a permission error.
+    continue-on-error: true
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -54,7 +54,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Get Jira Credentials from Vault
-        uses: SonarSource/vault-action-wrapper@v3
+        uses: SonarSource/vault-action-wrapper@c154b4a417b51cb98dd71137f49bf20e77c56820 # v3.4.0
         id: secrets
         with:
           secrets: |
@@ -76,14 +76,14 @@ jobs:
           JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
         run: |
           set -euo pipefail
-          STATE=$(python test-fixtures/jira/setup.py \
+          python test-fixtures/jira/setup.py \
             --project-key SONARIAC \
             --run-id "${{ github.run_id }}" \
-            --jira-url "https://sonarsource-sandbox-608.atlassian.net/")
-          echo "$STATE" > /tmp/jira-fixtures.json
+            --jira-url "https://sonarsource-sandbox-608.atlassian.net/"
           echo "Fixture state:"
           cat /tmp/jira-fixtures.json | jq .
 
+          STATE=$(cat /tmp/jira-fixtures.json)
           echo "version_name=$(echo "$STATE" | jq -r .version_name)" >> "$GITHUB_OUTPUT"
           echo "version_id=$(echo "$STATE" | jq -r .version_id)" >> "$GITHUB_OUTPUT"
           echo "issue_keys=$(echo "$STATE" | jq -r '.issue_keys | join(",")')" >> "$GITHUB_OUTPUT"

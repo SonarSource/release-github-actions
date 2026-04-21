@@ -10,7 +10,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from setup import create_test_version, create_test_issues, main
+from setup import create_test_version, create_test_issues, main, write_state
 from config import ISSUE_TYPES
 
 
@@ -97,6 +97,7 @@ class TestCreateTestIssues(unittest.TestCase):
 class TestMain(unittest.TestCase):
     """Tests for the main function."""
 
+    @patch('setup.write_state')
     @patch('setup.get_jira_instance')
     @patch('sys.stdout', new_callable=StringIO)
     @patch('sys.argv', [
@@ -105,7 +106,7 @@ class TestMain(unittest.TestCase):
         '--run-id', '42',
         '--jira-url', 'https://sandbox.atlassian.net/'
     ])
-    def test_main_outputs_json(self, mock_stdout, mock_get_jira):
+    def test_main_outputs_json(self, mock_stdout, mock_get_jira, mock_write_state):
         """Main should print valid JSON with version_id, version_name, issue_keys."""
         mock_jira = Mock()
         mock_version = Mock()
@@ -131,6 +132,44 @@ class TestMain(unittest.TestCase):
         for key in output['issue_keys']:
             self.assertTrue(key.startswith('SONARIAC-'))
 
+    @patch('setup.write_state')
+    @patch('setup.get_jira_instance')
+    @patch('sys.stdout', new_callable=StringIO)
+    @patch('sys.argv', [
+        'setup.py',
+        '--project-key', 'SONARIAC',
+        '--run-id', '42',
+        '--jira-url', 'https://sandbox.atlassian.net/'
+    ])
+    def test_main_writes_partial_state_before_issues(self, mock_stdout, mock_get_jira, mock_write_state):
+        """Main should write partial state (version only) before creating issues."""
+        mock_jira = Mock()
+        mock_version = Mock()
+        mock_version.id = '12345'
+        mock_version.name = '99.42'
+        mock_jira.create_version.return_value = mock_version
+
+        mock_issues = []
+        for i in range(len(ISSUE_TYPES)):
+            mock_issue = Mock()
+            mock_issue.key = f'SONARIAC-{100 + i}'
+            mock_issues.append(mock_issue)
+        mock_jira.create_issue.side_effect = mock_issues
+
+        mock_get_jira.return_value = mock_jira
+
+        main()
+
+        # First write_state call should contain the version but empty issue_keys
+        first_call_state = mock_write_state.call_args_list[0][0][0]
+        self.assertEqual(first_call_state['version_id'], '12345')
+        self.assertEqual(first_call_state['issue_keys'], [])
+
+        # Second write_state call should contain the full state
+        second_call_state = mock_write_state.call_args_list[1][0][0]
+        self.assertEqual(len(second_call_state['issue_keys']), len(ISSUE_TYPES))
+
+    @patch('setup.write_state')
     @patch('setup.get_jira_instance')
     @patch('sys.stdout', new_callable=StringIO)
     @patch('sys.argv', [
@@ -139,7 +178,7 @@ class TestMain(unittest.TestCase):
         '--run-id', '999',
         '--jira-url', 'https://sandbox.atlassian.net/'
     ])
-    def test_main_uses_provided_project_key(self, mock_stdout, mock_get_jira):
+    def test_main_uses_provided_project_key(self, mock_stdout, mock_get_jira, mock_write_state):
         """Main should use the project key from arguments."""
         mock_jira = Mock()
         mock_version = Mock()
