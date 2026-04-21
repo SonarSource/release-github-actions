@@ -181,6 +181,24 @@ class TestMain(unittest.TestCase):
         # Should not raise
         main()
 
+    @patch('cleanup.get_jira_instance')
+    @patch('sys.argv', [
+        'cleanup.py',
+        '--jira-url', 'https://sandbox.atlassian.net/',
+        '--state-file', '/nonexistent/path/state.json'
+    ])
+    def test_main_handles_missing_state_file(self, mock_get_jira):
+        """Main should not crash when state file does not exist."""
+        mock_jira = Mock()
+        mock_get_jira.return_value = mock_jira
+
+        # Should not raise — logs warning and continues
+        main()
+
+        # No issues or versions to delete
+        mock_jira.issue.assert_not_called()
+        mock_jira.version.assert_not_called()
+
 
 if __name__ == '__main__':
     unittest.main()

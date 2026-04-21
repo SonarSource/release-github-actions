@@ -57,10 +57,15 @@ def main():
     issue_keys = [k for k in args.issue_keys.split(',') if k] if args.issue_keys else []
 
     if args.state_file:
-        with open(args.state_file) as f:
-            state = json.load(f)
-        version_id = state.get('version_id', version_id)
-        issue_keys = state.get('issue_keys', issue_keys)
+        try:
+            with open(args.state_file) as f:
+                state = json.load(f)
+            version_id = state.get('version_id', version_id)
+            issue_keys = state.get('issue_keys', issue_keys)
+        except FileNotFoundError:
+            eprint(f"Warning: State file {args.state_file} not found. Nothing to clean up from state.")
+        except json.JSONDecodeError:
+            eprint(f"Warning: State file {args.state_file} is not valid JSON. Nothing to clean up from state.")
 
     if issue_keys:
         delete_issues(jira, issue_keys)
