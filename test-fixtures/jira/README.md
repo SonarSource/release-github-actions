@@ -70,12 +70,12 @@ python cleanup.py \
     JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
     JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
   run: |
-    STATE=$(python test-fixtures/jira/setup.py \
+    python test-fixtures/jira/setup.py \
       --project-key SONARIAC \
       --run-id "${{ github.run_id }}" \
-      --jira-url "https://sonarsource-sandbox-608.atlassian.net/")
-    echo "$STATE" > /tmp/jira-fixtures.json
-    echo "version_name=$(echo "$STATE" | jq -r .version_name)" >> "$GITHUB_OUTPUT"
+      --jira-url "https://sonarsource-sandbox-608.atlassian.net/"
+    VERSION_NAME=$(jq -r .version_name /tmp/jira-fixtures.json)
+    echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
 
 # ... run your integration tests here ...
 

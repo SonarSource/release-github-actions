@@ -90,18 +90,23 @@ jobs:
           echo "issue_keys=$(echo "$STATE" | jq -r '.issue_keys | join(",")')" >> "$GITHUB_OUTPUT"
 
       - name: Verify version was created
+        env:
+          VERSION_NAME: ${{ steps.setup.outputs.version_name }}
+          VERSION_ID: ${{ steps.setup.outputs.version_id }}
         run: |
-          echo "Version name: ${{ steps.setup.outputs.version_name }}"
-          echo "Version ID: ${{ steps.setup.outputs.version_id }}"
-          if [[ -z "${{ steps.setup.outputs.version_id }}" ]]; then
+          echo "Version name: $VERSION_NAME"
+          echo "Version ID: $VERSION_ID"
+          if [[ -z "$VERSION_ID" ]]; then
             echo "❌ Version ID is empty"
             exit 1
           fi
           echo "✅ Version created successfully"
 
       - name: Verify issues were created
+        env:
+          ISSUE_KEYS: ${{ steps.setup.outputs.issue_keys }}
         run: |
-          IFS=',' read -ra KEYS <<< "${{ steps.setup.outputs.issue_keys }}"
+          IFS=',' read -ra KEYS <<< "$ISSUE_KEYS"
           if [[ ${#KEYS[@]} -ne 3 ]]; then
             echo "❌ Expected 3 issues, got ${#KEYS[@]}"
             exit 1
@@ -109,7 +114,7 @@ jobs:
           echo "✅ Created 3 issues: ${KEYS[*]}"
 
       - name: Clean up test fixtures
-        if: always()
+        if: always() && steps.secrets.conclusion == 'success'
         env:
           JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
           JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}

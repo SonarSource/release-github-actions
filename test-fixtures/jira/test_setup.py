@@ -66,6 +66,25 @@ class TestCreateTestIssues(unittest.TestCase):
         self.assertEqual(len(result), len(ISSUE_TYPES))
         self.assertEqual(mock_jira.create_issue.call_count, len(ISSUE_TYPES))
 
+    def test_calls_on_issue_created_after_each_issue(self):
+        """Should invoke the callback after each successful issue creation."""
+        mock_jira = Mock()
+        mock_issues = []
+        for i in range(len(ISSUE_TYPES)):
+            mock_issue = Mock()
+            mock_issue.key = f'SONARIAC-{100 + i}'
+            mock_issues.append(mock_issue)
+        mock_jira.create_issue.side_effect = mock_issues
+
+        mock_version = Mock()
+        mock_version.name = '99.42'
+
+        callback_issues = []
+        create_test_issues(mock_jira, 'SONARIAC', mock_version, '42',
+                           on_issue_created=lambda issue: callback_issues.append(issue.key))
+
+        self.assertEqual(len(callback_issues), len(ISSUE_TYPES))
+
         # Verify each issue was created with correct fields
         for i, issue_type in enumerate(ISSUE_TYPES):
             call_args = mock_jira.create_issue.call_args_list[i]
@@ -142,7 +161,7 @@ class TestMain(unittest.TestCase):
         '--jira-url', 'https://sandbox.atlassian.net/'
     ])
     def test_main_writes_partial_state_before_issues(self, mock_stdout, mock_get_jira, mock_write_state):
-        """Main should write partial state (version only) before creating issues."""
+        """Main should write state incrementally: once with empty keys, then after each issue."""
         mock_jira = Mock()
         mock_version = Mock()
         mock_version.id = '12345'
@@ -158,16 +177,18 @@ class TestMain(unittest.TestCase):
 
         mock_get_jira.return_value = mock_jira
 
+        # Capture each call's state snapshot (the dict is mutated in-place)
+        snapshots = []
+        mock_write_state.side_effect = lambda s: snapshots.append(list(s['issue_keys']))
+
         main()
 
-        # First write_state call should contain the version but empty issue_keys
-        first_call_state = mock_write_state.call_args_list[0][0][0]
-        self.assertEqual(first_call_state['version_id'], '12345')
-        self.assertEqual(first_call_state['issue_keys'], [])
+        # First write: version created, no issues yet
+        self.assertEqual(snapshots[0], [])
 
-        # Second write_state call should contain the full state
-        second_call_state = mock_write_state.call_args_list[1][0][0]
-        self.assertEqual(len(second_call_state['issue_keys']), len(ISSUE_TYPES))
+        # Subsequent writes: one issue added per call
+        for i in range(1, len(ISSUE_TYPES) + 1):
+            self.assertEqual(len(snapshots[i]), i)
 
     @patch('setup.write_state')
     @patch('setup.get_jira_instance')

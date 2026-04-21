@@ -35,7 +35,7 @@ def create_test_version(jira, project_key, run_id):
     return version
 
 
-def create_test_issues(jira, project_key, version, run_id):
+def create_test_issues(jira, project_key, version, run_id, on_issue_created=None):
     """Creates one test issue per issue type, linked to the version via fixVersion."""
     issues = []
     for issue_type in ISSUE_TYPES:
@@ -48,6 +48,8 @@ def create_test_issues(jira, project_key, version, run_id):
         issue = jira.create_issue(fields=fields)
         eprint(f"Created {issue_type} issue: {issue.key}")
         issues.append(issue)
+        if on_issue_created:
+            on_issue_created(issue)
     return issues
 
 
@@ -63,12 +65,14 @@ def main():
     version = create_test_version(jira, args.project_key, args.run_id)
 
     # Write partial state immediately so cleanup can delete the version even if issue creation fails.
-    write_state({"version_id": version.id, "version_name": version.name, "issue_keys": []})
-
-    issues = create_test_issues(jira, args.project_key, version, args.run_id)
-
-    state = {"version_id": version.id, "version_name": version.name, "issue_keys": [issue.key for issue in issues]}
+    state = {"version_id": version.id, "version_name": version.name, "issue_keys": []}
     write_state(state)
+
+    def on_issue_created(issue):
+        state["issue_keys"].append(issue.key)
+        write_state(state)
+
+    issues = create_test_issues(jira, args.project_key, version, args.run_id, on_issue_created)
 
     print(json.dumps(state))
 
