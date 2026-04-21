@@ -9,7 +9,7 @@ on:
   push:
     branches:
       - master
-      - branch-*
+      - v*
     paths:
       - 'test-fixtures/jira/**'
       - '.github/workflows/test-jira-fixtures.yml'
