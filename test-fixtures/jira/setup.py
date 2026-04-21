@@ -72,7 +72,7 @@ def main():
         state["issue_keys"].append(issue.key)
         write_state(state)
 
-    issues = create_test_issues(jira, args.project_key, version, args.run_id, on_issue_created)
+    create_test_issues(jira, args.project_key, version, args.run_id, on_issue_created)
 
     print(json.dumps(state))
 
