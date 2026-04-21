@@ -42,8 +42,8 @@ jobs:
   integration-test:
     name: Integration Test (Jira Sandbox)
     # Requires 'Jira Tech User GitHub' to be Administrator on SONARIAC in the sandbox.
-    # Until that is configured, this job may fail with a permission error.
-    continue-on-error: true
+    # Only runs on workflow_dispatch and branch-* pushes until that is configured.
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
