@@ -41,7 +41,7 @@ jobs:
 
   integration-test:
     name: Integration Test (Jira Sandbox)
-    # Requires 'Jira Tech User GitHub' to be Administrator on SONARIAC in the sandbox.
+    # Requires 'Jira Tech User GitHub' to have permission to create versions in GHA in the sandbox.
     # Until that is configured, this job may fail with a permission error.
     continue-on-error: true
     runs-on: ubuntu-latest
@@ -77,7 +77,7 @@ jobs:
         run: |
           set -euo pipefail
           python test-fixtures/jira/setup.py \
-            --project-key SONARIAC \
+            --project-key GHA \
             --run-id "${{ github.run_id }}" \
             --jira-url "https://sonarsource-sandbox-608.atlassian.net/"
           echo "Fixture state:"
