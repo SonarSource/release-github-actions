@@ -8,6 +8,7 @@ on:
       - '.github/workflows/test-jira-fixtures.yml'
   push:
     branches:
+      - master
       - branch-*
     paths:
       - 'test-fixtures/jira/**'
