@@ -2,11 +2,12 @@
 """Unit tests for setup.py"""
 
 import json
-import unittest
-from unittest.mock import Mock, patch, call
-from io import StringIO
 import os
 import sys
+import tempfile
+import unittest
+from io import StringIO
+from unittest.mock import Mock, patch, call
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -179,7 +180,7 @@ class TestMain(unittest.TestCase):
 
         # Capture each call's state snapshot (the dict is mutated in-place)
         snapshots = []
-        mock_write_state.side_effect = lambda s: snapshots.append(list(s['issue_keys']))
+        mock_write_state.side_effect = lambda s, _f: snapshots.append(list(s['issue_keys']))
 
         main()
 
@@ -218,6 +219,53 @@ class TestMain(unittest.TestCase):
         mock_jira.create_version.assert_called_once_with(
             name='99.999', project='TESTPROJ'
         )
+
+
+    @patch('setup.write_state')
+    @patch('setup.get_jira_instance')
+    @patch('sys.stdout', new_callable=StringIO)
+    def test_main_uses_custom_state_file(self, mock_stdout, mock_get_jira, mock_write_state):
+        """Main should pass --state-file path to write_state."""
+        mock_jira = Mock()
+        mock_version = Mock()
+        mock_version.id = '12345'
+        mock_version.name = '99.42'
+        mock_jira.create_version.return_value = mock_version
+        mock_issue = Mock()
+        mock_issue.key = 'SONARIAC-100'
+        mock_jira.create_issue.return_value = mock_issue
+        mock_get_jira.return_value = mock_jira
+
+        custom_path = '/tmp/custom-state.json'
+        with patch('sys.argv', [
+            'setup.py',
+            '--project-key', 'SONARIAC',
+            '--run-id', '42',
+            '--jira-url', 'https://sandbox.atlassian.net/',
+            '--state-file', custom_path,
+        ]):
+            main()
+
+        for call_args in mock_write_state.call_args_list:
+            self.assertEqual(call_args[0][1], custom_path)
+
+
+class TestWriteState(unittest.TestCase):
+    """Tests for write_state."""
+
+    def test_writes_state_to_file(self):
+        """write_state should serialize state as JSON to the given path."""
+        state = {"version_id": "123", "version_name": "99.42", "issue_keys": ["PROJ-1"]}
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            state_file = f.name
+        self.addCleanup(os.remove, state_file)
+
+        write_state(state, state_file)
+
+        with open(state_file) as f:
+            loaded = json.load(f)
+        self.assertEqual(loaded, state)
 
 
 if __name__ == '__main__':

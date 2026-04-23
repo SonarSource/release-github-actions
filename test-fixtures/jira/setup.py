@@ -17,12 +17,12 @@ import sys
 from jira_client import get_jira_instance, eprint
 from config import VERSION_PREFIX, ISSUE_TYPES
 
-STATE_FILE = "/tmp/jira-fixtures.json"
+STATE_FILE_DEFAULT = "/tmp/jira-fixtures.json"
 
 
-def write_state(state):
-    """Writes the current state to STATE_FILE so cleanup can run even on partial failure."""
-    with open(STATE_FILE, "w") as f:
+def write_state(state, state_file):
+    """Writes the current state to state_file so cleanup can run even on partial failure."""
+    with open(state_file, "w") as f:
         json.dump(state, f)
 
 
@@ -58,6 +58,7 @@ def main():
     parser.add_argument("--project-key", required=True, help="Jira project key (e.g., SONARIAC).")
     parser.add_argument("--run-id", required=True, help="Unique run identifier for naming.")
     parser.add_argument("--jira-url", required=True, help="URL of the Jira instance.")
+    parser.add_argument("--state-file", default=STATE_FILE_DEFAULT, help="Path to write state JSON for cleanup.")
     args = parser.parse_args()
 
     jira = get_jira_instance(args.jira_url)
@@ -66,11 +67,11 @@ def main():
 
     # Write partial state immediately so cleanup can delete the version even if issue creation fails.
     state = {"version_id": version.id, "version_name": version.name, "issue_keys": []}
-    write_state(state)
+    write_state(state, args.state_file)
 
     def on_issue_created(issue):
         state["issue_keys"].append(issue.key)
-        write_state(state)
+        write_state(state, args.state_file)
 
     create_test_issues(jira, args.project_key, version, args.run_id, on_issue_created)
 

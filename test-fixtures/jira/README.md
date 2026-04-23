@@ -74,20 +74,23 @@ python cleanup.py \
       --project-key SONARIAC \
       --run-id "${{ github.run_id }}" \
       --jira-url "https://sonarsource-sandbox-608.atlassian.net/"
-    VERSION_NAME=$(jq -r .version_name /tmp/jira-fixtures.json)
-    echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+    echo "version_name=$(jq -r .version_name /tmp/jira-fixtures.json)" >> "$GITHUB_OUTPUT"
 
 # ... run your integration tests here ...
 
 - name: Clean up Jira test fixtures
-  if: always()
+  if: always() && steps.secrets.conclusion == 'success'
   env:
     JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
     JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
   run: |
-    python test-fixtures/jira/cleanup.py \
-      --jira-url "https://sonarsource-sandbox-608.atlassian.net/" \
-      --state-file /tmp/jira-fixtures.json
+    if [ -f /tmp/jira-fixtures.json ]; then
+      python test-fixtures/jira/cleanup.py \
+        --jira-url "https://sonarsource-sandbox-608.atlassian.net/" \
+        --state-file /tmp/jira-fixtures.json
+    else
+      echo "State file not found — setup failed before writing fixtures, nothing to clean up."
+    fi
 ```
 
 ## Running Tests Locally

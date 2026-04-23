@@ -18,7 +18,7 @@ on:
 jobs:
   unit-tests:
     name: Run Unit Tests
-    runs-on: ubuntu-latest
+    runs-on: github-ubuntu-latest-s
 
     steps:
       - name: Checkout code
@@ -38,14 +38,21 @@ jobs:
       - name: Run unit tests
         run: |
           cd test-fixtures/jira
-          python -m pytest test_jira_client.py test_setup.py test_cleanup.py -v --cov=jira_client --cov=setup --cov=cleanup --cov-report=term-missing
+          python -m pytest test_jira_client.py test_setup.py test_cleanup.py -v --cov=jira_client --cov=setup --cov=cleanup --cov-report=term-missing --cov-report=xml:coverage.xml
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-report
+          path: test-fixtures/jira/coverage.xml
 
   integration-test:
     name: Integration Test (Jira Sandbox)
     # Requires 'Jira Tech User GitHub' to have permission to create versions in GHA in the sandbox.
     # Until that is configured, this job may fail with a permission error.
+    # TODO GHA-258: Remove continue-on-error once sandbox permissions are granted.
     continue-on-error: true
-    runs-on: ubuntu-latest
+    runs-on: github-ubuntu-latest-s
     permissions:
       contents: read
       id-token: write
