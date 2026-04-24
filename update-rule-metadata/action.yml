@@ -22,6 +22,9 @@ inputs:
       Branch of the rspec repository to be used.
       If not specified, the 'master' branch of the rspec repository will be used.
     default: master
+  jira-issue:
+    description: 'Jira issue key to link the PR to (e.g., SONARSPACE-12345).'
+    required: false
   labels:
     description: 'Labels to add to the PR'
   post-update:
@@ -230,7 +233,7 @@ runs:
       uses: SonarSource/release-github-actions/create-pull-request@v1
       with:
         commit-message: Update rule metadata
-        title: Update rule metadata
+        title: ${{ inputs.jira-issue != '' && format('{0} Update rule metadata', inputs.jira-issue) || 'Update rule metadata' }}
         body: |
           ## Rule Metadata Update Summary
 
