@@ -1,0 +1,135 @@
+name: Test Jira Fixtures
+
+on:
+  workflow_call:
+  pull_request:
+    paths:
+      - 'test-fixtures/jira/**'
+      - '.github/workflows/test-jira-fixtures.yml'
+  push:
+    branches:
+      - master
+      - v*
+    paths:
+      - 'test-fixtures/jira/**'
+      - '.github/workflows/test-jira-fixtures.yml'
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    name: Run Unit Tests
+    runs-on: github-ubuntu-latest-s
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          cd test-fixtures/jira
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Run unit tests
+        run: |
+          cd test-fixtures/jira
+          python -m pytest test_jira_client.py test_setup.py test_cleanup.py -v --cov=jira_client --cov=setup --cov=cleanup --cov-report=term-missing --cov-report=xml:coverage.xml
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-report
+          path: test-fixtures/jira/coverage.xml
+
+  integration-test:
+    name: Integration Test (Jira Sandbox)
+    # Requires 'Jira Tech User GitHub' to have permission to create versions in GHA in the sandbox.
+    # Until that is configured, this job may fail with a permission error.
+    # TODO GHA-258: Remove continue-on-error once sandbox permissions are granted.
+    continue-on-error: true
+    runs-on: github-ubuntu-latest-s
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Get Jira Credentials from Vault
+        uses: SonarSource/vault-action-wrapper@c154b4a417b51cb98dd71137f49bf20e77c56820 # v3.4.0
+        id: secrets
+        with:
+          secrets: |
+            development/kv/data/jira user | JIRA_USER;
+            development/kv/data/jira token | JIRA_TOKEN;
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r test-fixtures/jira/requirements.txt
+
+      - name: Create test fixtures
+        id: setup
+        env:
+          JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
+          JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
+        run: |
+          set -euo pipefail
+          python test-fixtures/jira/setup.py \
+            --project-key GHA \
+            --run-id "${{ github.run_id }}" \
+            --jira-url "https://sonarsource-sandbox-608.atlassian.net/"
+          echo "Fixture state:"
+          cat /tmp/jira-fixtures.json | jq .
+
+          STATE=$(cat /tmp/jira-fixtures.json)
+          echo "version_name=$(echo "$STATE" | jq -r .version_name)" >> "$GITHUB_OUTPUT"
+          echo "version_id=$(echo "$STATE" | jq -r .version_id)" >> "$GITHUB_OUTPUT"
+          echo "issue_keys=$(echo "$STATE" | jq -r '.issue_keys | join(",")')" >> "$GITHUB_OUTPUT"
+
+      - name: Verify version was created
+        env:
+          VERSION_NAME: ${{ steps.setup.outputs.version_name }}
+          VERSION_ID: ${{ steps.setup.outputs.version_id }}
+        run: |
+          echo "Version name: $VERSION_NAME"
+          echo "Version ID: $VERSION_ID"
+          if [[ -z "$VERSION_ID" ]]; then
+            echo "❌ Version ID is empty"
+            exit 1
+          fi
+          echo "✅ Version created successfully"
+
+      - name: Verify issues were created
+        env:
+          ISSUE_KEYS: ${{ steps.setup.outputs.issue_keys }}
+        run: |
+          IFS=',' read -ra KEYS <<< "$ISSUE_KEYS"
+          if [[ ${#KEYS[@]} -ne 3 ]]; then
+            echo "❌ Expected 3 issues, got ${#KEYS[@]}"
+            exit 1
+          fi
+          echo "✅ Created 3 issues: ${KEYS[*]}"
+
+      - name: Clean up test fixtures
+        if: always() && steps.secrets.conclusion == 'success'
+        env:
+          JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
+          JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
+        run: |
+          if [ -f /tmp/jira-fixtures.json ]; then
+            python test-fixtures/jira/cleanup.py \
+              --jira-url "https://sonarsource-sandbox-608.atlassian.net/" \
+              --state-file /tmp/jira-fixtures.json
+          else
+            echo "State file not found — setup failed before writing fixtures, nothing to clean up."
+          fi
