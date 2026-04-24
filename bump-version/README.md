@@ -35,6 +35,6 @@ This action updates the version in Maven and Gradle files across your repository
 ```
 
 ## How it works
-- If `tool` is set to `maven`, runs `mvn versions:set` to update the version.
+- If `tool` is set to `maven`, runs `mvn versions:set` to update the version. The calling repository must provide a `mise.toml` that specifies `maven` and a JDK — these are installed via `mise-action` before `mvn versions:set` runs.
 - Otherwise, updates all `pom.xml` and `gradle.properties` files to the new version, skipping modules listed in `excluded-modules`.
 - Commits changes and creates a pull request.

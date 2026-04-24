@@ -26,6 +26,20 @@ runs:
   steps:
   - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
+  - name: Check mise.toml exists
+    if: ${{ inputs.tool == 'maven' }}
+    shell: bash
+    run: |
+      if [[ ! -f mise.toml ]]; then
+        echo "ERROR: mise.toml not found — required when tool=maven"
+        exit 1
+      fi
+
+  - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+    if: ${{ inputs.tool == 'maven' }}
+    with:
+      version: 2026.3.13
+
   - name: Bump version
     shell: bash
     env:
