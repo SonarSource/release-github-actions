@@ -1,4 +1,4 @@
-name: IDE Experience Reusable Automated Release
+name: Development Experience Reusable Automated Release
 
 env:
   JIRA_PROJECT_KEY: ${{ inputs.jira-project-key }}
@@ -16,7 +16,7 @@ on:
         required: true
         type: string
       pm-email:
-        description: "Product manager email to assign the REL ticket after release is done, defaults to IDE XP PM"
+        description: "Product manager email to assign the REL ticket after release is done, defaults to DevEx PM"
         required: false
         type: string
         default: "farah.bouassida@sonarsource.com"
@@ -44,6 +44,10 @@ on:
         required: false
         type: string
         default: 'squad-ide-slcore-bots'
+      new-version:
+        description: "New Jira version to create after the release (e.g. 10.9). If not provided, the last version segment is auto-incremented."
+        required: false
+        type: string
 
     outputs:
       new-version:
@@ -169,13 +173,14 @@ jobs:
         uses: SonarSource/release-github-actions/create-jira-version@v1
         with:
           jira-version-name: ${{ needs.prepare-release.outputs.jira-version-name }}
+          jira-new-version-name: ${{ inputs.new-version }}
 
       - name: Move release ticket to Technical release Done
         uses: SonarSource/release-github-actions/update-release-ticket-status@v1
         with:
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           status: "Technical Release Done"
-          assignee: ${{ inputs.pm-email }} # TODO take it from vault
+          assignee: ${{ inputs.pm-email }}
 
   unfreeze-branch:
     needs: [ freeze-branch, prepare-release, publish-github-release, create-release-ticket, release-in-jira ]
