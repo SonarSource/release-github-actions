@@ -13,14 +13,14 @@ This action depends on:
 
 ## Inputs
 
-| Input           | Description                                                                                            | Required | Default   |
-|-----------------|--------------------------------------------------------------------------------------------------------|----------|-----------|
-| `project-name`  | The display name of the project; used in the Slack username.                                           | Yes      | -         |
-| `icon`          | Emoji icon for the Slack message (Slack emoji code).                                                   | No       | `:alert:` |
-| `slack-channel` | Slack channel (without `#`) to post the notification into.                                             | Yes      | -         |
-| `message`       | The Slack message to send (mrkdwn format). Required when not using the deprecated `jobs` input.        | No       | -         |
-| `color`         | Slack attachment color (`good`, `danger`, `warning`, or a hex code).                                   | No       | `danger`  |
-| `jobs`          | **Deprecated.** A GitHub needs-like object of jobs and results. When `message` is not set, a failed-jobs summary is built from this input. Build the message in the caller and pass it via `message` instead. | No | - |
+| Input           | Description                                                                                                                                                                                                   | Required | Default   |
+|-----------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|-----------|
+| `project-name`  | The display name of the project; used in the Slack username.                                                                                                                                                  | Yes      | -         |
+| `icon`          | Emoji icon for the Slack message (Slack emoji code).                                                                                                                                                          | No       | `:alert:` |
+| `slack-channel` | Slack channel name (without `#`) or channel ID (e.g. `C1234ABCDE`) to post the notification into.                                                                                                             | Yes      | -         |
+| `message`       | The Slack message to send (mrkdwn format). Required when not using the deprecated `jobs` input.                                                                                                               | No       | -         |
+| `color`         | Slack attachment color (`good`, `danger`, `warning`, or a hex code).                                                                                                                                          | No       | `danger`  |
+| `jobs`          | **Deprecated.** A GitHub needs-like object of jobs and results. When `message` is not set, a failed-jobs summary is built from this input. Build the message in the caller and pass it via `message` instead. | No       | -         |
 
 ## Outputs
 
@@ -98,5 +98,5 @@ The action is a composite action that:
 ## Notes
 
 - For failure notifications, use `if: failure()` on the step or job; otherwise it will also fire on success.
-- Do not prefix the channel with `#`.
+- Do not prefix the channel with `#`. Channel IDs (`C…`, `D…`, `G…`) are passed through as-is.
 - Message formatting uses mrkdwn (Slack's markdown dialect).

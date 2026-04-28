@@ -7,6 +7,7 @@ Sends a Slack notification with a custom message or a list of failed jobs.
 
 import argparse
 import os
+import re
 import sys
 
 import requests
@@ -24,8 +25,13 @@ def require_env_token(name):
     return token
 
 
+_CHANNEL_ID_RE = re.compile(r'^[CDG][A-Z0-9]{8,10}$')
+
+
 def normalize_channel(channel):
-    """Ensures channel name starts with '#'."""
+    """Ensures channel name starts with '#', but leaves channel IDs (e.g. C1234ABCDE) unchanged."""
+    if _CHANNEL_ID_RE.match(channel):
+        return channel
     if not channel.startswith('#'):
         return f'#{channel}'
     return channel
