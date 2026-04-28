@@ -41,6 +41,7 @@ This repository includes Claude Code skills for automating common tasks related 
 | Skill | Description |
 |-------|-------------|
 | [automated-release-setup](.claude/skills/automated-release-setup/) | Set up automated release workflow for SonarSource analyzer projects |
+| [devex-release-setup](.claude/skills/devex-release-setup/) | Set up automated release workflow for SonarSource Development Experience projects (SonarLint Core, SonarLint for IntelliJ, etc.) |
 
 ### Usage
 
@@ -54,6 +55,14 @@ Skills in `.claude/skills/` are automatically discovered by Claude Code when you
 
 Or use the slash command: `/automated-release-setup`
 
+For Development Experience projects (SonarLint Core, SonarLint for IntelliJ, etc.):
+
+- "Set up Development Experience release workflow"
+- "Add full-release workflow using ide-automated-release"
+- "Configure release automation for this DevEx project"
+
+Or use the slash command: `/devex-release-setup`
+
 #### In other repositories (manual installation)
 
 To use these skills in other repositories, you can either download them or symlink them.
@@ -62,11 +71,14 @@ To use these skills in other repositories, you can either download them or symli
 
 ```bash
 # Create the skills directory if it doesn't exist
-mkdir -p .claude/skills/automated-release-setup
+mkdir -p .claude/skills/automated-release-setup .claude/skills/devex-release-setup
 
-# Download the skill
+# Download the skills
 curl -o .claude/skills/automated-release-setup/SKILL.md \
   https://raw.githubusercontent.com/SonarSource/release-github-actions/master/.claude/skills/automated-release-setup/SKILL.md
+
+curl -o .claude/skills/devex-release-setup/SKILL.md \
+  https://raw.githubusercontent.com/SonarSource/release-github-actions/master/.claude/skills/devex-release-setup/SKILL.md
 ```
 
 **Option 2: Clone and Symlink**
@@ -77,12 +89,14 @@ curl -o .claude/skills/automated-release-setup/SKILL.md \
    git clone https://github.com/SonarSource/release-github-actions.git
    ```
 
-2. Create a symlink to the skill directory in your target repository:
+2. Create symlinks to the skill directories in your target repository:
 
    ```bash
    mkdir -p .claude/skills
    ln -s /path/to/release-github-actions/.claude/skills/automated-release-setup \
      .claude/skills/automated-release-setup
+   ln -s /path/to/release-github-actions/.claude/skills/devex-release-setup \
+     .claude/skills/devex-release-setup
    ```
 
 ### Updating Skills
@@ -91,6 +105,8 @@ curl -o .claude/skills/automated-release-setup/SKILL.md \
 # If installed via curl
 curl -o .claude/skills/automated-release-setup/SKILL.md \
   https://raw.githubusercontent.com/SonarSource/release-github-actions/master/.claude/skills/automated-release-setup/SKILL.md
+curl -o .claude/skills/devex-release-setup/SKILL.md \
+  https://raw.githubusercontent.com/SonarSource/release-github-actions/master/.claude/skills/devex-release-setup/SKILL.md
 
 # If installed via symlink, just pull the latest changes
 cd /path/to/release-github-actions
