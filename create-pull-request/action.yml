@@ -247,7 +247,8 @@ runs:
         echo "Head SHA: ${HEAD_SHA}"
 
         # Configure remote URL with token for push
-        REPO_URL="https://x-access-token:${RESOLVED_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+        CURRENT_REPO=$(GH_TOKEN="$RESOLVED_TOKEN" gh repo view --json nameWithOwner --jq '.nameWithOwner')
+        REPO_URL="https://x-access-token:${RESOLVED_TOKEN}@github.com/${CURRENT_REPO}.git"
         git remote set-url origin "$REPO_URL"
 
         # Push to remote (force is safe here: the branch is bot-owned and managed exclusively by this action)
