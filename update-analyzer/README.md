@@ -24,7 +24,7 @@ An example PR how to request a token with those permissions can be found [here](
 This action depends on:
 - [SonarSource/vault-action-wrapper@v3](https://github.com/SonarSource/vault-action-wrapper) for secure token retrieval
 - [actions/checkout@v4](https://github.com/actions/checkout) for repository checkout
-- [peter-evans/create-pull-request@v6](https://github.com/peter-evans/create-pull-request) for pull request creation
+- [SonarSource/release-github-actions/create-pull-request](../create-pull-request) for pull request creation
 
 ## Inputs
 
