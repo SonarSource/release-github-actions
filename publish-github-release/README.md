@@ -1,35 +1,42 @@
 # Publish GitHub Release Action
 
-This GitHub Action automates the creation of a draft GitHub Release using provided release notes and then triggers a downstream release workflow (`gh-action_release` v7) which handles artifact promotion and publishes the release atomically.
+This GitHub Action automates the creation of a GitHub Release using provided release notes and then triggers a downstream release workflow.
 
 ## Description
 
 The action performs the following steps:
 1. Validates that either a `release-version` input or `RELEASE_VERSION` environment variable is provided
-2. Creates a draft GitHub release using the provided release notes
-3. Triggers the downstream release workflow (`release.yml`) which calls `gh-action_release` v7
+2. Creates a GitHub release using the provided release notes
+3. Automatically triggers a specified release workflow in the caller repository
 4. Monitors the workflow execution and waits for it to complete
 
-`gh-action_release` v7 uses a **draft-first flow**: it reuses the draft created by this action, promotes artifacts through all channels (Artifactory, Maven Central, PyPI, npm, etc.), and then atomically publishes the release at the end.
+## gh-action_release v6/v7 Compatibility
 
-## Draft Release Handling
+The action automatically detects whether the caller's release workflow uses `gh-action_release` v6 or v7 by inspecting the workflow file:
 
-The action always creates draft releases. If a release with the same version already exists:
+- **v6**: Uses the original flow — publishes releases when `draft=false`, passes `releaseId` to the triggered workflow.
+- **v7 (default)**: Uses a draft-first flow — always creates draft releases and passes only `version` and `dryRun`. `gh-action_release` v7 handles the draft-to-published promotion after successful artifact promotion.
 
-- **Existing draft**: The action reuses it and continues (idempotent — safe for retries).
-- **Existing published release**: The action fails with an error to prevent duplicate releases.
+No changes are needed in calling workflows — the detection is automatic.
+
+## Duplicate Release Handling
+
+The action automatically checks for existing releases with the same title before creating a new one:
+
+- **When `draft=true`**: If a release with the same title already exists, the action logs a warning and skips creation without failing.
+- **When `draft=false`**: If an existing draft release with the same title is found, it will be published instead of creating a new release. If a published release with the same title already exists, the action will fail with an error.
+- **When using v7**: Existing drafts are reused (idempotent). Existing published releases cause an error.
 
 ## Release Workflow Triggering
 
-After creating the draft release, this action triggers the release workflow in the caller repository. The action:
+After creating the GitHub release, this action automatically triggers a release workflow in the caller repository. The action:
 
 - Triggers the specified release workflow (default: `release.yml`)
-- Passes the release tag name and dry-run flag (based on the `draft` input) to the triggered workflow
-- For v6 consumers, also passes the `releaseId`
+- Passes the release tag name, release ID (v6 only), and dry-run flag (based on the `draft` input) to the triggered workflow
 - Monitors the workflow execution and waits for it to complete (checking only runs from the last 5 minutes)
 - Succeeds if the release workflow completes successfully, or fails if the release workflow fails
 
-This ensures that the entire release process (GitHub release draft creation + downstream release workflow) succeeds or fails as a unit.
+This ensures that the entire release process (GitHub release creation + downstream release workflow) succeeds or fails as a unit.
 
 ## Prerequisites
 
@@ -43,7 +50,7 @@ This action requires a GitHub token with `contents: write`, `id-token: write`, a
 | `release-version`  | The version number for the new release (e.g., `v1.0.0`). This will also be the tag name. If not provided, uses `RELEASE_VERSION` environment variable. | No       |                       |
 | `branch`           | The branch, commit, or tag to create the release from.                                                                                                 | No       | `master`              |
 | `release-notes`    | The full markdown content for the release notes.                                                                                                       | No       |                       |
-| `draft`            | Controls dry-run mode. When `true`, the downstream release workflow runs with `dryRun=true` (no artifact promotion). The GitHub release is always created as a draft. | No | `true` |
+| `draft`            | A boolean value to indicate if the release should be a draft.                                                                                          | No       | `true`                |
 | `release-workflow` | The filename of the release workflow to trigger in the caller repository.                                                                              | No       | `release.yml`         |
 
 ## Outputs
@@ -103,7 +110,8 @@ This action requires a GitHub token with `contents: write`, `id-token: write`, a
 The action:
 - Uses the GitHub CLI (`gh`) to create releases and trigger workflows
 - Validates version input using either the `release-version` input or `RELEASE_VERSION` environment variable
-- Always creates draft releases — `gh-action_release` v7 handles the draft-to-published promotion
+- Detects `gh-action_release` version by grepping the caller's release workflow for `@v6` or `@v7`
+- Creates releases with provided markdown content directly
 - Monitors triggered workflows with a 5-minute time window to prevent picking up stale runs
 - Uses kebab-case naming conventions for all inputs and outputs
 
@@ -112,7 +120,7 @@ The action:
 The action will fail with a non-zero exit code if:
 - Neither `release-version` input nor `RELEASE_VERSION` environment variable is provided
 - The GitHub API calls fail (authentication, permissions, etc.)
-- A published release with the same title already exists
+- A published release with the same title already exists when `draft=false`
 - The triggered release workflow fails or is cancelled
 - The workflow run ID cannot be retrieved after triggering
 

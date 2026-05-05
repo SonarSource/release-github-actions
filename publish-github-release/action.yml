@@ -18,7 +18,7 @@ inputs:
     description: 'The full markdown content for the release notes.'
     required: false
   draft:
-    description: 'Controls dry-run mode. When true, the downstream release workflow runs with dryRun=true (no artifact promotion). The GitHub release is always created as a draft; gh-action_release v7 handles the draft-to-published promotion.'
+    description: 'A boolean value to indicate if the release should be a draft. Defaults to true.'
     required: false
     default: 'true'
   release-workflow:
@@ -61,13 +61,28 @@ runs:
       run: |
         echo "" > release-notes.md
 
-    - name: Create Draft Release
+    - name: Detect release workflow version
+      shell: bash
+      env:
+        RELEASE_WORKFLOW: ${{ inputs.release-workflow }}
+      run: |
+        WORKFLOW_FILE=".github/workflows/$RELEASE_WORKFLOW"
+        if [[ -f "$WORKFLOW_FILE" ]] && grep -q 'gh-action_release.*@v6' "$WORKFLOW_FILE"; then
+          echo "Detected gh-action_release v6 in $WORKFLOW_FILE"
+          echo "RELEASE_WORKFLOW_VERSION=v6" >> $GITHUB_ENV
+        else
+          echo "Using gh-action_release v7 flow (default)"
+          echo "RELEASE_WORKFLOW_VERSION=v7" >> $GITHUB_ENV
+        fi
+
+    - name: Create Release with GitHub CLI
       id: create-release
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         HAS_RELEASE_NOTES: ${{ inputs.release-notes != '' }}
         BRANCH_NAME: ${{ inputs.branch }}
+        DRAFT_MODE: ${{ inputs.draft }}
       run: |
         # Check if a release with the same title already exists
         EXPECTED_TITLE="$VALIDATED_VERSION"
@@ -75,23 +90,56 @@ runs:
 
         if [[ -n "$EXISTING_RELEASE" ]]; then
           EXISTING_DRAFT=$(echo "$EXISTING_RELEASE" | jq -r '.draft')
+          EXISTING_TAG=$(echo "$EXISTING_RELEASE" | jq -r '.tag_name')
           EXISTING_URL=$(echo "$EXISTING_RELEASE" | jq -r '.html_url')
+          EXISTING_ID=$(echo "$EXISTING_RELEASE" | jq -r '.id')
 
-          if [[ "$EXISTING_DRAFT" == "true" ]]; then
-            # Reuse existing draft
-            echo "Reusing existing draft release '$EXPECTED_TITLE'"
-            echo "release-url=${EXISTING_URL}" >> $GITHUB_OUTPUT
-            exit 0
+          if [[ "$RELEASE_WORKFLOW_VERSION" == "v7" ]]; then
+            # v7 draft-first flow: reuse existing drafts, fail on published
+            if [[ "$EXISTING_DRAFT" == "true" ]]; then
+              echo "Reusing existing draft release '$EXPECTED_TITLE'"
+              echo "release-url=${EXISTING_URL}" >> $GITHUB_OUTPUT
+              echo "release-id=${EXISTING_ID}" >> $GITHUB_OUTPUT
+              exit 0
+            else
+              echo "::error::A published release with title '$EXPECTED_TITLE' already exists."
+              exit 1
+            fi
+          elif [[ "$RELEASE_WORKFLOW_VERSION" == "v6" ]]; then
+            if [[ "$DRAFT_MODE" == "true" ]]; then
+              # If draft=true and release exists, log warning and do nothing
+              echo "::warning::A release with title '$EXPECTED_TITLE' already exists. Skipping creation since draft=true."
+              echo "release-url=${EXISTING_URL}" >> $GITHUB_OUTPUT
+              echo "release-id=${EXISTING_ID}" >> $GITHUB_OUTPUT
+              exit 0
+            else
+              if [[ "$EXISTING_DRAFT" == "true" ]]; then
+              # If draft=false and existing release is a draft, publish it
+                echo "Found existing draft release with title '$EXPECTED_TITLE'. Publishing it instead of creating a new one."
+                UPDATED_URL=$(gh release edit "$EXISTING_TAG" --draft=false)
+                echo "release-url=${UPDATED_URL}" >> $GITHUB_OUTPUT
+                echo "release-id=${EXISTING_ID}" >> $GITHUB_OUTPUT
+                exit 0
+              else
+                # If draft=false and existing release is already published, this is an error
+                echo "::error::A published release with title '$EXPECTED_TITLE' already exists. Cannot create or publish another release with the same title."
+                exit 1
+              fi
+            fi
           else
-            # Published release already exists — cannot proceed
-            echo "::error::A published release with title '$EXPECTED_TITLE' already exists. Cannot create another release with the same title."
+            echo "::error::Unknown release workflow version: $RELEASE_WORKFLOW_VERSION"
             exit 1
           fi
         fi
 
-        # No existing release found — always create as draft.
-        # gh-action_release v7 will reuse this draft and promote it to published
-        # after successful artifact promotion.
+        # No existing release found, proceed with normal creation
+        # v7 always creates as draft; v6 respects the draft input
+        DRAFT_FLAG=""
+        if [[ "$DRAFT_MODE" == "true" ]] || [[ "$RELEASE_WORKFLOW_VERSION" == "v7" ]]; then
+          DRAFT_FLAG="--draft"
+        fi
+
+        # Build the gh release create command
         NOTES_FLAG=""
         if [[ "$HAS_RELEASE_NOTES" == "true" ]]; then
           NOTES_FLAG="--notes-file release-notes.md"
@@ -101,27 +149,51 @@ runs:
           --target "$BRANCH_NAME" \
           --title "$VALIDATED_VERSION" \
           $NOTES_FLAG \
-          --draft)
+          $DRAFT_FLAG)
 
         echo "release-url=${RELEASE_URL}" >> $GITHUB_OUTPUT
+
+        # Get the release ID for published releases (v6) or draft releases (v7)
+        if [[ "$DRAFT_MODE" != "true" ]] || [[ "$RELEASE_WORKFLOW_VERSION" == "v7" ]]; then
+          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases --jq ".[] | select(.tag_name == \"$VALIDATED_VERSION\") | .id")
+          echo "release-id=${RELEASE_ID}" >> $GITHUB_OUTPUT
+        fi
 
     - name: Trigger Release Workflow
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         GITHUB_REF: ${{ inputs.branch }}
-        DRAFT: ${{ inputs.draft }}
+        DRAFT_MODE: ${{ inputs.draft }}
         RELEASE_WORKFLOW: ${{ inputs.release-workflow }}
+        RELEASE_ID_OUTPUT: ${{ steps.create-release.outputs.release-id }}
       run: |
-        echo "Triggering release workflow '$RELEASE_WORKFLOW' with version '$VALIDATED_VERSION' and dryRun=$DRY_RUN..."
+        # Set release ID based on draft status
+        if [[ "$DRAFT_MODE" == "true" ]]; then
+          RELEASE_ID_VALUE="N/A"
+        else
+          RELEASE_ID_VALUE="$RELEASE_ID_OUTPUT"
+        fi
 
-        # Trigger the workflow — gh-action_release v7 will reuse the draft
-        # created above and publish it after successful artifact promotion
-        gh workflow run "$RELEASE_WORKFLOW" \
-          --repo "${{ github.repository }}" \
-          --ref $GITHUB_REF \
-          -f "version=$VALIDATED_VERSION" \
-          -f "dryRun=$DRY_RUN"
+        if [[ "$RELEASE_WORKFLOW_VERSION" == "v7" ]]; then
+          # v7: gh-action_release will reuse the draft and publish it after
+          # successful artifact promotion — no releaseId needed
+          echo "Triggering release workflow '$RELEASE_WORKFLOW' (v7) with version '$VALIDATED_VERSION' and dryRun=$DRAFT_MODE..."
+          gh workflow run "$RELEASE_WORKFLOW" \
+            --repo "${{ github.repository }}" \
+            --ref $GITHUB_REF \
+            -f "version=$VALIDATED_VERSION" \
+            -f "dryRun=$DRAFT_MODE"
+        else
+          echo "Triggering release workflow '$RELEASE_WORKFLOW' with tag '$VALIDATED_VERSION', release ID '$RELEASE_ID_VALUE', and dryRun=$DRAFT_MODE..."
+          # Trigger the workflow
+          gh workflow run "$RELEASE_WORKFLOW" \
+            --repo "${{ github.repository }}" \
+            --ref $GITHUB_REF \
+            -f "version=$VALIDATED_VERSION" \
+            -f "releaseId=$RELEASE_ID_VALUE" \
+            -f "dryRun=$DRAFT_MODE"
+        fi
 
         echo "Workflow triggered successfully"
 
@@ -135,26 +207,26 @@ runs:
           --created ">=$(date -u -d '5 minutes ago' +%Y-%m-%dT%H:%M:%SZ)" \
           --json databaseId \
           --jq '.[0].databaseId')
-        
+
         if [[ -z "$RUN_ID" ]] || [[ "$RUN_ID" == "null" ]]; then
           echo "::error::Failed to get workflow run ID"
           exit 1
         fi
-        
+
         echo "Monitoring workflow run ID: $RUN_ID"
-        
+
         # Wait for the workflow to complete
         while true; do
           RUN_STATUS=$(gh run view "$RUN_ID" \
             --repo "${{ github.repository }}" \
             --json status,conclusion \
             --jq '{status: .status, conclusion: .conclusion}')
-          
+
           STATUS=$(echo "$RUN_STATUS" | jq -r '.status')
           CONCLUSION=$(echo "$RUN_STATUS" | jq -r '.conclusion')
-          
+
           echo "Workflow status: $STATUS, conclusion: $CONCLUSION"
-          
+
           if [[ "$STATUS" == "completed" ]]; then
             if [[ "$CONCLUSION" == "success" ]]; then
               echo "✅ Release workflow completed successfully!"
@@ -169,7 +241,7 @@ runs:
             gh run view "$RUN_ID" --repo "${{ github.repository }}" --log-failed
             exit 1
           fi
-          
+
           # Wait 15 seconds before checking again
           sleep 15
         done
