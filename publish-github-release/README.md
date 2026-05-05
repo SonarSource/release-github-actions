@@ -24,7 +24,8 @@ The action always creates draft releases. If a release with the same version alr
 After creating the draft release, this action triggers the release workflow in the caller repository. The action:
 
 - Triggers the specified release workflow (default: `release.yml`)
-- Passes the release tag name and dry-run flag (based on the `dry-run` input) to the triggered workflow
+- Passes the release tag name and dry-run flag (based on the `draft` input) to the triggered workflow
+- For v6 consumers, also passes the `releaseId`
 - Monitors the workflow execution and waits for it to complete (checking only runs from the last 5 minutes)
 - Succeeds if the release workflow completes successfully, or fails if the release workflow fails
 
@@ -42,7 +43,7 @@ This action requires a GitHub token with `contents: write`, `id-token: write`, a
 | `release-version`  | The version number for the new release (e.g., `v1.0.0`). This will also be the tag name. If not provided, uses `RELEASE_VERSION` environment variable. | No       |                       |
 | `branch`           | The branch, commit, or tag to create the release from.                                                                                                 | No       | `master`              |
 | `release-notes`    | The full markdown content for the release notes.                                                                                                       | No       |                       |
-| `dry-run`          | Controls dry-run mode. When `true`, the downstream release workflow runs with `dryRun=true` (no artifact promotion). The GitHub release is always created as a draft. | No | `true` |
+| `draft`            | Controls dry-run mode. When `true`, the downstream release workflow runs with `dryRun=true` (no artifact promotion). The GitHub release is always created as a draft. | No | `true` |
 | `release-workflow` | The filename of the release workflow to trigger in the caller repository.                                                                              | No       | `release.yml`         |
 
 ## Outputs
@@ -67,7 +68,7 @@ This action requires a GitHub token with `contents: write`, `id-token: write`, a
 
       ## Breaking Changes
       - Removed deprecated API Z
-    dry-run: false
+    draft: false
 ```
 
 ### Using RELEASE_VERSION environment variable
@@ -81,7 +82,7 @@ This action requires a GitHub token with `contents: write`, `id-token: write`, a
     release-notes: |
       ## Release Notes
       Content generated from previous steps...
-    dry-run: false
+    draft: false
 ```
 
 ### With custom release workflow
@@ -94,7 +95,7 @@ This action requires a GitHub token with `contents: write`, `id-token: write`, a
     release-notes: ${{ steps.generate-notes.outputs.notes }}
     release-workflow: 'custom-release.yml'
     branch: 'main'
-    dry-run: true
+    draft: true
 ```
 
 ## Implementation Details

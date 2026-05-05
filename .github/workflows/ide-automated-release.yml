@@ -149,7 +149,7 @@ jobs:
         with:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           release-notes: ${{ format('For full release notes, see [JIRA]({0})', needs.prepare-release.outputs.jira-release-url) }}
-          dry-run: ${{ inputs.is-test-run }}
+          draft: ${{ inputs.is-test-run }}
           branch: ${{ inputs.branch }}
 
   release-in-jira:

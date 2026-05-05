@@ -17,7 +17,7 @@ inputs:
   release-notes:
     description: 'The full markdown content for the release notes.'
     required: false
-  dry-run:
+  draft:
     description: 'Controls dry-run mode. When true, the downstream release workflow runs with dryRun=true (no artifact promotion). The GitHub release is always created as a draft; gh-action_release v7 handles the draft-to-published promotion.'
     required: false
     default: 'true'
@@ -110,7 +110,7 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         GITHUB_REF: ${{ inputs.branch }}
-        DRY_RUN: ${{ inputs.dry-run }}
+        DRAFT: ${{ inputs.draft }}
         RELEASE_WORKFLOW: ${{ inputs.release-workflow }}
       run: |
         echo "Triggering release workflow '$RELEASE_WORKFLOW' with version '$VALIDATED_VERSION' and dryRun=$DRY_RUN..."

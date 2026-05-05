@@ -453,7 +453,7 @@ jobs:
         with:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           release-notes: ${{ inputs.release-notes != '' && inputs.release-notes || needs.prepare-release.outputs.release-notes }}
-          dry-run: ${{ inputs.is-draft-release }}
+          draft: ${{ inputs.is-draft-release }}
           branch: ${{ inputs.branch }}
 
       - name: Summary
