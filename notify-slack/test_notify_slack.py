@@ -23,6 +23,17 @@ class TestNormalizeChannel(unittest.TestCase):
     def test_keeps_existing_hash(self):
         self.assertEqual(normalize_channel('#releases'), '#releases')
 
+    def test_channel_id_not_prefixed(self):
+        # C = public/private channel, D = DM, G = group DM
+        # 8 suffix chars (minimum)
+        self.assertEqual(normalize_channel('C1234ABCD'), 'C1234ABCD')
+        # 9 suffix chars (middle)
+        self.assertEqual(normalize_channel('C1234ABCDE'), 'C1234ABCDE')
+        self.assertEqual(normalize_channel('D0AB12XYZ9'), 'D0AB12XYZ9')
+        self.assertEqual(normalize_channel('G9Z8Y7X6W5'), 'G9Z8Y7X6W5')
+        # 10 suffix chars (maximum)
+        self.assertEqual(normalize_channel('C1234ABCDEF'), 'C1234ABCDEF')
+
 
 class TestSendSlackNotification(unittest.TestCase):
 
