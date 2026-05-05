@@ -319,26 +319,17 @@ Add `bump-version: true` (and optionally `bump-version-pr-labels`) to the SonarL
 
 ### Step 4: Update release.yml
 
-The existing `release.yml` must be updated to:
-1. Add `workflow_dispatch` trigger with inputs
-2. Pass inputs to the reusable workflow with fallbacks for release events
+The existing `release.yml` must be updated to support `workflow_dispatch` triggering from the automated release workflow. `gh-action_release` v7 uses a draft-first flow — it no longer needs a `releaseId` and no longer uses the `release: published` event.
 
-Add the `workflow_dispatch` trigger:
+Update the triggers to use `workflow_dispatch` only:
 
 ```yaml
 on:
-  release:
-    types:
-      - published
   workflow_dispatch:
     inputs:
       version:
         type: string
-        description: Version
-        required: true
-      releaseId:
-        type: string
-        description: Release ID
+        description: Full version including build number (e.g. 1.2.3.456)
         required: true
       dryRun:
         type: boolean
@@ -346,22 +337,20 @@ on:
         default: false
 ```
 
-Then update the job's `with:` block to pass the inputs with fallbacks for release events:
+Then update the job's `with:` block to reference v7 and pass the inputs:
 
 ```yaml
 jobs:
   release:
     # ... existing permissions ...
-    uses: SonarSource/gh-action_release/.github/workflows/main.yaml@v6
+    uses: SonarSource/gh-action_release/.github/workflows/main.yaml@v7
     with:
       # ... existing inputs like publishToBinaries, mavenCentralSync, slackChannel ...
-      # We do not have any inputs if this workflow is triggered by a release event, hence we have to use a fallback for all inputs
-      version: ${{ inputs.version || github.event.release.tag_name }}
-      releaseId: ${{ inputs.releaseId || github.event.release.id }}
+      version: ${{ inputs.version }}
       dryRun: ${{ inputs.dryRun == true }}
 ```
 
-**Important:** The fallbacks (`|| github.event.release.tag_name` and `|| github.event.release.id`) are required because when triggered by a `release` event, there are no `inputs` - only `github.event.release` context is available.
+**Note:** v7 no longer requires `releaseId` — it creates or reuses a draft release internally and publishes it atomically after successful artifact promotion.
 
 ### Step 5: Create Branch and Commit
 
