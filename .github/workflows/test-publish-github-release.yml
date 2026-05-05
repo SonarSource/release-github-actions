@@ -83,7 +83,7 @@ jobs:
         with:
           github-token: ${{ github.token }}
           release-version: "test-v1.0.0-${{ github.run_number }}"
-          draft: "true"
+          dry-run: "true"
         continue-on-error: true
 
       - name: Test With Custom Branch
@@ -93,7 +93,7 @@ jobs:
           github-token: ${{ github.token }}
           release-version: "test-v1.0.1-${{ github.run_number }}"
           branch: ${{ github.ref_name }}
-          draft: "true"
+          dry-run: "true"
         continue-on-error: true
 
       - name: Test With Release Notes
@@ -112,7 +112,7 @@ jobs:
             ## Bug Fixes
             - Fix 1
             - Fix 2
-          draft: "true"
+          dry-run: "true"
         continue-on-error: true
 
       - name: Test With Release Notes Containing Quotes
@@ -135,7 +135,7 @@ jobs:
             [TEST-123](https://example.com) Fix issue with "quotes" in title
             [TEST-456](https://example.com) Handle 'single quotes' and "double quotes" correctly
             [TEST-789](https://example.com) Test with "command -f" in title
-          draft: "true"
+          dry-run: "true"
         continue-on-error: true
 
       - name: Verify Parameter Tests
@@ -165,7 +165,7 @@ jobs:
         uses: ./publish-github-release
         with:
           github-token: ${{ github.token }}
-          draft: "true"
+          dry-run: "true"
         env:
           RELEASE_VERSION: "test-env-v1.0.0-${{ github.run_number }}"
         continue-on-error: true

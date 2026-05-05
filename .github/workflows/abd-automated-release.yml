@@ -180,7 +180,7 @@ jobs:
         with:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           release-notes: ${{ inputs.release-notes != '' && inputs.release-notes || needs.prepare-release.outputs.release-notes }}
-          draft: ${{ inputs.is-draft-release }}
+          dry-run: ${{ inputs.is-draft-release }}
           branch: ${{ inputs.branch }}
 
   release-in-jira:
