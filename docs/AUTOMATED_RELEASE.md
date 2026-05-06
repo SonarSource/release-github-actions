@@ -172,13 +172,27 @@ To set up this workflow in your repository, you need to complete the following p
    - Example PR: https://github.com/SonarSource/re-terraform-aws-vault/pull/8406
 
 3. **Release Workflow**:
-   - Update `release.yml` to support `workflow_dispatch` with inputs: `version`, `releaseId`, `dryRun`
-   - Add fallbacks for release events:
+   - Update `release.yml` to support `workflow_dispatch` with inputs: `version`, `dryRun`
+   - Reference `gh-action_release` v7 which uses a draft-first flow:
      ```yaml
-     with:
-       version: ${{ inputs.version || github.event.release.tag_name }}
-       releaseId: ${{ inputs.releaseId || github.event.release.id }}
-       dryRun: ${{ inputs.dryRun == true }}
+     on:
+       workflow_dispatch:
+         inputs:
+           version:
+             type: string
+             description: Full version including build number (e.g. 1.2.3.456)
+             required: true
+           dryRun:
+             type: boolean
+             description: Flag to enable the dry-run execution
+             default: false
+
+     jobs:
+       release:
+         uses: SonarSource/gh-action_release/.github/workflows/main.yaml@v7
+         with:
+           version: ${{ inputs.version }}
+           dryRun: ${{ inputs.dryRun == true }}
      ```
 
 ### Required Workflow Files

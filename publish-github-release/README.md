@@ -10,19 +10,37 @@ The action performs the following steps:
 3. Automatically triggers a specified release workflow in the caller repository
 4. Monitors the workflow execution and waits for it to complete
 
+## gh-action_release v6/v7 Compatibility
+
+The action automatically detects whether the caller's release workflow uses `gh-action_release` v6 or v7 by inspecting the workflow file. Detection works with all common pinning strategies:
+
+- **Tag references**: `@v6`, `@6.8.1`
+- **SHA-pinned with version comment**: `@abc123def # 6.8.1`
+- **`releaseId` fallback**: If no version is detected from the action reference, the presence of a `releaseId` input in the workflow indicates v6.
+- **Default**: If none of the above match, v7 is assumed.
+
+Behavior per version:
+
+- **v6**: Uses the original flow — publishes releases when `draft=false`, passes `releaseId` to the triggered workflow.
+- **v7 (default)**: Uses a draft-first flow — always creates draft releases and passes only `version` and `dryRun`. `gh-action_release` v7 handles the draft-to-published promotion after successful artifact promotion.
+
+No changes are needed in calling workflows — the detection is automatic.
+
 ## Duplicate Release Handling
 
 The action automatically checks for existing releases with the same title before creating a new one:
 
-- **When `draft=true`**: If a release with the same title already exists, the action logs a warning and skips creation without failing.
-- **When `draft=false`**: If an existing draft release with the same title is found, it will be published instead of creating a new release. If a published release with the same title already exists, the action will fail with an error.
+- **When using v7**: Existing drafts are reused (idempotent). Existing published releases cause an error.
+- **When using v6**:
+  - **When `draft=true`**: If a release with the same title already exists, the action logs a warning and skips creation without failing.
+  - **When `draft=false`**: If an existing draft release with the same title is found, it will be published instead of creating a new release. If a published release with the same title already exists, the action will fail with an error.
 
 ## Release Workflow Triggering
 
 After creating the GitHub release, this action automatically triggers a release workflow in the caller repository. The action:
 
-- Triggers the specified release workflow (default: `release.yml`) 
-- Passes the release tag name, release ID, and dry-run flag (based on the `draft` input) to the triggered workflow
+- Triggers the specified release workflow (default: `release.yml`)
+- Passes the release tag name, release ID (v6 only), and dry-run flag (based on the `draft` input) to the triggered workflow
 - Monitors the workflow execution and waits for it to complete (checking only runs from the last 5 minutes)
 - Succeeds if the release workflow completes successfully, or fails if the release workflow fails
 
@@ -62,7 +80,7 @@ This action requires a GitHub token with `contents: write`, `id-token: write`, a
       ## What's New
       - Added new feature X
       - Fixed bug Y
-      
+
       ## Breaking Changes
       - Removed deprecated API Z
     draft: false
@@ -100,6 +118,8 @@ This action requires a GitHub token with `contents: write`, `id-token: write`, a
 The action:
 - Uses the GitHub CLI (`gh`) to create releases and trigger workflows
 - Validates version input using either the `release-version` input or `RELEASE_VERSION` environment variable
+- Detects `gh-action_release` version by checking the caller's release workflow for v6 references (`@v6` or `@6.x.y` tag, `# 6` comment, or `releaseId` input); defaults to v7 if not found
+
 - Creates releases with provided markdown content directly
 - Monitors triggered workflows with a 5-minute time window to prevent picking up stale runs
 - Uses kebab-case naming conventions for all inputs and outputs
