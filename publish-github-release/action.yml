@@ -135,7 +135,7 @@ runs:
         # No existing release found, proceed with normal creation
         # v7 always creates as draft; v6 respects the draft input
         DRAFT_FLAG=""
-        if [[ "$DRAFT_MODE" == "true" ]] || [[ "$RELEASE_WORKFLOW_VERSION" == "v7" ]]; then
+        if [[ "$DRAFT_MODE" == "true" || "$RELEASE_WORKFLOW_VERSION" == "v7" ]]; then
           DRAFT_FLAG="--draft"
         fi
 
