@@ -126,9 +126,6 @@ runs:
                 exit 1
               fi
             fi
-          else
-            echo "::error::Unknown release workflow version: $RELEASE_WORKFLOW_VERSION"
-            exit 1
           fi
         fi
 
@@ -168,32 +165,23 @@ runs:
         RELEASE_WORKFLOW: ${{ inputs.release-workflow }}
         RELEASE_ID_OUTPUT: ${{ steps.create-release.outputs.release-id }}
       run: |
-        # Set release ID based on draft status
-        if [[ "$DRAFT_MODE" == "true" ]]; then
-          RELEASE_ID_VALUE="N/A"
-        else
-          RELEASE_ID_VALUE="$RELEASE_ID_OUTPUT"
+        # v6 requires releaseId; v7 does not (it reuses the draft directly)
+        RELEASE_ID_ARG=""
+        if [[ "$RELEASE_WORKFLOW_VERSION" == "v6" ]]; then
+          if [[ "$DRAFT_MODE" == "true" ]]; then
+            RELEASE_ID_ARG='-f releaseId=N/A'
+          else
+            RELEASE_ID_ARG="-f releaseId=$RELEASE_ID_OUTPUT"
+          fi
         fi
 
-        if [[ "$RELEASE_WORKFLOW_VERSION" == "v7" ]]; then
-          # v7: gh-action_release will reuse the draft and publish it after
-          # successful artifact promotion — no releaseId needed
-          echo "Triggering release workflow '$RELEASE_WORKFLOW' (v7) with version '$VALIDATED_VERSION' and dryRun=$DRAFT_MODE..."
-          gh workflow run "$RELEASE_WORKFLOW" \
-            --repo "${{ github.repository }}" \
-            --ref $GITHUB_REF \
-            -f "version=$VALIDATED_VERSION" \
-            -f "dryRun=$DRAFT_MODE"
-        else
-          echo "Triggering release workflow '$RELEASE_WORKFLOW' with tag '$VALIDATED_VERSION', release ID '$RELEASE_ID_VALUE', and dryRun=$DRAFT_MODE..."
-          # Trigger the workflow
-          gh workflow run "$RELEASE_WORKFLOW" \
-            --repo "${{ github.repository }}" \
-            --ref $GITHUB_REF \
-            -f "version=$VALIDATED_VERSION" \
-            -f "releaseId=$RELEASE_ID_VALUE" \
-            -f "dryRun=$DRAFT_MODE"
-        fi
+        echo "Triggering release workflow '$RELEASE_WORKFLOW' ($RELEASE_WORKFLOW_VERSION) with version '$VALIDATED_VERSION' and dryRun=$DRAFT_MODE..."
+        gh workflow run "$RELEASE_WORKFLOW" \
+          --repo "${{ github.repository }}" \
+          --ref $GITHUB_REF \
+          -f "version=$VALIDATED_VERSION" \
+          $RELEASE_ID_ARG \
+          -f "dryRun=$DRAFT_MODE"
 
         echo "Workflow triggered successfully"
 

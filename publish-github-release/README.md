@@ -24,7 +24,7 @@ No changes are needed in calling workflows — the detection is automatic.
 The action automatically checks for existing releases with the same title before creating a new one:
 
 - **When using v7**: Existing drafts are reused (idempotent). Existing published releases cause an error.
-- ** When using v6**:
+- **When using v6**:
   - **When `draft=true`**: If a release with the same title already exists, the action logs a warning and skips creation without failing.
   - **When `draft=false`**: If an existing draft release with the same title is found, it will be published instead of creating a new release. If a published release with the same title already exists, the action will fail with an error.
 
