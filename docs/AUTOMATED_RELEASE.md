@@ -66,6 +66,8 @@ This workflow composes several actions from this repository:
 | `freeze-branch`              | When `true`, locks the target branch during the release and unlocks it after publishing                         | No       | `true`       |
 | `check-releasability`        | When `true`, verifies the releasability status on the branch before proceeding                                  | No       | `true`       |
 | `slack-channel`              | Slack channel to notify when locking/unlocking the branch                                                       | No       | -            |
+| `release-artifacts-public`   | Newline-separated Repox paths from public repositories to attach to the GitHub release. Include the Artifactory repo name. Use `{version}` as placeholder. | No | - |
+| `release-artifacts-private`  | Newline-separated Repox paths from private repositories to attach to the GitHub release. Include the Artifactory repo name. Use `{version}` as placeholder. | No | - |
 
 ## Outputs
 
@@ -216,6 +218,30 @@ When your analyzer is used by SonarLint, you can enable integration ticket creat
 | `create-sli-ticket` | SLI | SonarLint for IntelliJ |
 
 Use `sq-ide-short-description` to describe changes relevant for IDE integrations.
+
+### Artifact Attachment
+
+To attach build artifacts from Repox (JFrog Artifactory) to the GitHub release draft:
+
+```yaml
+jobs:
+  automated-release:
+    uses: SonarSource/release-github-actions/.github/workflows/automated-release.yml@v1
+    with:
+      # ... existing inputs ...
+      release-artifacts-public: |
+        sonarsource-public-builds/org/sonarsource/java/sonar-java-plugin/{version}/sonar-java-plugin-{version}.jar
+      release-artifacts-private: |
+        sonarsource-nuget-private-builds/A3S.NET.{version}.nupkg
+```
+
+Artifacts are downloaded using Vault-managed Artifactory credentials and uploaded to the draft release before the downstream release workflow is triggered. The `{version}` placeholder is replaced with the validated release version at runtime.
+
+**Vault roles used:**
+- `release-artifacts-public` authenticates with the `{REPO}-public-reader` Vault role
+- `release-artifacts-private` authenticates with the `{REPO}-private-reader` Vault role
+
+On retries, existing assets are overwritten automatically.
 
 ## Troubleshooting
 

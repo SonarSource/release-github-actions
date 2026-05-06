@@ -455,6 +455,7 @@ Mention these optional configurations if relevant:
 - **Custom artifact names**: `plugin-artifacts-sqs`, `plugin-artifacts-sqc`
 - **Custom secret name**: `release-automation-secret-name`
 - **Disable releasability check**: `check-releasability: false`
+- **Attach release artifacts**: `release-artifacts-public`, `release-artifacts-private` — download artifacts from Repox and attach them to the GitHub release draft. Provide full Artifactory paths including the repo name, with `{version}` as placeholder for the release version.
 
 ### SonarLint Integration Details
 
