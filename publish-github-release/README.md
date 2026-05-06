@@ -12,7 +12,14 @@ The action performs the following steps:
 
 ## gh-action_release v6/v7 Compatibility
 
-The action automatically detects whether the caller's release workflow uses `gh-action_release` v6 or v7 by inspecting the workflow file:
+The action automatically detects whether the caller's release workflow uses `gh-action_release` v6 or v7 by inspecting the workflow file. Detection works with all common pinning strategies:
+
+- **Tag references**: `@v6`, `@v6.8.1`
+- **SHA-pinned with version comment**: `@abc123def # v6.8.1`
+- **`releaseId` fallback**: If no version is detected from the action reference, the presence of a `releaseId` input in the workflow indicates v6.
+- **Default**: If none of the above match, v7 is assumed.
+
+Behavior per version:
 
 - **v6**: Uses the original flow — publishes releases when `draft=false`, passes `releaseId` to the triggered workflow.
 - **v7 (default)**: Uses a draft-first flow — always creates draft releases and passes only `version` and `dryRun`. `gh-action_release` v7 handles the draft-to-published promotion after successful artifact promotion.
@@ -111,7 +118,7 @@ This action requires a GitHub token with `contents: write`, `id-token: write`, a
 The action:
 - Uses the GitHub CLI (`gh`) to create releases and trigger workflows
 - Validates version input using either the `release-version` input or `RELEASE_VERSION` environment variable
-- Detects `gh-action_release` version by grepping the caller's release workflow for `@v6`; defaults to v7 if not found
+- Detects `gh-action_release` version by checking the caller's release workflow for v6 references (`@v6` tag, `# v6` comment, or `releaseId` input); defaults to v7 if not found
 - Creates releases with provided markdown content directly
 - Monitors triggered workflows with a 5-minute time window to prevent picking up stale runs
 - Uses kebab-case naming conventions for all inputs and outputs

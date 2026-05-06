@@ -67,9 +67,19 @@ runs:
         RELEASE_WORKFLOW: ${{ inputs.release-workflow }}
       run: |
         WORKFLOW_FILE=".github/workflows/$RELEASE_WORKFLOW"
-        if [[ -f "$WORKFLOW_FILE" ]] && grep -q 'gh-action_release.*@v6' "$WORKFLOW_FILE"; then
-          echo "Detected gh-action_release v6 in $WORKFLOW_FILE"
-          echo "RELEASE_WORKFLOW_VERSION=v6" >> $GITHUB_ENV
+        if [[ -f "$WORKFLOW_FILE" ]]; then
+          # Check for gh-action_release v6: tag reference (@v6, @v6.x.y) or SHA-pinned with # v6 comment
+          if grep -qE 'gh-action_release.*(@v6|#\s*v6)' "$WORKFLOW_FILE"; then
+            echo "Detected gh-action_release v6 in $WORKFLOW_FILE"
+            echo "RELEASE_WORKFLOW_VERSION=v6" >> $GITHUB_ENV
+          # Fallback: if the workflow accepts a releaseId input, must be v6
+          elif grep -q 'releaseId' "$WORKFLOW_FILE"; then
+            echo "Detected releaseId input in $WORKFLOW_FILE, must be v6"
+            echo "RELEASE_WORKFLOW_VERSION=v6" >> $GITHUB_ENV
+          else
+            echo "Using gh-action_release v7 flow (default)"
+            echo "RELEASE_WORKFLOW_VERSION=v7" >> $GITHUB_ENV
+          fi
         else
           echo "Using gh-action_release v7 flow (default)"
           echo "RELEASE_WORKFLOW_VERSION=v7" >> $GITHUB_ENV
