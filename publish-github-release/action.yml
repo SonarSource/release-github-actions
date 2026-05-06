@@ -69,7 +69,7 @@ runs:
         WORKFLOW_FILE=".github/workflows/$RELEASE_WORKFLOW"
         if [[ -f "$WORKFLOW_FILE" ]]; then
           # Check for gh-action_release v6: tag reference (@v6, @6.x.y) or SHA-pinned with # v6 comment
-          if grep -qE 'gh-action_release.*(@v6|@6\.|#\s*v6)' "$WORKFLOW_FILE"; then
+          if grep -qE 'gh-action_release.*(@v6|@6\.|#\s*6)' "$WORKFLOW_FILE"; then
             echo "Detected gh-action_release v6 in $WORKFLOW_FILE"
             echo "RELEASE_WORKFLOW_VERSION=v6" >> $GITHUB_ENV
           # Fallback: if the workflow accepts a releaseId input, must be v6
