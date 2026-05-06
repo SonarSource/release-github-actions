@@ -162,6 +162,14 @@ on:
         description: "Version bumping tool to use. Supported values: 'maven'. Leave empty to use the default shell-based solution."
         required: false
         type: string
+      release-artifacts-public:
+        description: "Newline-separated Repox artifact paths from public repositories to attach to the GitHub release. Include the Artifactory repo name in each path (e.g., sonarsource-public-releases/org/sonarsource/...). Use {version} as placeholder for the release version."
+        required: false
+        type: string
+      release-artifacts-private:
+        description: "Newline-separated Repox artifact paths from private repositories to attach to the GitHub release. Include the Artifactory repo name in each path (e.g., sonarsource-npm-private-releases/@sonar/...). Use {version} as placeholder for the release version."
+        required: false
+        type: string
 
     outputs:
       new-version:
@@ -455,6 +463,8 @@ jobs:
           release-notes: ${{ inputs.release-notes != '' && inputs.release-notes || needs.prepare-release.outputs.release-notes }}
           draft: ${{ inputs.is-draft-release }}
           branch: ${{ inputs.branch }}
+          release-artifacts-public: ${{ inputs.release-artifacts-public }}
+          release-artifacts-private: ${{ inputs.release-artifacts-private }}
 
       - name: Summary
         if: ${{ inputs.verbose }}

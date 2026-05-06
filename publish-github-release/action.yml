@@ -29,7 +29,7 @@ inputs:
 outputs:
   release-url:
     description: 'The URL of the newly created release.'
-    value: ${{ steps.create-release.outputs.release-url }}
+    value: ${{ steps.publish-release.outputs.release-url || steps.create-release.outputs.release-url }}
 
 runs:
   using: "composite"
@@ -85,7 +85,7 @@ runs:
           echo "RELEASE_WORKFLOW_VERSION=v7" >> $GITHUB_ENV
         fi
 
-    - name: Create Release with GitHub CLI
+    - name: Create Draft Release
       id: create-release
       shell: bash
       env:
@@ -94,59 +94,36 @@ runs:
         BRANCH_NAME: ${{ inputs.branch }}
         DRAFT_MODE: ${{ inputs.draft }}
       run: |
+        # Determine if we need to publish after artifacts are attached.
+        # v6 + draft=false means we need to publish the release.
+        # We create a draft first so that artifacts can be attached before publishing.
+        if [[ "$RELEASE_WORKFLOW_VERSION" == "v6" && "$DRAFT_MODE" != "true" ]]; then
+          echo "NEEDS_PUBLISH=true" >> $GITHUB_ENV
+        else
+          echo "NEEDS_PUBLISH=false" >> $GITHUB_ENV
+        fi
+
         # Check if a release with the same title already exists
         EXPECTED_TITLE="$VALIDATED_VERSION"
         EXISTING_RELEASE=$(gh api repos/${{ github.repository }}/releases --jq ".[] | select(.name == \"$EXPECTED_TITLE\")" || echo "")
 
         if [[ -n "$EXISTING_RELEASE" ]]; then
           EXISTING_DRAFT=$(echo "$EXISTING_RELEASE" | jq -r '.draft')
-          EXISTING_TAG=$(echo "$EXISTING_RELEASE" | jq -r '.tag_name')
           EXISTING_URL=$(echo "$EXISTING_RELEASE" | jq -r '.html_url')
           EXISTING_ID=$(echo "$EXISTING_RELEASE" | jq -r '.id')
 
-          if [[ "$RELEASE_WORKFLOW_VERSION" == "v7" ]]; then
-            # v7 draft-first flow: reuse existing drafts, fail on published
-            if [[ "$EXISTING_DRAFT" == "true" ]]; then
-              echo "Reusing existing draft release '$EXPECTED_TITLE'"
-              echo "release-url=${EXISTING_URL}" >> $GITHUB_OUTPUT
-              echo "release-id=${EXISTING_ID}" >> $GITHUB_OUTPUT
-              exit 0
-            else
-              echo "::error::A published release with title '$EXPECTED_TITLE' already exists."
-              exit 1
-            fi
-          elif [[ "$RELEASE_WORKFLOW_VERSION" == "v6" ]]; then
-            if [[ "$DRAFT_MODE" == "true" ]]; then
-              # If draft=true and release exists, log warning and do nothing
-              echo "::warning::A release with title '$EXPECTED_TITLE' already exists. Skipping creation since draft=true."
-              echo "release-url=${EXISTING_URL}" >> $GITHUB_OUTPUT
-              echo "release-id=${EXISTING_ID}" >> $GITHUB_OUTPUT
-              exit 0
-            else
-              if [[ "$EXISTING_DRAFT" == "true" ]]; then
-              # If draft=false and existing release is a draft, publish it
-                echo "Found existing draft release with title '$EXPECTED_TITLE'. Publishing it instead of creating a new one."
-                UPDATED_URL=$(gh release edit "$EXISTING_TAG" --draft=false)
-                echo "release-url=${UPDATED_URL}" >> $GITHUB_OUTPUT
-                echo "release-id=${EXISTING_ID}" >> $GITHUB_OUTPUT
-                exit 0
-              else
-                # If draft=false and existing release is already published, this is an error
-                echo "::error::A published release with title '$EXPECTED_TITLE' already exists. Cannot create or publish another release with the same title."
-                exit 1
-              fi
-            fi
+          if [[ "$EXISTING_DRAFT" == "true" ]]; then
+            echo "Reusing existing draft release '$EXPECTED_TITLE'"
+            echo "release-url=${EXISTING_URL}" >> $GITHUB_OUTPUT
+            echo "release-id=${EXISTING_ID}" >> $GITHUB_OUTPUT
+            exit 0
+          else
+            echo "::error::A published release with title '$EXPECTED_TITLE' already exists."
+            exit 1
           fi
         fi
 
-        # No existing release found, proceed with normal creation
-        # v7 always creates as draft; v6 respects the draft input
-        DRAFT_FLAG=""
-        if [[ "$DRAFT_MODE" == "true" || "$RELEASE_WORKFLOW_VERSION" == "v7" ]]; then
-          DRAFT_FLAG="--draft"
-        fi
-
-        # Build the gh release create command
+        # No existing release found — create as draft
         NOTES_FLAG=""
         if [[ "$HAS_RELEASE_NOTES" == "true" ]]; then
           NOTES_FLAG="--notes-file release-notes.md"
@@ -156,15 +133,29 @@ runs:
           --target "$BRANCH_NAME" \
           --title "$VALIDATED_VERSION" \
           $NOTES_FLAG \
-          $DRAFT_FLAG)
+          --draft)
 
         echo "release-url=${RELEASE_URL}" >> $GITHUB_OUTPUT
 
+        RELEASE_ID=$(gh release view "$VALIDATED_VERSION" --json databaseId --jq '.databaseId')
+        echo "release-id=${RELEASE_ID}" >> $GITHUB_OUTPUT
         # Get the release ID for published releases (v6) or draft releases (v7)
         if [[ "$DRAFT_MODE" != "true" || "$RELEASE_WORKFLOW_VERSION" == "v7" ]]; then
           RELEASE_ID=$(gh release view "$VALIDATED_VERSION" --json databaseId --jq '.databaseId')
           echo "release-id=${RELEASE_ID}" >> $GITHUB_OUTPUT
         fi
+
+    - name: Publish Release
+      id: publish-release
+      if: ${{ env.NEEDS_PUBLISH == 'true' }}
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        echo "Publishing draft release '$VALIDATED_VERSION'..."
+        PUBLISHED_URL=$(gh release edit "$VALIDATED_VERSION" --draft=false)
+        echo "Release published: $PUBLISHED_URL"
+        echo "release-url=${PUBLISHED_URL}" >> $GITHUB_OUTPUT
 
     - name: Trigger Release Workflow
       shell: bash
