@@ -111,7 +111,7 @@ This action requires a GitHub token with `contents: write`, `id-token: write`, a
 The action:
 - Uses the GitHub CLI (`gh`) to create releases and trigger workflows
 - Validates version input using either the `release-version` input or `RELEASE_VERSION` environment variable
-- Detects `gh-action_release` version by grepping the caller's release workflow for `@v6` or `@v7`
+- Detects `gh-action_release` version by grepping the caller's release workflow for `@v6`; defaults to v7 if not found
 - Creates releases with provided markdown content directly
 - Monitors triggered workflows with a 5-minute time window to prevent picking up stale runs
 - Uses kebab-case naming conventions for all inputs and outputs
