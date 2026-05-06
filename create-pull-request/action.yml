@@ -247,11 +247,13 @@ runs:
         echo "Head SHA: ${HEAD_SHA}"
 
         # Configure remote URL with token for push
-        REPO_URL="https://x-access-token:${RESOLVED_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+        CURRENT_REPO=$(GH_TOKEN="$RESOLVED_TOKEN" gh repo view --json nameWithOwner --jq '.nameWithOwner')
+        REPO_URL="https://x-access-token:${RESOLVED_TOKEN}@github.com/${CURRENT_REPO}.git"
         git remote set-url origin "$REPO_URL"
 
         # Push to remote (force is safe here: the branch is bot-owned and managed exclusively by this action)
         git push --force origin "$PR_BRANCH"
+        echo "repo=${CURRENT_REPO}" >> "$GITHUB_OUTPUT"
         echo "Pushed branch '${PR_BRANCH}' to origin."
 
     - name: Create or update pull request
@@ -260,6 +262,7 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+        CURRENT_REPO: ${{ steps.stage-commit-push.outputs.repo }}
         INPUT_TITLE: ${{ inputs.title }}
         INPUT_BODY: ${{ inputs.body }}
         INPUT_BODY_PATH: ${{ inputs.body-path }}
@@ -401,7 +404,7 @@ runs:
           # Handle maintainer-can-modify
           if [[ "$INPUT_MAINTAINER_CAN_MODIFY" == "false" ]]; then
             echo "Disabling maintainer edits on PR #${PR_NUMBER}..."
-            gh api --method PATCH "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" \
+            gh api --method PATCH "/repos/${CURRENT_REPO}/pulls/${PR_NUMBER}" \
               -f maintainer_can_modify=false
           fi
         fi

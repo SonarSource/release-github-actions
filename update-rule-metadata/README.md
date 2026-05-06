@@ -17,7 +17,7 @@ This action depends on:
 - [SonarSource/vault-action-wrapper](https://github.com/SonarSource/vault-action-wrapper) for retrieving Artifactory credentials and GitHub token
 - Java 17 runtime for executing the rule-api JAR
 - Git for detecting changes and creating pull requests
-- [peter-evans/create-pull-request](https://github.com/peter-evans/create-pull-request) for automated PR creation
+- [SonarSource/release-github-actions/create-pull-request](../create-pull-request) for automated PR creation
 
 ## Inputs
 

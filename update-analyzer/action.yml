@@ -111,14 +111,14 @@ runs:
 
     - name: Create Pull Request
       id: create_pr
-      uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
+      uses: SonarSource/release-github-actions/create-pull-request@v1
       with:
+        token: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
         author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
         commit-message: '${{ steps.setup_env.outputs.commit-prefix }} Update `${{ inputs.plugin-name }}` plugins to version ${{ inputs.release-version }}'
         title: '${{ steps.setup_env.outputs.commit-prefix }} Update `${{ inputs.plugin-name }}` to version ${{ inputs.release-version }}'
         body: ${{ inputs.pull-request-body }}
         base: ${{ inputs.base-branch }}
         branch: '${{ inputs.plugin-name }}/update-analyzer-${{ inputs.release-version }}'
-        token: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
         draft: ${{ inputs.draft }}
         reviewers: ${{ inputs.reviewers }}

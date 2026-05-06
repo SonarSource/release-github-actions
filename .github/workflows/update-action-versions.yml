@@ -62,56 +62,39 @@ jobs:
             rm -f "$file.bak"
           done
 
-      - name: Check for changes
-        id: check-changes
-        run: |
-          if git diff --quiet; then
-            echo "changes_detected=false" >> $GITHUB_OUTPUT
-            echo "No changes detected"
-          else
-            echo "changes_detected=true" >> $GITHUB_OUTPUT
-            echo "Changes detected"
-            echo "Modified files:"
-            git diff --name-only
-          fi
-
       - name: Create Pull Request
-        if: steps.check-changes.outputs.changes_detected == 'true'
-        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7
+        id: create-pr
+        uses: ./create-pull-request
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: |
             Update action versions to ${{ steps.get-ref.outputs.target_ref }}
-            
+
             Updated all SonarSource/release-github-actions references to use ${{ steps.get-ref.outputs.target_ref }}
           title: "Update action versions to ${{ steps.get-ref.outputs.target_ref }}"
           body: |
             ## Summary
-            
+
             This PR updates all `SonarSource/release-github-actions` references to use `${{ steps.get-ref.outputs.target_ref }}`.
-            
+
             ## Changes
-            
+
             - Updated action references in action.yml files
             - Used reference: `${{ steps.get-ref.outputs.target_ref }}`
-            
-            ## Files Modified
-            
-            ```
-            ${{ steps.check-changes.outputs.modified_files }}
-            ```
-            
+
             ---
-            
+
             This PR was automatically created by the `update-action-versions` workflow.
           branch: update-action-versions-${{ steps.get-ref.outputs.target_ref }}
           delete-branch: true
 
       - name: Summary
+        env:
+          PR_OPERATION: ${{ steps.create-pr.outputs.pull-request-operation }}
+          TARGET_REF: ${{ steps.get-ref.outputs.target_ref }}
         run: |
-          if [ "${{ steps.check-changes.outputs.changes_detected }}" == "true" ]; then
-            echo "✅ Successfully created PR with updated action versions"
-            echo "Target reference: ${{ steps.get-ref.outputs.target_ref }}"
+          if [ "$PR_OPERATION" != "none" ]; then
+            echo "Successfully created PR with updated action versions"
+            echo "Target reference: $TARGET_REF"
           else
-            echo "ℹ️ No updates needed - all references are already up to date"
+            echo "No updates needed - all references are already up to date"
           fi
