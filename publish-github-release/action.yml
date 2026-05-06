@@ -154,7 +154,7 @@ runs:
         echo "release-url=${RELEASE_URL}" >> $GITHUB_OUTPUT
 
         # Get the release ID for published releases (v6) or draft releases (v7)
-        if [[ "$DRAFT_MODE" != "true" ]] || [[ "$RELEASE_WORKFLOW_VERSION" == "v7" ]]; then
+        if [[ "$DRAFT_MODE" != "true" || "$RELEASE_WORKFLOW_VERSION" == "v7" ]]; then
           RELEASE_ID=$(gh api repos/${{ github.repository }}/releases --jq ".[] | select(.tag_name == \"$VALIDATED_VERSION\") | .id")
           echo "release-id=${RELEASE_ID}" >> $GITHUB_OUTPUT
         fi
