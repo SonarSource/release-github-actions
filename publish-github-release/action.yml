@@ -25,11 +25,17 @@ inputs:
     description: 'The filename of the release workflow to trigger in the caller repository.'
     required: false
     default: 'release.yml'
+  release-artifacts-public:
+    description: 'Newline-separated list of artifact paths to download from Repox public repositories and attach to the GitHub release. Each path should include the Artifactory repo name (e.g., sonarsource-public-builds/org/sonarsource/dotnet/sonar-csharp-plugin/{version}/sonar-csharp-plugin-{version}.jar). Use {version} as a placeholder for the release version. Authenticated via the public-reader Vault role.'
+    required: false
+  release-artifacts-private:
+    description: 'Newline-separated list of artifact paths to download from Repox private repositories and attach to the GitHub release. Each path should include the Artifactory repo name (e.g., sonarsource-private-builds/com/sonarsource/dotnet/sonar-csharp-enterprise-plugin/{version}/sonar-csharp-enterprise-plugin-{version}.jar). Use {version} as a placeholder for the release version. Authenticated via the private-reader Vault role.'
+    required: false
 
 outputs:
   release-url:
     description: 'The URL of the newly created release.'
-    value: ${{ steps.create-release.outputs.release-url }}
+    value: ${{ steps.publish-release.outputs.release-url || steps.create-release.outputs.release-url }}
 
 runs:
   using: "composite"
@@ -85,7 +91,7 @@ runs:
           echo "RELEASE_WORKFLOW_VERSION=v7" >> $GITHUB_ENV
         fi
 
-    - name: Create Release with GitHub CLI
+    - name: Create Draft Release
       id: create-release
       shell: bash
       env:
@@ -94,59 +100,36 @@ runs:
         BRANCH_NAME: ${{ inputs.branch }}
         DRAFT_MODE: ${{ inputs.draft }}
       run: |
+        # Determine if we need to publish after artifacts are attached.
+        # v6 + draft=false means we need to publish the release.
+        # We create a draft first so that artifacts can be attached before publishing.
+        if [[ "$RELEASE_WORKFLOW_VERSION" == "v6" && "$DRAFT_MODE" != "true" ]]; then
+          echo "NEEDS_PUBLISH=true" >> $GITHUB_ENV
+        else
+          echo "NEEDS_PUBLISH=false" >> $GITHUB_ENV
+        fi
+
         # Check if a release with the same title already exists
         EXPECTED_TITLE="$VALIDATED_VERSION"
         EXISTING_RELEASE=$(gh api repos/${{ github.repository }}/releases --jq ".[] | select(.name == \"$EXPECTED_TITLE\")" || echo "")
 
         if [[ -n "$EXISTING_RELEASE" ]]; then
           EXISTING_DRAFT=$(echo "$EXISTING_RELEASE" | jq -r '.draft')
-          EXISTING_TAG=$(echo "$EXISTING_RELEASE" | jq -r '.tag_name')
           EXISTING_URL=$(echo "$EXISTING_RELEASE" | jq -r '.html_url')
           EXISTING_ID=$(echo "$EXISTING_RELEASE" | jq -r '.id')
 
-          if [[ "$RELEASE_WORKFLOW_VERSION" == "v7" ]]; then
-            # v7 draft-first flow: reuse existing drafts, fail on published
-            if [[ "$EXISTING_DRAFT" == "true" ]]; then
-              echo "Reusing existing draft release '$EXPECTED_TITLE'"
-              echo "release-url=${EXISTING_URL}" >> $GITHUB_OUTPUT
-              echo "release-id=${EXISTING_ID}" >> $GITHUB_OUTPUT
-              exit 0
-            else
-              echo "::error::A published release with title '$EXPECTED_TITLE' already exists."
-              exit 1
-            fi
-          elif [[ "$RELEASE_WORKFLOW_VERSION" == "v6" ]]; then
-            if [[ "$DRAFT_MODE" == "true" ]]; then
-              # If draft=true and release exists, log warning and do nothing
-              echo "::warning::A release with title '$EXPECTED_TITLE' already exists. Skipping creation since draft=true."
-              echo "release-url=${EXISTING_URL}" >> $GITHUB_OUTPUT
-              echo "release-id=${EXISTING_ID}" >> $GITHUB_OUTPUT
-              exit 0
-            else
-              if [[ "$EXISTING_DRAFT" == "true" ]]; then
-              # If draft=false and existing release is a draft, publish it
-                echo "Found existing draft release with title '$EXPECTED_TITLE'. Publishing it instead of creating a new one."
-                UPDATED_URL=$(gh release edit "$EXISTING_TAG" --draft=false)
-                echo "release-url=${UPDATED_URL}" >> $GITHUB_OUTPUT
-                echo "release-id=${EXISTING_ID}" >> $GITHUB_OUTPUT
-                exit 0
-              else
-                # If draft=false and existing release is already published, this is an error
-                echo "::error::A published release with title '$EXPECTED_TITLE' already exists. Cannot create or publish another release with the same title."
-                exit 1
-              fi
-            fi
+          if [[ "$EXISTING_DRAFT" == "true" ]]; then
+            echo "Reusing existing draft release '$EXPECTED_TITLE'"
+            echo "release-url=${EXISTING_URL}" >> $GITHUB_OUTPUT
+            echo "release-id=${EXISTING_ID}" >> $GITHUB_OUTPUT
+            exit 0
+          else
+            echo "::error::A published release with title '$EXPECTED_TITLE' already exists."
+            exit 1
           fi
         fi
 
-        # No existing release found, proceed with normal creation
-        # v7 always creates as draft; v6 respects the draft input
-        DRAFT_FLAG=""
-        if [[ "$DRAFT_MODE" == "true" || "$RELEASE_WORKFLOW_VERSION" == "v7" ]]; then
-          DRAFT_FLAG="--draft"
-        fi
-
-        # Build the gh release create command
+        # No existing release found — create as draft
         NOTES_FLAG=""
         if [[ "$HAS_RELEASE_NOTES" == "true" ]]; then
           NOTES_FLAG="--notes-file release-notes.md"
@@ -156,15 +139,84 @@ runs:
           --target "$BRANCH_NAME" \
           --title "$VALIDATED_VERSION" \
           $NOTES_FLAG \
-          $DRAFT_FLAG)
+          --draft)
 
         echo "release-url=${RELEASE_URL}" >> $GITHUB_OUTPUT
 
-        # Get the release ID for published releases (v6) or draft releases (v7)
-        if [[ "$DRAFT_MODE" != "true" || "$RELEASE_WORKFLOW_VERSION" == "v7" ]]; then
-          RELEASE_ID=$(gh release view "$VALIDATED_VERSION" --json databaseId --jq '.databaseId')
-          echo "release-id=${RELEASE_ID}" >> $GITHUB_OUTPUT
-        fi
+        RELEASE_ID=$(gh release view "$VALIDATED_VERSION" --json databaseId --jq '.databaseId')
+        echo "release-id=${RELEASE_ID}" >> $GITHUB_OUTPUT
+
+    - name: Vault Artifactory Public Reader
+      if: ${{ inputs.release-artifacts-public != '' }}
+      id: vault-public
+      uses: SonarSource/vault-action-wrapper@v3
+      with:
+        secrets: |
+          development/artifactory/token/{REPO_OWNER_NAME_DASH}-public-reader access_token | PUBLIC_ARTIFACTORY_ACCESS_TOKEN;
+          development/artifactory/token/{REPO_OWNER_NAME_DASH}-public-reader role         | PUBLIC_ARTIFACTORY_ROLE;
+
+    - name: Vault Artifactory Private Reader
+      if: ${{ inputs.release-artifacts-private != '' }}
+      id: vault-private
+      uses: SonarSource/vault-action-wrapper@v3
+      with:
+        secrets: |
+          development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader access_token | PRIVATE_ARTIFACTORY_ACCESS_TOKEN;
+          development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader role         | PRIVATE_ARTIFACTORY_ROLE;
+
+    - name: Download and attach public release artifacts
+      if: ${{ inputs.release-artifacts-public != '' }}
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        ARTIFACTS: ${{ inputs.release-artifacts-public }}
+        REPOX_USER: vault-${{ fromJSON(steps.vault-public.outputs.vault).PUBLIC_ARTIFACTORY_ROLE }}
+        REPOX_PASS: ${{ fromJSON(steps.vault-public.outputs.vault).PUBLIC_ARTIFACTORY_ACCESS_TOKEN }}
+      run: &attach-artifacts |
+        REPOX_BASE_URL="https://repox.jfrog.io/artifactory"
+        DOWNLOAD_DIR=$(mktemp -d)
+
+        while IFS= read -r artifact_path; do
+          [[ -z "$artifact_path" || "$artifact_path" =~ ^[[:space:]]*$ || "$artifact_path" == \#* ]] && continue
+          artifact_path=$(echo "$artifact_path" | xargs)
+
+          resolved_path="${artifact_path//\{version\}/$VALIDATED_VERSION}"
+          filename=$(basename "$resolved_path")
+          download_url="${REPOX_BASE_URL}/${resolved_path}"
+
+          echo "Downloading $download_url..."
+          curl -fSL -u "$REPOX_USER:$REPOX_PASS" -o "$DOWNLOAD_DIR/$filename" "$download_url"
+          echo "Downloaded $filename ($(stat --format='%s' "$DOWNLOAD_DIR/$filename") bytes)"
+
+          echo "Uploading $filename to release $VALIDATED_VERSION..."
+          gh release upload "$VALIDATED_VERSION" "$DOWNLOAD_DIR/$filename" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber
+        done <<< "$ARTIFACTS"
+
+        rm -rf "$DOWNLOAD_DIR"
+
+    - name: Download and attach private release artifacts
+      if: ${{ inputs.release-artifacts-private != '' }}
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        ARTIFACTS: ${{ inputs.release-artifacts-private }}
+        REPOX_USER: vault-${{ fromJSON(steps.vault-private.outputs.vault).PRIVATE_ARTIFACTORY_ROLE }}
+        REPOX_PASS: ${{ fromJSON(steps.vault-private.outputs.vault).PRIVATE_ARTIFACTORY_ACCESS_TOKEN }}
+      run: *attach-artifacts
+
+    - name: Publish Release
+      id: publish-release
+      if: ${{ env.NEEDS_PUBLISH == 'true' }}
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        echo "Publishing draft release '$VALIDATED_VERSION'..."
+        PUBLISHED_URL=$(gh release edit "$VALIDATED_VERSION" --draft=false)
+        echo "Release published: $PUBLISHED_URL"
+        echo "release-url=${PUBLISHED_URL}" >> $GITHUB_OUTPUT
 
     - name: Trigger Release Workflow
       shell: bash
