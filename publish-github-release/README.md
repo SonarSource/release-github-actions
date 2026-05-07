@@ -62,10 +62,10 @@ Each path should include the Artifactory repository name and can use `{version}`
   with:
     release-version: 'v1.2.3.456'
     release-artifacts-public: |
-      sonarsource-public-releases/org/sonarsource/java/sonar-java-plugin/{version}/sonar-java-plugin-{version}.jar
+      sonarsource-public-builds/org/sonarsource/java/sonar-java-plugin/{version}/sonar-java-plugin-{version}.jar
     release-artifacts-private: |
-      sonarsource-npm-private-releases/@sonar/some-package/-/some-package-{version}.tgz
-    dry-run: false
+      sonarsource-nuget-private-builds/A3S.NET.{version}.nupkg
+    draft: false
 ```
 
 ### Vault Roles
