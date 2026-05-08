@@ -35,7 +35,7 @@ inputs:
 outputs:
   release-url:
     description: 'The URL of the newly created release.'
-    value: ${{ steps.publish-release.outputs.release-url || steps.create-release.outputs.release-url }}
+    value: ${{ steps.trigger-release.outputs.release-url || steps.publish-release.outputs.release-url || steps.create-release.outputs.release-url }}
 
 runs:
   using: "composite"
@@ -244,6 +244,7 @@ runs:
         echo "release-url=${PUBLISHED_URL}" >> $GITHUB_OUTPUT
 
     - name: Trigger Release Workflow
+      id: trigger-release
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
@@ -320,3 +321,7 @@ runs:
           # Wait 15 seconds before checking again
           sleep 15
         done
+
+        # Fetch the final release URL now that the release is published
+        RELEASE_URL=$(gh release view "$VALIDATED_VERSION" --json url --jq '.url')
+        echo "release-url=${RELEASE_URL}" >> $GITHUB_OUTPUT
