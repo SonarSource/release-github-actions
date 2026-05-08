@@ -179,13 +179,12 @@ runs:
         #   REPOX_PASS        - Artifactory access token
         # Expected env vars from earlier steps:
         #   VALIDATED_VERSION - release version from "Validate Version Input"
+        set -e
         REPOX_BASE_URL="https://repox.jfrog.io/artifactory"
         DOWNLOAD_DIR=$(mktemp -d -p "$RUNNER_TEMP")
+        trap 'rm -rf "$DOWNLOAD_DIR"' EXIT
 
-        while IFS= read -r artifact_path; do
-          artifact_path=$(echo "$artifact_path" | xargs)
-          [[ -z "$artifact_path" || "$artifact_path" == \#* ]] && continue
-
+        while read -r artifact_path; do
           resolved_path="${artifact_path//\{version\}/$VALIDATED_VERSION}"
           filename=$(basename "$resolved_path")
           download_url="${REPOX_BASE_URL}/${resolved_path}"
@@ -193,7 +192,7 @@ runs:
           echo "Downloading $download_url..."
           curl -fSL -u "$REPOX_USER:$REPOX_PASS" -o "$DOWNLOAD_DIR/$filename" "$download_url"
           echo "Downloaded $filename ($(stat --format='%s' "$DOWNLOAD_DIR/$filename") bytes)"
-        done <<< "$ARTIFACTS"
+        done < <(echo "$ARTIFACTS" | grep -vE '^(#|$)')
 
         echo "Uploading artifacts to release $VALIDATED_VERSION..."
         gh release upload "$VALIDATED_VERSION" "$DOWNLOAD_DIR"/* \
