@@ -172,13 +172,7 @@ runs:
         ARTIFACTS: ${{ inputs.release-artifacts-public }}
         REPOX_USER: vault-${{ fromJSON(steps.vault-public.outputs.vault).PUBLIC_ARTIFACTORY_ROLE }}
         REPOX_PASS: ${{ fromJSON(steps.vault-public.outputs.vault).PUBLIC_ARTIFACTORY_ACCESS_TOKEN }}
-      run: &attach-artifacts |
-        # Expected env vars from the calling step:
-        #   ARTIFACTS         - newline-separated list of artifact paths
-        #   REPOX_USER        - Artifactory username
-        #   REPOX_PASS        - Artifactory access token
-        # Expected env vars from earlier steps:
-        #   VALIDATED_VERSION - release version from "Validate Version Input"
+      run: |
         set -e
         REPOX_BASE_URL="https://repox.jfrog.io/artifactory"
         DOWNLOAD_DIR=$(mktemp -d -p "$RUNNER_TEMP")
@@ -216,7 +210,26 @@ runs:
         ARTIFACTS: ${{ inputs.release-artifacts-private }}
         REPOX_USER: vault-${{ fromJSON(steps.vault-private.outputs.vault).PRIVATE_ARTIFACTORY_ROLE }}
         REPOX_PASS: ${{ fromJSON(steps.vault-private.outputs.vault).PRIVATE_ARTIFACTORY_ACCESS_TOKEN }}
-      run: *attach-artifacts
+      run: |
+        set -e
+        REPOX_BASE_URL="https://repox.jfrog.io/artifactory"
+        DOWNLOAD_DIR=$(mktemp -d -p "$RUNNER_TEMP")
+        trap 'rm -rf "$DOWNLOAD_DIR"' EXIT
+
+        while read -r artifact_path; do
+          resolved_path="${artifact_path//\{version\}/$VALIDATED_VERSION}"
+          filename=$(basename "$resolved_path")
+          download_url="${REPOX_BASE_URL}/${resolved_path}"
+
+          echo "Downloading $download_url..."
+          curl -fSL -u "$REPOX_USER:$REPOX_PASS" -o "$DOWNLOAD_DIR/$filename" "$download_url"
+          echo "Downloaded $filename ($(stat --format='%s' "$DOWNLOAD_DIR/$filename") bytes)"
+        done < <(echo "$ARTIFACTS" | grep -vE '^(#|$)')
+
+        echo "Uploading artifacts to release $VALIDATED_VERSION..."
+        gh release upload "$VALIDATED_VERSION" "$DOWNLOAD_DIR"/* \
+          --repo "$GITHUB_REPOSITORY" \
+          --clobber
 
     - name: Publish Release
       id: publish-release
