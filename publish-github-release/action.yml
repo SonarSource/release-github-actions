@@ -170,8 +170,8 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         ARTIFACTS: ${{ inputs.release-artifacts-public }}
-        REPOX_USER: vault-${{ fromJSON(steps.vault-public.outputs.vault).PUBLIC_ARTIFACTORY_ROLE }}
-        REPOX_PASS: ${{ fromJSON(steps.vault-public.outputs.vault).PUBLIC_ARTIFACTORY_ACCESS_TOKEN }}
+        REPOX_USER: vault-${{ fromJSON(steps.vault-public.outputs.vault || '{}').PUBLIC_ARTIFACTORY_ROLE }}
+        REPOX_PASS: ${{ fromJSON(steps.vault-public.outputs.vault || '{}').PUBLIC_ARTIFACTORY_ACCESS_TOKEN }}
       run: |
         set -e
         REPOX_BASE_URL="https://repox.jfrog.io/artifactory"
@@ -208,8 +208,8 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         ARTIFACTS: ${{ inputs.release-artifacts-private }}
-        REPOX_USER: vault-${{ fromJSON(steps.vault-private.outputs.vault).PRIVATE_ARTIFACTORY_ROLE }}
-        REPOX_PASS: ${{ fromJSON(steps.vault-private.outputs.vault).PRIVATE_ARTIFACTORY_ACCESS_TOKEN }}
+        REPOX_USER: vault-${{ fromJSON(steps.vault-private.outputs.vault || '{}').PRIVATE_ARTIFACTORY_ROLE }}
+        REPOX_PASS: ${{ fromJSON(steps.vault-private.outputs.vault || '{}').PRIVATE_ARTIFACTORY_ACCESS_TOKEN }}
       run: |
         set -e
         REPOX_BASE_URL="https://repox.jfrog.io/artifactory"
