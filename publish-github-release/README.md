@@ -74,8 +74,8 @@ This action requires a GitHub token with `contents: write`, `id-token: write`, a
 | `release-notes`    | The full markdown content for the release notes.                                                                                                       | No       |                       |
 | `draft`            | A boolean value to indicate if the release should be a draft.                                                                                          | No       | `true`                |
 | `release-workflow` | The filename of the release workflow to trigger in the caller repository.                                                                              | No       | `release.yml`         |
-| `release-artifacts-public` | Newline-separated Repox paths from public repositories to attach to the release. Use `{version}` as placeholder.  | No       |                       |
-| `release-artifacts-private` | Newline-separated Repox paths from private repositories to attach to the release. Use `{version}` as placeholder. | No       |                       |
+| `release-artifacts-public` | Newline-separated Repox paths from public repositories to attach to the release. Use `{version}` as placeholder.                               | No       |                       |
+| `release-artifacts-private` | Newline-separated Repox paths from private repositories to attach to the release. Use `{version}` as placeholder.                             | No       |                       |
 
 ## Outputs
 

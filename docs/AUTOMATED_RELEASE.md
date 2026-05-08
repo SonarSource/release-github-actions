@@ -60,14 +60,14 @@ This workflow composes several actions from this repository:
 | `create-sli-ticket`          | Create SLI integration ticket                                                                                   | No       | `false`      |
 | `sqs-integration`            | Create SQS integration ticket and PR                                                                            | No       | `true`       |
 | `sqc-integration`            | Create SQC integration ticket and PR                                                                            | No       | `true`       |
-| `runner-environment`         | Runner labels/environment                                                                                        | No       | `sonar-m`    |
+| `runner-environment`         | Runner labels/environment                                                                                       | No       | `sonar-m`    |
 | `release-process`            | Release process documentation URL                                                                               | No       | General page |
 | `verbose`                    | When `true`, posts per-job summaries and a final run summary                                                    | No       | `false`      |
 | `freeze-branch`              | When `true`, locks the target branch during the release and unlocks it after publishing                         | No       | `true`       |
 | `check-releasability`        | When `true`, verifies the releasability status on the branch before proceeding                                  | No       | `true`       |
 | `slack-channel`              | Slack channel to notify when locking/unlocking the branch                                                       | No       | -            |
-| `release-artifacts-public`   | Newline-separated Repox paths from public repositories to attach to the GitHub release | No       | -            |
-| `release-artifacts-private`  | Newline-separated Repox paths from private repositories to attach to the GitHub release | No       | -            |
+| `release-artifacts-public`   | Newline-separated Repox paths from public repositories to attach to the GitHub release                          | No       | -            |
+| `release-artifacts-private`  | Newline-separated Repox paths from private repositories to attach to the GitHub release                         | No       | -            |
 
 ## Outputs
 
