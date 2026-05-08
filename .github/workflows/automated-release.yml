@@ -163,11 +163,11 @@ on:
         required: false
         type: string
       release-artifacts-public:
-        description: "Newline-separated Repox artifact paths from public repositories to attach to the GitHub release. Include the Artifactory repo name in each path (e.g., sonarsource-public-releases/org/sonarsource/...). Use {version} as placeholder for the release version."
+        description: "Newline-separated Repox public artifact paths to attach to the release. Use {version} as placeholder."
         required: false
         type: string
       release-artifacts-private:
-        description: "Newline-separated Repox artifact paths from private repositories to attach to the GitHub release. Include the Artifactory repo name in each path (e.g., sonarsource-npm-private-releases/@sonar/...). Use {version} as placeholder for the release version."
+        description: "Newline-separated Repox private artifact paths to attach to the release. Use {version} as placeholder."
         required: false
         type: string
 
