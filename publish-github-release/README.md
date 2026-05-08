@@ -7,21 +7,22 @@ This GitHub Action automates the creation of a GitHub Release using provided rel
 The action performs the following steps:
 1. Validates that either a `release-version` input or `RELEASE_VERSION` environment variable is provided
 2. Creates a GitHub release using the provided release notes
-3. Automatically triggers a specified release workflow in the caller repository
-4. Monitors the workflow execution and waits for it to complete
+3. Optionally downloads artifacts from Repox and attaches them to the release
+4. Automatically triggers a specified release workflow in the caller repository
+5. Monitors the workflow execution and waits for it to complete
 
 ## gh-action_release v6/v7 Compatibility
 
 The action automatically detects whether the caller's release workflow uses `gh-action_release` v6 or v7 by inspecting the workflow file. Detection works with all common pinning strategies:
 
-- **Tag references**: `@v6`, `@6.8.1`
+- **Tag references**: `@v6`, `@6.8.1`
 - **SHA-pinned with version comment**: `@abc123def # 6.8.1`
 - **`releaseId` fallback**: If no version is detected from the action reference, the presence of a `releaseId` input in the workflow indicates v6.
 - **Default**: If none of the above match, v7 is assumed.
 
 Behavior per version:
 
-- **v6**: Uses the original flow — publishes releases when `draft=false`, passes `releaseId` to the triggered workflow.
+- **v6**: Creates a draft, attaches artifacts, then publishes when `draft=false`. Passes `releaseId` to the triggered workflow.
 - **v7 (default)**: Uses a draft-first flow — always creates draft releases and passes only `version` and `dryRun`. `gh-action_release` v7 handles the draft-to-published promotion after successful artifact promotion.
 
 No changes are needed in calling workflows — the detection is automatic.
@@ -30,10 +31,10 @@ No changes are needed in calling workflows — the detection is automatic.
 
 The action automatically checks for existing releases with the same title before creating a new one:
 
-- **When using v7**: Existing drafts are reused (idempotent). Existing published releases cause an error.
+- **When using v7**: Existing drafts are reused (idempotent). Existing published releases cause an error (release already completed).
 - **When using v6**:
   - **When `draft=true`**: If a release with the same title already exists, the action logs a warning and skips creation without failing.
-  - **When `draft=false`**: If an existing draft release with the same title is found, it will be published instead of creating a new release. If a published release with the same title already exists, the action will fail with an error.
+  - **When `draft=false`**: If an existing draft release with the same title is found, it will be reused. If a published release with the same title already exists, the action will fail with an error.
 
 ## Release Workflow Triggering
 
@@ -45,6 +46,19 @@ After creating the GitHub release, this action automatically triggers a release 
 - Succeeds if the release workflow completes successfully, or fails if the release workflow fails
 
 This ensures that the entire release process (GitHub release creation + downstream release workflow) succeeds or fails as a unit.
+
+## Artifact Attachment
+
+Artifacts from Repox can be attached to the draft release using `release-artifacts-public` and `release-artifacts-private` inputs. The `{version}` placeholder is replaced at runtime. Calling repositories must configure `{REPO}-public-reader` and/or `{REPO}-private-reader` Vault roles, and the calling job needs `id-token: write` permission.
+
+```yaml
+    with:
+      release-artifacts-public: |
+        sonarsource-public-builds/org/sonarsource/java/sonar-java-plugin/{version}/sonar-java-plugin-{version}.jar
+      release-artifacts-private: |
+        sonarsource-nuget-private-builds/A3S.NET.{version}.nupkg
+```
+
 
 ## Prerequisites
 
@@ -60,6 +74,8 @@ This action requires a GitHub token with `contents: write`, `id-token: write`, a
 | `release-notes`    | The full markdown content for the release notes.                                                                                                       | No       |                       |
 | `draft`            | A boolean value to indicate if the release should be a draft.                                                                                          | No       | `true`                |
 | `release-workflow` | The filename of the release workflow to trigger in the caller repository.                                                                              | No       | `release.yml`         |
+| `release-artifacts-public` | Newline-separated Repox paths from public repositories to attach to the release. Use `{version}` as placeholder.                               | No       |                       |
+| `release-artifacts-private` | Newline-separated Repox paths from private repositories to attach to the release. Use `{version}` as placeholder.                             | No       |                       |
 
 ## Outputs
 
@@ -118,8 +134,7 @@ This action requires a GitHub token with `contents: write`, `id-token: write`, a
 The action:
 - Uses the GitHub CLI (`gh`) to create releases and trigger workflows
 - Validates version input using either the `release-version` input or `RELEASE_VERSION` environment variable
-- Detects `gh-action_release` version by checking the caller's release workflow for v6 references (`@v6` or `@6.x.y` tag, `# 6` comment, or `releaseId` input); defaults to v7 if not found
-
+- Detects `gh-action_release` version by checking the caller's release workflow for v6 references (`@v6` or `@6.x.y` tag, `# 6` comment, or `releaseId` input); defaults to v7 if not found
 - Creates releases with provided markdown content directly
 - Monitors triggered workflows with a 5-minute time window to prevent picking up stale runs
 - Uses kebab-case naming conventions for all inputs and outputs

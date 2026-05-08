@@ -162,6 +162,14 @@ on:
         description: "Version bumping tool to use. Supported values: 'maven'. Leave empty to use the default shell-based solution."
         required: false
         type: string
+      release-artifacts-public:
+        description: "Newline-separated Repox public artifact paths to attach to the release. Use {version} as placeholder."
+        required: false
+        type: string
+      release-artifacts-private:
+        description: "Newline-separated Repox private artifact paths to attach to the release. Use {version} as placeholder."
+        required: false
+        type: string
 
     outputs:
       new-version:
@@ -455,6 +463,8 @@ jobs:
           release-notes: ${{ inputs.release-notes != '' && inputs.release-notes || needs.prepare-release.outputs.release-notes }}
           draft: ${{ inputs.is-draft-release }}
           branch: ${{ inputs.branch }}
+          release-artifacts-public: ${{ inputs.release-artifacts-public }}
+          release-artifacts-private: ${{ inputs.release-artifacts-private }}
 
       - name: Summary
         if: ${{ inputs.verbose }}
