@@ -121,23 +121,21 @@ runs:
           EXISTING_URL=$(echo "$EXISTING_RELEASE" | jq -r '.html_url')
           EXISTING_ID=$(echo "$EXISTING_RELEASE" | jq -r '.id')
 
-          if [[ "$DRAFT_MODE" == "true" ]]; then
-            # draft=true: skip creation regardless of existing release state
-            echo "::warning::Release '$EXPECTED_TITLE' already exists. Skipping creation."
-            echo "release-url=${EXISTING_URL}" >> $GITHUB_OUTPUT
-            echo "release-id=${EXISTING_ID}" >> $GITHUB_OUTPUT
-            exit 0
-          else
-            if [[ "$EXISTING_DRAFT" == "true" ]]; then
-              echo "Reusing existing draft release '$EXPECTED_TITLE'"
-              echo "release-url=${EXISTING_URL}" >> $GITHUB_OUTPUT
-              echo "release-id=${EXISTING_ID}" >> $GITHUB_OUTPUT
-              exit 0
+          # Published releases are immutable — fail unless v6 dry-run (draft=true)
+          if [[ "$EXISTING_DRAFT" != "true" ]]; then
+            if [[ "$RELEASE_WORKFLOW_VERSION" == "v6" && "$DRAFT_MODE" == "true" ]]; then
+              echo "::warning::Release '$EXPECTED_TITLE' already exists. Skipping creation."
             else
               echo "::error::A published release with title '$EXPECTED_TITLE' already exists."
               exit 1
             fi
+          else
+            echo "Reusing existing draft release '$EXPECTED_TITLE'"
           fi
+
+          echo "release-url=${EXISTING_URL}" >> $GITHUB_OUTPUT
+          echo "release-id=${EXISTING_ID}" >> $GITHUB_OUTPUT
+          exit 0
         fi
 
         # No existing release found — create as draft
