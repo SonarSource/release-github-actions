@@ -112,14 +112,18 @@ runs:
         BRANCH_NAME: ${{ inputs.branch }}
         DRAFT_MODE: ${{ inputs.draft }}
       run: |
+        # Strip build metadata suffix for the human-readable title (e.g. 1.2.3+build → 1.2.3)
+        RELEASE_TITLE="${VALIDATED_VERSION%%+*}"
+
         # Check if a release with the same title already exists
-        EXPECTED_TITLE="$VALIDATED_VERSION"
+        EXPECTED_TITLE="$RELEASE_TITLE"
         EXISTING_RELEASE=$(gh api repos/${{ github.repository }}/releases --jq ".[] | select(.name == \"$EXPECTED_TITLE\")" || echo "")
 
         if [[ -n "$EXISTING_RELEASE" ]]; then
           EXISTING_DRAFT=$(echo "$EXISTING_RELEASE" | jq -r '.draft')
           EXISTING_URL=$(echo "$EXISTING_RELEASE" | jq -r '.html_url')
           EXISTING_ID=$(echo "$EXISTING_RELEASE" | jq -r '.id')
+          EXISTING_TAG=$(echo "$EXISTING_RELEASE" | jq -r '.tag_name')
 
           # Published releases are immutable — fail unless v6 dry-run (draft=true)
           if [[ "$EXISTING_DRAFT" != "true" ]]; then
@@ -130,9 +134,11 @@ runs:
               exit 1
             fi
           else
-            echo "Reusing existing draft release '$EXPECTED_TITLE'"
+            echo "Reusing existing draft release '$EXPECTED_TITLE' (tag: $EXISTING_TAG)"
           fi
 
+          # Align VALIDATED_VERSION with the existing release's tag so subsequent steps use the correct tag
+          echo "VALIDATED_VERSION=$EXISTING_TAG" >> $GITHUB_ENV
           echo "release-url=${EXISTING_URL}" >> $GITHUB_OUTPUT
           echo "release-id=${EXISTING_ID}" >> $GITHUB_OUTPUT
           exit 0
@@ -146,7 +152,7 @@ runs:
 
         RELEASE_URL=$(gh release create "$VALIDATED_VERSION" \
           --target "$BRANCH_NAME" \
-          --title "$VALIDATED_VERSION" \
+          --title "$RELEASE_TITLE" \
           $NOTES_FLAG \
           --draft)
 
