@@ -86,15 +86,15 @@ on:
         required: false
         type: boolean
         default: false
-      sq-cli-short-description:
-        description: "Short summary of SQ CLI related changes."
-        required: false
-        type: string
       create-cli-ticket:
         description: "Create CLI integration ticket"
         required: false
         type: boolean
         default: false
+      sq-cli-short-description:
+        description: "Short summary of SQ CLI related changes."
+        required: false
+        type: string
       sqs-integration:
         description: "Creat SQS integration ticket and PR"
         required: false

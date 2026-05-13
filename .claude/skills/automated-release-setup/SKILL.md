@@ -329,14 +329,6 @@ on:
         description: "Short description for the REL ticket"
         required: true
         type: string
-      sqc-integration:
-        description: "Integrate into SQC"
-        type: boolean
-        default: true
-      sqs-integration:
-        description: "Integrate into SQS"
-        type: boolean
-        default: true
       cli-integration:
         description: "Create CLI ticket (SonarQube CLI scanner)"
         type: boolean
@@ -345,6 +337,14 @@ on:
         description: "Short description for the CLI ticket (leave empty to use the main short-description)"
         required: false
         type: string
+      sqc-integration:
+        description: "Integrate into SQC"
+        type: boolean
+        default: true
+      sqs-integration:
+         description: "Integrate into SQS"
+         type: boolean
+         default: true
       branch:
         description: "Branch from which to do the release"
         required: true
@@ -385,10 +385,10 @@ jobs:
       rule-props-changed: ${{ github.event.inputs.rule-props-changed }}
       short-description: ${{ github.event.inputs.short-description }}
       new-version: ${{ github.event.inputs.new-version }}
-      sqc-integration: ${{ github.event.inputs.sqc-integration == 'true' }}
-      sqs-integration: ${{ github.event.inputs.sqs-integration == 'true' }}
       create-cli-ticket: ${{ github.event.inputs.cli-integration == 'true' }}
       sq-cli-short-description: ${{ github.event.inputs.sq-cli-short-description }}
+      sqc-integration: ${{ github.event.inputs.sqc-integration == 'true' }}
+      sqs-integration: ${{ github.event.inputs.sqs-integration == 'true' }}
       branch: ${{ github.event.inputs.branch }}
       pm-email: "${PM_EMAIL}"
       slack-channel: "${SLACK_CHANNEL}"

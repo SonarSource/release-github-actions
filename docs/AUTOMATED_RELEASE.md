@@ -58,8 +58,8 @@ This workflow composes several actions from this repository:
 | `create-slvscode-ticket`     | Create SLVSCODE integration ticket                                                                              | No       | `false`      |
 | `create-sle-ticket`          | Create SLE integration ticket                                                                                   | No       | `false`      |
 | `create-sli-ticket`          | Create SLI integration ticket                                                                                   | No       | `false`      |
-| `sq-cli-short-description`   | Short summary of SQ CLI related changes                                                                         | No       | -            |
 | `create-cli-ticket`          | Create CLI integration ticket                                                                                   | No       | `false`      |
+| `sq-cli-short-description`   | Short summary of SQ CLI related changes                                                                         | No       | -            |
 | `sqs-integration`            | Create SQS integration ticket and PR                                                                            | No       | `true`       |
 | `sqc-integration`            | Create SQC integration ticket and PR                                                                            | No       | `true`       |
 | `runner-environment`         | Runner labels/environment                                                                                       | No       | `sonar-m`    |
