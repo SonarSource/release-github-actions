@@ -58,6 +58,8 @@ This workflow composes several actions from this repository:
 | `create-slvscode-ticket`     | Create SLVSCODE integration ticket                                                                              | No       | `false`      |
 | `create-sle-ticket`          | Create SLE integration ticket                                                                                   | No       | `false`      |
 | `create-sli-ticket`          | Create SLI integration ticket                                                                                   | No       | `false`      |
+| `sq-cli-short-description`   | Short summary of SQ CLI related changes                                                                         | No       | -            |
+| `create-cli-ticket`          | Create CLI integration ticket                                                                                   | No       | `false`      |
 | `sqs-integration`            | Create SQS integration ticket and PR                                                                            | No       | `true`       |
 | `sqc-integration`            | Create SQC integration ticket and PR                                                                            | No       | `true`       |
 | `runner-environment`         | Runner labels/environment                                                                                       | No       | `sonar-m`    |
@@ -218,6 +220,15 @@ When your analyzer is used by SonarLint, you can enable integration ticket creat
 | `create-sli-ticket` | SLI | SonarLint for IntelliJ |
 
 Use `sq-ide-short-description` to describe changes relevant for IDE integrations.
+
+### CLI Integration
+
+To create a CLI integration ticket, enable `create-cli-ticket`. 
+Use `sq-cli-short-description` to describe changes relevant for CLI integrations; falls back to `short-description` if not provided.
+
+| Input | Jira Project | Description |
+|-------|--------------|-------------|
+| `create-cli-ticket` | CLI | SonarQube CLI scanner |
 
 ### Artifact Attachment
 

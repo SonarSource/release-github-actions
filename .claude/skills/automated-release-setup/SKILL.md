@@ -26,7 +26,8 @@ Ask the user for the following details using AskUserQuestion:
    - **SLVSCode** (SonarLint for VS Code)
    - **SLE** (SonarLint for Eclipse)
    - **SLI** (SonarLint for IntelliJ)
-8. **Version Bump**: Whether the automated release workflow should bump the project version after the release (i.e., prepare the next development iteration). If yes, also ask:
+8. **CLI Integration**: Whether to create an integration ticket for the SonarQube CLI scanner.
+9. **Version Bump**: Whether the automated release workflow should bump the project version after the release (i.e., prepare the next development iteration). If yes, also ask:
    - **Bump Version PR Labels**: Optional comma-separated list of labels to apply to the version bump pull request (e.g., `update-next-dev,skip-qa`). Leave empty if no labels are needed.
 
 ### Step 1b: Check Existing release.yml
@@ -317,6 +318,85 @@ jobs:
 
 Add `bump-version: true` (and optionally `bump-version-pr-labels`) to the SonarLint variant's `with:` block, same as in 3.2.
 
+#### 3.5 Create `automated-release{EXT}` (with SQ-CLI integration, no version bump, no SonarLint integration)
+
+```yaml
+name: Automated Release
+on:
+  workflow_dispatch:
+    inputs:
+      short-description:
+        description: "Short description for the REL ticket"
+        required: true
+        type: string
+      sqc-integration:
+        description: "Integrate into SQC"
+        type: boolean
+        default: true
+      sqs-integration:
+        description: "Integrate into SQS"
+        type: boolean
+        default: true
+      cli-integration:
+        description: "Create CLI ticket (SonarQube CLI scanner)"
+        type: boolean
+        default: false
+      sq-cli-short-description:
+        description: "Short description for the CLI ticket (leave empty to use the main short-description)"
+        required: false
+        type: string
+      branch:
+        description: "Branch from which to do the release"
+        required: true
+        default: "master"
+        type: string
+      new-version:
+        description: "New version to release (without -SNAPSHOT; if left empty, the current minor version will be auto-incremented)"
+        required: false
+        type: string
+      rule-props-changed:
+        description: >
+          "@RuleProperty" changed? See SC-4654
+        type: boolean
+        default: false
+      verbose:
+        description: "Enable verbose logging"
+        type: boolean
+        default: false
+      dry-run:
+        description: "Test mode: uses Jira sandbox and creates draft GitHub release"
+        type: boolean
+        default: false
+
+jobs:
+  release:
+    name: Release
+    uses: SonarSource/release-github-actions/.github/workflows/automated-release.yml@v1
+    permissions:
+      statuses: read
+      id-token: write
+      contents: write
+      actions: write
+      pull-requests: write
+    with:
+      project-name: "${PROJECT_NAME}"
+      plugin-name: "${PLUGIN_NAME}"
+      jira-project-key: "${JIRA_PROJECT_KEY}"
+      rule-props-changed: ${{ github.event.inputs.rule-props-changed }}
+      short-description: ${{ github.event.inputs.short-description }}
+      new-version: ${{ github.event.inputs.new-version }}
+      sqc-integration: ${{ github.event.inputs.sqc-integration == 'true' }}
+      sqs-integration: ${{ github.event.inputs.sqs-integration == 'true' }}
+      create-cli-ticket: ${{ github.event.inputs.cli-integration == 'true' }}
+      sq-cli-short-description: ${{ github.event.inputs.sq-cli-short-description }}
+      branch: ${{ github.event.inputs.branch }}
+      pm-email: "${PM_EMAIL}"
+      slack-channel: "${SLACK_CHANNEL}"
+      verbose: ${{ github.event.inputs.verbose == 'true' }}
+      use-jira-sandbox: ${{ github.event.inputs.dry-run == 'true' }}
+      is-draft-release: ${{ github.event.inputs.dry-run == 'true' }}
+```
+
 ### Step 4: Update release.yml
 
 The existing `release.yml` must be updated to support `workflow_dispatch` triggering from the automated release workflow. `gh-action_release` v7 uses a draft-first flow — it no longer needs a `releaseId` and no longer uses the `release: published` event.
@@ -477,6 +557,19 @@ The `sq-ide-short-description` input is used as the description for all IDE tick
 - Performance improvements relevant to IDE analysis
 
 **Note:** Not all analyzers are integrated with SonarLint. Check with the IDE teams if unsure whether your analyzer requires SonarLint integration tickets.
+
+### CLI Integration Details
+
+When CLI integration is enabled, the workflow creates a Jira ticket for the CLI scanner team:
+
+| Input | Jira Project | Description |
+|-------|--------------|-------------|
+| `create-cli-ticket` | CLI | SonarQube CLI scanner |
+
+The `sq-cli-short-description` input is used as the description for the CLI ticket. If not provided, it falls back to `short-description`. This should describe what changes are relevant for CLI users.
+
+**When to enable CLI integration:**
+- The analyzer is integrated into the SonarQube CLI (ex. sonar-secrets-cli)
 
 ### References
 
