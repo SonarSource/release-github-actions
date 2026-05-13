@@ -91,6 +91,10 @@ on:
         required: false
         type: boolean
         default: false
+      sq-cli-short-description:
+        description: "Short summary of SQ CLI related changes."
+        required: false
+        type: string
       sqs-integration:
         description: "Creat SQS integration ticket and PR"
         required: false
@@ -675,7 +679,7 @@ jobs:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "CLI"
-          ticket-description: ${{ inputs.sq-ide-short-description != '' && inputs.sq-ide-short-description || inputs.short-description }}
+          ticket-description: ${{ inputs.sq-cli-short-description != '' && inputs.sq-cli-short-description || inputs.short-description }}
           jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
 
       - name: Create SQC Ticket
