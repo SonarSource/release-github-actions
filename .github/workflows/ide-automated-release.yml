@@ -59,7 +59,7 @@ on:
 
 jobs:
   freeze-branch:
-    runs-on: github-ubuntu-latest-s
+    runs-on: warp-custom-ubuntu-24-04
     permissions:
       id-token: write
     steps:
@@ -71,7 +71,7 @@ jobs:
 
   prepare-release:
     name: Prepare release
-    runs-on: github-ubuntu-latest-s
+    runs-on: warp-custom-ubuntu-24-04
     needs: freeze-branch
     permissions:
       statuses: read
@@ -110,7 +110,7 @@ jobs:
 
   create-release-ticket:
     name: Create release ticket
-    runs-on: github-ubuntu-latest-s
+    runs-on: warp-custom-ubuntu-24-04
     needs: [freeze-branch, prepare-release]
     permissions:
       statuses: read
@@ -134,7 +134,7 @@ jobs:
 
   publish-github-release:
     name: Publish github release
-    runs-on: github-ubuntu-latest-s
+    runs-on: warp-custom-ubuntu-24-04
     needs: [ freeze-branch, prepare-release, create-release-ticket ]
     permissions:
       id-token: write
@@ -154,7 +154,7 @@ jobs:
 
   release-in-jira:
     name: Release in Jira
-    runs-on: github-ubuntu-latest-s
+    runs-on: warp-custom-ubuntu-24-04
     needs: [ freeze-branch, prepare-release, publish-github-release, create-release-ticket ]
     permissions:
       statuses: read
@@ -187,7 +187,7 @@ jobs:
     # keep branch frozen if the release failed, we need to fix something before allowing merges. 
     # the branch can be unfrozen manually with breakglass if needed.
     # if: always()
-    runs-on: github-ubuntu-latest-s
+    runs-on: warp-custom-ubuntu-24-04
     permissions:
       id-token: write
     steps:
@@ -199,7 +199,7 @@ jobs:
 
   summarize_release:
     name: Release
-    runs-on: github-ubuntu-latest-s
+    runs-on: warp-custom-ubuntu-24-04
     if: always()
     needs: [ freeze-branch, prepare-release, publish-github-release, create-release-ticket, release-in-jira, unfreeze-branch ]
     steps:
