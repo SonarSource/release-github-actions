@@ -18,7 +18,7 @@ on:
 jobs:
   unit-tests:
     name: Run Unit Tests
-    runs-on: github-ubuntu-latest-s
+    runs-on: warp-custom-ubuntu-24-04
 
     steps:
       - name: Checkout code
@@ -52,7 +52,7 @@ jobs:
     # Until that is configured, this job may fail with a permission error.
     # TODO GHA-258: Remove continue-on-error once sandbox permissions are granted.
     continue-on-error: true
-    runs-on: github-ubuntu-latest-s
+    runs-on: warp-custom-ubuntu-24-04
     permissions:
       contents: read
       id-token: write
