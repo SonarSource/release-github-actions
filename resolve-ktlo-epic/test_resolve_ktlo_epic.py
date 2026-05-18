@@ -101,7 +101,7 @@ class TestResolveKtloEpic(unittest.TestCase):
             _make_epic('CPP-998', 'CFamily Roadmap 2026'),
         ]
         jira = self._jira_with_epics(epics)
-        with patch('resolve_ktlo_epic.eprint') as mock_eprint:
+        with patch('resolve_ktlo_epic.eprint'):
             result = resolve_ktlo_epic(jira, 'CPP', 'KTLO')
         self.assertIsNone(result)
 

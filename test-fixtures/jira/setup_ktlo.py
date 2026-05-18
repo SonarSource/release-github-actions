@@ -13,11 +13,12 @@ Usage:
 
 import argparse
 import json
+import os
 import sys
 
 from jira_client import get_jira_instance, eprint
 
-STATE_FILE_DEFAULT = "/tmp/jira-ktlo-fixtures.json"
+STATE_FILE_DEFAULT = os.path.join(os.path.expanduser("~"), ".cache", "jira-ktlo-fixtures.json")
 
 
 def create_epic(jira, project_key, summary):
@@ -52,6 +53,11 @@ def main():
     jira = get_jira_instance(args.jira_url)
     run_id = args.run_id
     project = args.project_key
+
+    # Ensure state file directory exists with restrictive permissions
+    state_dir = os.path.dirname(args.state_file)
+    if state_dir and not os.path.exists(state_dir):
+        os.makedirs(state_dir, mode=0o700)
 
     state = {"epic_keys": []}
 

@@ -85,13 +85,15 @@ jobs:
         env:
           JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
           JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
+          STATE_FILE: ${{ runner.temp }}/jira-ktlo-fixtures.json
         run: |
           set -euo pipefail
           python test-fixtures/jira/setup_ktlo.py \
             --project-key GHA \
             --run-id "${{ github.run_id }}" \
-            --jira-url "https://sonarsource-sandbox-608.atlassian.net/"
-          STATE=$(cat /tmp/jira-ktlo-fixtures.json)
+            --jira-url "https://sonarsource-sandbox-608.atlassian.net/" \
+            --state-file "$STATE_FILE"
+          STATE=$(cat "$STATE_FILE")
           echo "one_match_key=$(echo "$STATE" | jq -r .one_match_key)" >> "$GITHUB_OUTPUT"
           echo "multi_a_key=$(echo "$STATE"   | jq -r .multi_a_key)"   >> "$GITHUB_OUTPUT"
           echo "multi_b_key=$(echo "$STATE"   | jq -r .multi_b_key)"   >> "$GITHUB_OUTPUT"
@@ -162,11 +164,12 @@ jobs:
         env:
           JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
           JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
+          STATE_FILE: ${{ runner.temp }}/jira-ktlo-fixtures.json
         run: |
-          if [ -f /tmp/jira-ktlo-fixtures.json ]; then
+          if [ -f "$STATE_FILE" ]; then
             python test-fixtures/jira/cleanup_ktlo.py \
               --jira-url "https://sonarsource-sandbox-608.atlassian.net/" \
-              --state-file /tmp/jira-ktlo-fixtures.json
+              --state-file "$STATE_FILE"
           else
             echo "State file not found — setup failed before writing fixtures, nothing to clean up."
           fi
