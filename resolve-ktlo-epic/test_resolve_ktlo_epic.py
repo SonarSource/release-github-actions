@@ -141,11 +141,9 @@ class TestResolveKtloEpic(unittest.TestCase):
         self.assertIn('In Progress', jql)
 
     def test_warn_emits_github_actions_annotation(self):
-        with patch('resolve_ktlo_epic.eprint') as mock_eprint, \
-             patch('sys.stdout', new_callable=StringIO) as mock_stdout:
+        with patch('sys.stderr', new_callable=StringIO) as mock_stderr:
             warn('something went wrong')
-        self.assertIn('::warning::something went wrong', mock_stdout.getvalue())
-        mock_eprint.assert_called_once()
+        self.assertIn('::warning::something went wrong', mock_stderr.getvalue())
 
 
 class TestMain(unittest.TestCase):

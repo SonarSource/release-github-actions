@@ -66,9 +66,8 @@ def resolve_ktlo_epic(jira, project, pattern):
 
 
 def warn(message):
-    """Emit a GitHub Actions warning annotation and log to stderr."""
-    print(f"::warning::{message}", flush=True)
-    eprint(f"Warning: {message}")
+    """Emit a GitHub Actions warning annotation to stderr."""
+    eprint(f"::warning::{message}")
 
 
 def main():

@@ -143,14 +143,14 @@ jobs:
           fi
           echo "✅ multi-match: got $EPIC_KEY (first of multiple matches)"
 
-          # Verify that a ::warning:: annotation is emitted when multiple epics match
-          OUTPUT=$(python resolve-ktlo-epic/resolve_ktlo_epic.py \
+          # Verify that a ::warning:: annotation is emitted to stderr when multiple epics match
+          STDERR_OUTPUT=$(python resolve-ktlo-epic/resolve_ktlo_epic.py \
             --jira-project GHA \
             --epic-name-pattern "$PATTERN" \
-            --jira-url "https://sonarsource-sandbox-608.atlassian.net/")
-          if ! echo "$OUTPUT" | grep -q "::warning::"; then
-            echo "❌ Expected ::warning:: annotation in output for multi-match case"
-            echo "Got: $OUTPUT"
+            --jira-url "https://sonarsource-sandbox-608.atlassian.net/" 2>&1 >/dev/null)
+          if ! echo "$STDERR_OUTPUT" | grep -q "::warning::"; then
+            echo "❌ Expected ::warning:: annotation in stderr for multi-match case"
+            echo "Got: $STDERR_OUTPUT"
             exit 1
           fi
           echo "✅ multi-match: ::warning:: annotation present"
