@@ -26,7 +26,7 @@ def create_epic(jira, project_key, summary):
         'project': project_key,
         'issuetype': {'name': 'Epic'},
         'summary': summary,
-        'customfield_17353': 'Infrastructure',  # Eng Epic Type (required by sandbox)
+        'customfield_17353': {'value': 'Maintenance'},  # Eng Epic Type (required by sandbox)
     }
     epic = jira.create_issue(fields=fields)
     eprint(f"Created epic: {epic.key} — {summary}")
