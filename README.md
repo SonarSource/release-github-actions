@@ -21,6 +21,7 @@ A centralized collection of reusable GitHub Actions designed to streamline and a
 | [Send Slack Message](slack-message/README.md)                           | Sends a markdown message to a Slack channel |
 | [Publish GitHub Release](publish-github-release/README.md)              | Publishes a GitHub Release with notes fetched from Jira or provided directly |
 | [Release Jira Version](release-jira-version/README.md)                  | Releases a Jira version and creates the next one |
+| [Resolve KTLO Epic](resolve-ktlo-epic/README.md)                        | Finds the current KTLO epic in a Jira project by matching in-progress epics against a regex pattern |
 | [Sonar Update Center Release](sonar-update-center-release/README.md)    | Updates a plugin entry in sonar-update-center-properties and creates a pull request |
 | [Update Analyzer](update-analyzer/README.md)                            | Updates an analyzer version in SonarQube or SonarCloud and creates a pull request |
 | [Update Release Ticket Status](update-release-ticket-status/README.md)  | Updates the status of a Jira release ticket and can change its assignee |

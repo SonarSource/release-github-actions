@@ -1,0 +1,57 @@
+name: 'Resolve KTLO Epic'
+description: 'Finds the current KTLO epic in a Jira project by querying for in-progress epics matching a regex pattern.'
+author: 'SonarSource'
+
+inputs:
+  jira-project:
+    description: 'The Jira project key to search in (e.g. CPP)'
+    required: true
+  epic-name-pattern:
+    description: 'Regex pattern matched against epic summaries to identify the KTLO epic (case-insensitive)'
+    required: false
+    default: 'KTLO'
+  use-jira-sandbox:
+    description: 'Use the sandbox Jira server instead of production. Can also be controlled via USE_JIRA_SANDBOX environment variable.'
+    required: false
+
+outputs:
+  epic-key:
+    description: 'The key of the matching KTLO epic (e.g. CPP-7858), or empty string if none found'
+    value: ${{ steps.run.outputs.epic_key }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Get Jira Credentials from Vault
+      id: secrets
+      uses: SonarSource/vault-action-wrapper@320bd31b03e5dacaac6be51bbbb15adf7caccc32 # v3.1
+      with:
+        secrets: |
+          development/kv/data/jira user | JIRA_USER;
+          development/kv/data/jira token | JIRA_TOKEN;
+
+    - name: Set up Python
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      shell: bash
+      run: pip install -r ${{ github.action_path }}/requirements.txt
+
+    - name: Resolve KTLO epic
+      id: run
+      shell: bash
+      env:
+        JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
+        JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
+        JIRA_PROD_URL: "https://sonarsource.atlassian.net/"
+        JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
+        INPUT_JIRA_PROJECT: ${{ inputs.jira-project }}
+        INPUT_EPIC_NAME_PATTERN: ${{ inputs.epic-name-pattern }}
+      run: |
+        python ${{ github.action_path }}/resolve_ktlo_epic.py \
+          --jira-project "$INPUT_JIRA_PROJECT" \
+          --epic-name-pattern "$INPUT_EPIC_NAME_PATTERN" \
+          --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
+          >> $GITHUB_OUTPUT

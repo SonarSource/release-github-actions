@@ -25,6 +25,9 @@ inputs:
   jira-release-url:
     description: 'Jira release URL to append to ticket description'
     required: false
+  parent-epic:
+    description: 'Optional Jira issue key to set as parent of the created ticket (e.g. CPP-7858). When provided, sets fields.parent.key on ticket creation.'
+    required: false
 
 outputs:
   ticket-key:
@@ -94,6 +97,7 @@ runs:
         INPUT_TARGET_JIRA_PROJECT: ${{ inputs.target-jira-project }}
         INPUT_RELEASE_TICKET_KEY: ${{ inputs.release-ticket-key }}
         INPUT_LINK_TYPE: ${{ inputs.link-type }}
+        INPUT_PARENT_EPIC: ${{ inputs.parent-epic }}
         TICKET_SUMMARY: ${{ steps.validate_inputs.outputs.ticket_summary }}
       run: |
         python ${{ github.action_path }}/create_integration_ticket.py \
@@ -102,4 +106,5 @@ runs:
           --release-ticket-key "$INPUT_RELEASE_TICKET_KEY" \
           --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
           --link-type "$INPUT_LINK_TYPE" \
-          ${TICKET_DESCRIPTION:+--ticket-description "$TICKET_DESCRIPTION"} >> $GITHUB_OUTPUT
+          ${TICKET_DESCRIPTION:+--ticket-description "$TICKET_DESCRIPTION"} \
+          ${INPUT_PARENT_EPIC:+--parent-epic "$INPUT_PARENT_EPIC"} >> $GITHUB_OUTPUT
