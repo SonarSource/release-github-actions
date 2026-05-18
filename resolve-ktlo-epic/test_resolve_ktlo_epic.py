@@ -144,7 +144,7 @@ class TestResolveKtloEpic(unittest.TestCase):
         jira = self._jira_with_epics([])
         with patch('resolve_ktlo_epic.warn'):
             resolve_ktlo_epic(jira, 'CPP', 'KTLO')
-        self.assertEqual(jira.search_issues.call_args[1]['maxResults'], False)
+        self.assertFalse(jira.search_issues.call_args[1]['maxResults'])
 
     def test_invalid_regex_pattern_exits(self):
         jira = self._jira_with_epics([])
