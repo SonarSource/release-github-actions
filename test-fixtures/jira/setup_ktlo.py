@@ -36,7 +36,7 @@ def create_epic(jira, project_key, summary):
 def transition_to_in_progress(jira, issue_key):
     transitions = jira.transitions(issue_key)
     for t in transitions:
-        if t['name'].lower() in ('start', 'start progress', 'in progress'):
+        if t['name'].lower() in ('start', 'start work', 'start progress', 'in progress'):
             jira.transition_issue(issue_key, t['id'])
             eprint(f"Transitioned {issue_key} to In Progress (transition: {t['name']})")
             return
