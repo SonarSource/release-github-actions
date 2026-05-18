@@ -54,17 +54,21 @@ def resolve_ktlo_epic(jira, project, pattern):
     matches = [e for e in epics if re.search(pattern, e.fields.summary, re.IGNORECASE)]
 
     if not matches:
-        eprint(f"Warning: No in-progress epic matching '{pattern}' found in project '{project}'. "
-               f"Integration ticket will be created without a parent.")
+        warn(f"No in-progress epic matching '{pattern}' found in project '{project}'. Integration ticket will be created without a parent.")
         return None
 
     if len(matches) > 1:
         keys = [e.key for e in matches]
-        eprint(f"Warning: Multiple epics matching '{pattern}' found in project '{project}': {keys}. "
-               f"Using the first one: {matches[0].key}.")
+        warn(f"Multiple epics matching '{pattern}' found in project '{project}': {keys}. Using the first one: {matches[0].key}.")
 
     eprint(f"Resolved KTLO epic: {matches[0].key} — {matches[0].fields.summary}")
     return matches[0].key
+
+
+def warn(message):
+    """Emit a GitHub Actions warning annotation and log to stderr."""
+    print(f"::warning::{message}", flush=True)
+    eprint(f"Warning: {message}")
 
 
 def main():

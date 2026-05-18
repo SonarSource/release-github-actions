@@ -13,7 +13,7 @@ from unittest.mock import Mock, patch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from resolve_ktlo_epic import get_jira_instance, resolve_ktlo_epic, main
+from resolve_ktlo_epic import get_jira_instance, resolve_ktlo_epic, warn, main
 from jira.exceptions import JIRAError
 
 
@@ -69,31 +69,33 @@ class TestResolveKtloEpic(unittest.TestCase):
         mock_jira.search_issues.return_value = epics
         return mock_jira
 
-    def test_one_match_returns_key(self):
+    def test_one_match_returns_key_no_warning(self):
         epic = _make_epic('CPP-7858', 'CFamily 2026Q2 KTLO')
         jira = self._jira_with_epics([epic])
-        result = resolve_ktlo_epic(jira, 'CPP', 'KTLO')
+        with patch('resolve_ktlo_epic.warn') as mock_warn:
+            result = resolve_ktlo_epic(jira, 'CPP', 'KTLO')
         self.assertEqual(result, 'CPP-7858')
+        mock_warn.assert_not_called()
 
-    def test_zero_matches_returns_none_and_warns(self):
+    def test_zero_matches_returns_none_and_emits_warning(self):
         jira = self._jira_with_epics([])
-        with patch('resolve_ktlo_epic.eprint') as mock_eprint:
+        with patch('resolve_ktlo_epic.warn') as mock_warn:
             result = resolve_ktlo_epic(jira, 'CPP', 'KTLO')
         self.assertIsNone(result)
-        warning_messages = ' '.join(str(c) for c in mock_eprint.call_args_list)
-        self.assertIn('Warning', warning_messages)
+        mock_warn.assert_called_once()
+        self.assertIn('No in-progress epic', mock_warn.call_args[0][0])
 
-    def test_multiple_matches_returns_first_and_warns(self):
+    def test_multiple_matches_returns_first_and_emits_warning(self):
         epics = [
             _make_epic('CPP-100', 'CFamily KTLO Q1'),
             _make_epic('CPP-200', 'CFamily KTLO Q2'),
         ]
         jira = self._jira_with_epics(epics)
-        with patch('resolve_ktlo_epic.eprint') as mock_eprint:
+        with patch('resolve_ktlo_epic.warn') as mock_warn:
             result = resolve_ktlo_epic(jira, 'CPP', 'KTLO')
         self.assertEqual(result, 'CPP-100')
-        warning_messages = ' '.join(str(c) for c in mock_eprint.call_args_list)
-        self.assertIn('Warning', warning_messages)
+        mock_warn.assert_called_once()
+        self.assertIn('Multiple epics', mock_warn.call_args[0][0])
 
     def test_epics_present_but_none_match_pattern_returns_none(self):
         epics = [
@@ -101,32 +103,35 @@ class TestResolveKtloEpic(unittest.TestCase):
             _make_epic('CPP-998', 'CFamily Roadmap 2026'),
         ]
         jira = self._jira_with_epics(epics)
-        with patch('resolve_ktlo_epic.eprint'):
+        with patch('resolve_ktlo_epic.warn') as mock_warn:
             result = resolve_ktlo_epic(jira, 'CPP', 'KTLO')
         self.assertIsNone(result)
+        mock_warn.assert_called_once()
 
     def test_custom_regex_pattern_matches(self):
         epic = _make_epic('NET-3604', '.NET KTLO 2026 Q2')
         jira = self._jira_with_epics([epic])
-        result = resolve_ktlo_epic(jira, 'NET', r'KTLO\s+\d{4}')
+        with patch('resolve_ktlo_epic.warn'):
+            result = resolve_ktlo_epic(jira, 'NET', r'KTLO\s+\d{4}')
         self.assertEqual(result, 'NET-3604')
 
     def test_custom_regex_pattern_no_match(self):
         epic = _make_epic('NET-3604', '.NET KTLO 2026 Q2')
         jira = self._jira_with_epics([epic])
-        with patch('resolve_ktlo_epic.eprint'):
+        with patch('resolve_ktlo_epic.warn'):
             result = resolve_ktlo_epic(jira, 'NET', r'TLO-\d{4}')
         self.assertIsNone(result)
 
     def test_pattern_match_is_case_insensitive(self):
         epic = _make_epic('JS-1531', 'Web-Squad-2026-Q2-ktlo')
         jira = self._jira_with_epics([epic])
-        result = resolve_ktlo_epic(jira, 'JS', 'KTLO')
+        with patch('resolve_ktlo_epic.warn'):
+            result = resolve_ktlo_epic(jira, 'JS', 'KTLO')
         self.assertEqual(result, 'JS-1531')
 
     def test_jql_uses_correct_query(self):
         jira = self._jira_with_epics([])
-        with patch('resolve_ktlo_epic.eprint'):
+        with patch('resolve_ktlo_epic.warn'):
             resolve_ktlo_epic(jira, 'CPP', 'KTLO')
         call_args = jira.search_issues.call_args
         jql = call_args[0][0]
@@ -134,6 +139,13 @@ class TestResolveKtloEpic(unittest.TestCase):
         self.assertIn('issuetype = Epic', jql)
         self.assertIn('statusCategory', jql)
         self.assertIn('In Progress', jql)
+
+    def test_warn_emits_github_actions_annotation(self):
+        with patch('resolve_ktlo_epic.eprint') as mock_eprint, \
+             patch('sys.stdout', new_callable=StringIO) as mock_stdout:
+            warn('something went wrong')
+        self.assertIn('::warning::something went wrong', mock_stdout.getvalue())
+        mock_eprint.assert_called_once()
 
 
 class TestMain(unittest.TestCase):
