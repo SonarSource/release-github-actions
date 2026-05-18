@@ -26,7 +26,13 @@ def create_epic(jira, project_key, summary):
         'project': project_key,
         'issuetype': {'name': 'Epic'},
         'summary': summary,
-        'customfield_17353': {'value': 'Maintenance'},  # Eng Epic Type (required by sandbox)
+        'customfield_17353': {'value': 'Maintenance'},  # Eng Epic Type (required)
+        # Security fields required to be Y/N (not "Not Set") before transitioning to In Progress
+        'customfield_11250': {'value': 'N'},  # SecData
+        'customfield_11251': {'value': 'N'},  # SecAccess
+        'customfield_11252': {'value': 'N'},  # SecArchitecture
+        'customfield_11253': {'value': 'N'},  # SecServiceLevel
+        'customfield_11256': {'value': 'N'},  # SecSupplier
     }
     epic = jira.create_issue(fields=fields)
     eprint(f"Created epic: {epic.key} — {summary}")
