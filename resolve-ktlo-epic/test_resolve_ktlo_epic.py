@@ -140,6 +140,19 @@ class TestResolveKtloEpic(unittest.TestCase):
         self.assertIn('statusCategory', jql)
         self.assertIn('In Progress', jql)
 
+    def test_search_uses_max_results_false(self):
+        jira = self._jira_with_epics([])
+        with patch('resolve_ktlo_epic.warn'):
+            resolve_ktlo_epic(jira, 'CPP', 'KTLO')
+        self.assertEqual(jira.search_issues.call_args[1]['maxResults'], False)
+
+    def test_invalid_regex_pattern_exits(self):
+        jira = self._jira_with_epics([])
+        with self.assertRaises(SystemExit) as cm:
+            resolve_ktlo_epic(jira, 'CPP', 'KTLO[')
+        self.assertEqual(cm.exception.code, 1)
+        jira.search_issues.assert_not_called()
+
     def test_warn_emits_github_actions_annotation(self):
         with patch('sys.stderr', new_callable=StringIO) as mock_stderr:
             warn('something went wrong')

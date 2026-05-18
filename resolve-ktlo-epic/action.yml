@@ -49,9 +49,10 @@ runs:
         JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
         INPUT_JIRA_PROJECT: ${{ inputs.jira-project }}
         INPUT_EPIC_NAME_PATTERN: ${{ inputs.epic-name-pattern }}
+        INPUT_JIRA_URL: ${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && 'https://sonarsource-sandbox-608.atlassian.net/' || 'https://sonarsource.atlassian.net/' }}
       run: |
         python ${{ github.action_path }}/resolve_ktlo_epic.py \
           --jira-project "$INPUT_JIRA_PROJECT" \
           --epic-name-pattern "$INPUT_EPIC_NAME_PATTERN" \
-          --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
+          --jira-url "$INPUT_JIRA_URL" \
           >> $GITHUB_OUTPUT

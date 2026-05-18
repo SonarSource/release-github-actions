@@ -47,9 +47,15 @@ def resolve_ktlo_epic(jira, project, pattern):
     Returns the key of the first in-progress epic matching the regex pattern,
     or None if none found. Warns when zero or multiple epics match.
     """
+    try:
+        re.compile(pattern)
+    except re.error as e:
+        eprint(f"Error: invalid --epic-name-pattern '{pattern}': {e}")
+        sys.exit(1)
+
     jql = f'project = {project} AND issuetype = Epic AND statusCategory = "In Progress"'
     eprint(f"Searching for KTLO epic in project '{project}' with pattern '{pattern}'...")
-    epics = jira.search_issues(jql)
+    epics = jira.search_issues(jql, maxResults=False)
 
     matches = [e for e in epics if re.search(pattern, e.fields.summary, re.IGNORECASE)]
 
