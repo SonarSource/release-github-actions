@@ -682,6 +682,14 @@ jobs:
           ticket-description: ${{ inputs.sq-cli-short-description != '' && inputs.sq-cli-short-description || inputs.short-description }}
           jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
 
+      - name: Resolve KTLO Epic
+        if: ${{ inputs.sqc-integration || inputs.sqs-integration }}
+        id: resolve-ktlo-epic
+        uses: SonarSource/release-github-actions/resolve-ktlo-epic@v1
+        with:
+          jira-project: ${{ inputs.jira-project-key }}
+          use-jira-sandbox: ${{ inputs.use-jira-sandbox }}
+
       - name: Create SQC Ticket
         if: ${{ inputs.sqc-integration }}
         id: create-sqc-ticket
@@ -693,6 +701,7 @@ jobs:
           target-jira-project: "SC"
           ticket-description: ${{ inputs.short-description }}
           jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
+          parent-epic: ${{ steps.resolve-ktlo-epic.outputs.epic-key }}
 
       - name: Create SQS Ticket
         if: ${{ inputs.sqs-integration }}
@@ -705,6 +714,7 @@ jobs:
           target-jira-project: "SONAR"
           ticket-description: ${{ inputs.short-description }}
           jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
+          parent-epic: ${{ steps.resolve-ktlo-epic.outputs.epic-key }}
 
       - name: Summary
         if: ${{ inputs.verbose }}

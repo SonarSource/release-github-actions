@@ -116,6 +116,9 @@ def create_integration_ticket(jira_client, args):
         'summary': args.ticket_summary,
     }
 
+    if getattr(args, 'parent_epic', None):
+        ticket_details['parent'] = {'key': args.parent_epic}
+
     try:
         new_ticket = jira_client.create_issue(fields=ticket_details)
         eprint(f"Successfully created ticket: {new_ticket.key}")
@@ -185,6 +188,8 @@ def main():
                         help="The Jira server URL to connect to.")
     parser.add_argument("--link-type", default="relates to",
                        help="The type of link to create (e.g., 'relates to', 'depends on').")
+    parser.add_argument("--parent-epic",
+                       help="Optional Jira issue key to set as parent of the created ticket (e.g. CPP-7858).")
 
     args = parser.parse_args()
 

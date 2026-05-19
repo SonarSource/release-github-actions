@@ -645,5 +645,48 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         )
 
 
+    def test_create_integration_ticket_with_parent_epic(self):
+        """Test creating integration ticket with a parent epic key sets fields.parent.key."""
+        mock_jira = Mock()
+        mock_jira.createmeta.return_value = {
+            'projects': [{'issuetypes': [{'name': 'Maintenance'}]}]
+        }
+        mock_ticket = Mock()
+        mock_ticket.key = 'SQS-42'
+        mock_jira.create_issue.return_value = mock_ticket
+
+        args = Mock()
+        args.target_jira_project = 'SQS'
+        args.ticket_summary = 'Update sonar-security to 1.0.0'
+        args.ticket_description = None
+        args.parent_epic = 'SONARSEC-100'
+
+        create_integration_ticket(mock_jira, args)
+
+        call_args = mock_jira.create_issue.call_args[1]['fields']
+        self.assertEqual(call_args['parent'], {'key': 'SONARSEC-100'})
+
+    def test_create_integration_ticket_without_parent_epic(self):
+        """Test creating integration ticket without parent epic sets no parent field."""
+        mock_jira = Mock()
+        mock_jira.createmeta.return_value = {
+            'projects': [{'issuetypes': [{'name': 'Maintenance'}]}]
+        }
+        mock_ticket = Mock()
+        mock_ticket.key = 'SQS-43'
+        mock_jira.create_issue.return_value = mock_ticket
+
+        args = Mock()
+        args.target_jira_project = 'SQS'
+        args.ticket_summary = 'Update sonar-security to 1.0.0'
+        args.ticket_description = None
+        args.parent_epic = None
+
+        create_integration_ticket(mock_jira, args)
+
+        call_args = mock_jira.create_issue.call_args[1]['fields']
+        self.assertNotIn('parent', call_args)
+
+
 if __name__ == '__main__':
     unittest.main()
