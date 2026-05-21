@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Updates version anchors in plugins.yaml for the given plugin artifacts.
+# Updates the version anchor in plugins.yaml for the given plugin.
 #
 # Environment variables (required):
-#   PLUGINS_YAML     - path to plugins.yaml
-#   PLUGIN_NAME      - plugin name; anchor key is derived from this (e.g. java, go-enterprise, dotnet-enterprise)
-#   RELEASE_VERSION  - new version string (e.g. 1.2.3.45678)
+#   PLUGINS_YAML    - path to plugins.yaml
+#   PLUGIN_NAME     - plugin name used to compute the anchor key
+#   RELEASE_VERSION - new version string (e.g. 1.2.3.45678)
 
 set -euo pipefail
 

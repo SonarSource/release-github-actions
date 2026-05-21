@@ -15,9 +15,6 @@ inputs:
   secret-name:
     description: 'Name of the secret to fetch from the vault that has write access to sonar-plugins-deployer.'
     required: true
-  plugin-artifacts:
-    description: 'Comma-separated list of plugin artifact names to update (e.g. "java,java-symbolic-execution"). Falls back to plugin-name if not provided.'
-    required: false
   base-branch:
     description: 'The base branch for the pull request.'
     required: false
@@ -80,7 +77,6 @@ runs:
       shell: bash
       env:
         PLUGINS_YAML: plugins.yaml
-        PLUGIN_ARTIFACTS: ${{ inputs.plugin-artifacts }}
         PLUGIN_NAME: ${{ inputs.plugin-name }}
         RELEASE_VERSION: ${{ inputs.release-version }}
       run: bash ${{ github.action_path }}/update_plugins_yaml.sh

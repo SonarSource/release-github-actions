@@ -79,7 +79,6 @@ jobs:
         env:
           PLUGINS_YAML: update-plugins-deployer/test_plugins.yaml
           PLUGIN_NAME: java
-          PLUGIN_ARTIFACTS: ''
           RELEASE_VERSION: '0.0.0.11111'
         run: |
           cp update-plugins-deployer/test_plugins.yaml /tmp/plugins_java.yaml
@@ -95,7 +94,6 @@ jobs:
         run: |
           cp update-plugins-deployer/test_plugins.yaml /tmp/plugins_security.yaml
           PLUGINS_YAML=/tmp/plugins_security.yaml PLUGIN_NAME=security \
-            PLUGIN_ARTIFACTS="security,security-java-frontend,security-python-frontend" \
             RELEASE_VERSION="0.0.0.22222" bash update-plugins-deployer/update_plugins_yaml.sh
           grep "sonar-security: &version-sonar-security 0.0.0.22222" /tmp/plugins_security.yaml || {
             echo "❌ sonar-security anchor not updated"; exit 1
@@ -107,8 +105,7 @@ jobs:
       - name: Test go-enterprise strips -enterprise suffix
         run: |
           cp update-plugins-deployer/test_plugins.yaml /tmp/plugins_go.yaml
-          PLUGINS_YAML=/tmp/plugins_go.yaml PLUGIN_NAME=go-enterprise \
-            PLUGIN_ARTIFACTS="go-enterprise" RELEASE_VERSION="2.0.0.33333" \
+          PLUGINS_YAML=/tmp/plugins_go.yaml PLUGIN_NAME=go-enterprise RELEASE_VERSION="2.0.0.33333" \
             bash update-plugins-deployer/update_plugins_yaml.sh
           grep "sonar-go: &version-sonar-go 2.0.0.33333" /tmp/plugins_go.yaml || {
             echo "❌ sonar-go anchor not updated"; exit 1
@@ -118,8 +115,7 @@ jobs:
       - name: Test dotnet-enterprise maps csharp/vbnet to sonar-dotnet
         run: |
           cp update-plugins-deployer/test_plugins.yaml /tmp/plugins_dotnet.yaml
-          PLUGINS_YAML=/tmp/plugins_dotnet.yaml PLUGIN_NAME=dotnet-enterprise \
-            PLUGIN_ARTIFACTS="csharp-enterprise,vbnet-enterprise" RELEASE_VERSION="11.0.0.44444" \
+          PLUGINS_YAML=/tmp/plugins_dotnet.yaml PLUGIN_NAME=dotnet-enterprise RELEASE_VERSION="11.0.0.44444" \
             bash update-plugins-deployer/update_plugins_yaml.sh
           grep "sonar-dotnet: &version-sonar-dotnet 11.0.0.44444" /tmp/plugins_dotnet.yaml || {
             echo "❌ sonar-dotnet anchor not updated"; exit 1
