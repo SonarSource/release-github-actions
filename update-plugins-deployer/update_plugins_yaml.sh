@@ -44,10 +44,8 @@ PLUGINS_YAML="${PLUGINS_YAML:-plugins.yaml}"
 RELEASE_VERSION="${RELEASE_VERSION:?RELEASE_VERSION is required}"
 PLUGIN_NAME="${PLUGIN_NAME:?PLUGIN_NAME is required}"
 
-# The anchor key is always derived from PLUGIN_NAME.
-# PLUGIN_ARTIFACTS lists individual artifacts for build.gradle sed matching,
-# but plugins.yaml uses one anchor per plugin family (e.g. sonar-security covers
-# all security frontends via aliases).
+# The anchor key is always derived from PLUGIN_NAME — one anchor per plugin family
+# (e.g. sonar-security covers all security frontends via aliases).
 anchor_key=$(compute_anchor_key "$PLUGIN_NAME")
 update_anchor "$anchor_key" "$RELEASE_VERSION" "$PLUGINS_YAML"
 
