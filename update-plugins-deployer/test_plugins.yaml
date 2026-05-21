@@ -1,0 +1,53 @@
+versions:
+  sonar-java: &version-sonar-java 8.29.0.43460
+  sonar-java-symbolic-execution: &version-sonar-java-symbolic-execution 8.20.0.1864
+  sonar-security: &version-sonar-security 11.29.0.45905
+  sonar-go: &version-sonar-go 1.36.0.5922
+  sonar-dotnet: &version-sonar-dotnet 10.25.0.139117
+  sonar-php: &version-sonar-php 3.56.0.15870
+
+plugins:
+  - key: sonar-java
+    groupId: org.sonarsource.java
+    artifactId: sonar-java-plugin
+    version: *version-sonar-java
+
+  - key: sonar-java-symbolic-execution
+    groupId: org.sonarsource.java
+    artifactId: sonar-java-symbolic-execution-plugin
+    version: *version-sonar-java-symbolic-execution
+
+  - key: sonar-security
+    groupId: com.sonarsource.security
+    artifactId: sonar-security-plugin
+    version: *version-sonar-security
+
+  - key: sonar-security-java-frontend
+    groupId: com.sonarsource.security
+    artifactId: sonar-security-java-frontend-plugin
+    version: *version-sonar-security
+
+  - key: sonar-security-python-frontend
+    groupId: com.sonarsource.security
+    artifactId: sonar-security-python-frontend-plugin
+    version: *version-sonar-security
+
+  - key: sonar-go-enterprise
+    groupId: com.sonarsource.go
+    artifactId: sonar-go-enterprise-plugin
+    version: *version-sonar-go
+
+  - key: sonar-csharp-enterprise
+    groupId: com.sonarsource.dotnet
+    artifactId: sonar-csharp-enterprise-plugin
+    version: *version-sonar-dotnet
+
+  - key: sonar-vbnet-enterprise
+    groupId: com.sonarsource.dotnet
+    artifactId: sonar-vbnet-enterprise-plugin
+    version: *version-sonar-dotnet
+
+  - key: sonar-php
+    groupId: org.sonarsource.php
+    artifactId: sonar-php-plugin
+    version: *version-sonar-php
