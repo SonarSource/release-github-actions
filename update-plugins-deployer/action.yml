@@ -1,0 +1,96 @@
+name: 'Update Plugins Deployer'
+description: 'Updates the version of a specified analyzer in sonar-plugins-deployer and creates a pull request.'
+author: 'SonarSource'
+
+inputs:
+  release-version:
+    description: 'The new version to set for the analyzer (e.g., 1.12.0.12345).'
+    required: true
+  ticket-key:
+    description: 'The Jira ticket number. Must start with SC-.'
+    required: true
+  plugin-name:
+    description: 'The language key of the plugin to update (e.g., java, security). Used for PR title, commit message, and branch name.'
+    required: true
+  secret-name:
+    description: 'Name of the secret to fetch from the vault that has write access to sonar-plugins-deployer.'
+    required: true
+  base-branch:
+    description: 'The base branch for the pull request.'
+    required: false
+    default: 'master'
+  draft:
+    description: 'A boolean value to control if the pull request is created as a draft. When true, the commit message is prefixed with [DO NOT MERGE].'
+    required: false
+    default: 'false'
+  reviewers:
+    description: 'A comma-separated list of GitHub usernames to request a review from.'
+    required: false
+  pull-request-body:
+    description: 'The body of the pull request.'
+    required: false
+
+outputs:
+  pull-request-url:
+    description: 'The URL of the created pull request.'
+    value: ${{ steps.create_pr.outputs.pull-request-url }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Get GitHub token from Vault
+      id: secrets
+      uses: SonarSource/vault-action-wrapper@v3
+      with:
+        secrets: |
+          development/github/token/SonarSource-${{ inputs.secret-name}} token | GITHUB_TOKEN;
+
+    - name: Validate ticket and set commit prefix
+      id: setup_env
+      shell: bash
+      env:
+        TICKET_KEY: ${{ inputs.ticket-key }}
+        DRAFT: ${{ inputs.draft }}
+      run: |
+        if [[ "$TICKET_KEY" != SC-* ]]; then
+          echo "::error::Invalid ticket format '${TICKET_KEY}'. Must start with SC-."
+          exit 1
+        fi
+
+        if [[ "$DRAFT" == "true" ]]; then
+          echo "commit-prefix=[DO NOT MERGE]" >> $GITHUB_OUTPUT
+        else
+          echo "commit-prefix=$TICKET_KEY" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Checkout sonar-plugins-deployer
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        repository: SonarSource/sonar-plugins-deployer
+        ref: ${{ inputs.base-branch }}
+        sparse-checkout: plugins.yaml
+        sparse-checkout-cone-mode: false
+        fetch-depth: 0
+        token: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
+
+    - name: Update analyzer version in plugins.yaml
+      shell: bash
+      env:
+        PLUGINS_YAML: plugins.yaml
+        PLUGIN_NAME: ${{ inputs.plugin-name }}
+        RELEASE_VERSION: ${{ inputs.release-version }}
+      run: bash ${{ github.action_path }}/update_plugins_yaml.sh
+
+    - name: Create Pull Request
+      id: create_pr
+      uses: SonarSource/release-github-actions/create-pull-request@v1
+      with:
+        token: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
+        author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+        commit-message: '${{ steps.setup_env.outputs.commit-prefix }} Update `${{ inputs.plugin-name }}` plugins to version ${{ inputs.release-version }}'
+        title: '${{ steps.setup_env.outputs.commit-prefix }} Update `${{ inputs.plugin-name }}` to version ${{ inputs.release-version }}'
+        body: ${{ inputs.pull-request-body }}
+        base: ${{ inputs.base-branch }}
+        branch: '${{ inputs.plugin-name }}/update-analyzer-${{ inputs.release-version }}'
+        draft: ${{ inputs.draft }}
+        reviewers: ${{ inputs.reviewers }}

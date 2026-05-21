@@ -105,6 +105,11 @@ on:
         required: false
         type: boolean
         default: true
+      sqc-plugins-deployer-integration:
+        description: "Also create a PR in sonar-plugins-deployer when sqc-integration is true. Disabled by default during the transition period."
+        required: false
+        type: boolean
+        default: false
       runner-environment:
         description: "Environment where the workflow will run"
         required: false
@@ -760,6 +765,7 @@ jobs:
     outputs:
       sqs-pull-request-url: ${{ steps.update-sqs.outputs.pull-request-url }}
       sqc-pull-request-url: ${{ steps.update-sqc.outputs.pull-request-url }}
+      plugins-deployer-pull-request-url: ${{ steps.update-plugins-deployer.outputs.pull-request-url }}
     steps:
       - name: Update analyzer in SQS
         id: update-sqs
@@ -787,6 +793,18 @@ jobs:
           draft: ${{ inputs.is-draft-release }}
           reviewers: ${{ github.actor }}
 
+      - name: Update analyzer in sonar-plugins-deployer
+        id: update-plugins-deployer
+        if: ${{ inputs.sqc-integration && inputs.sqc-plugins-deployer-integration }}
+        uses: SonarSource/release-github-actions/update-plugins-deployer@v1
+        with:
+          release-version: ${{ needs.prepare-release.outputs.release-version }}
+          ticket-key: ${{ needs.create-integration-tickets.outputs.sqc-ticket-key }}
+          plugin-name: ${{ inputs.plugin-name }}
+          secret-name: ${{ inputs.release-automation-secret-name || format('sonar-{0}-release-automation', inputs.plugin-name) }}
+          draft: ${{ inputs.is-draft-release }}
+          reviewers: ${{ github.actor }}
+
       - name: Summary
         if: ${{ inputs.verbose }}
         shell: bash
@@ -798,6 +816,7 @@ jobs:
           RELEASE_AUTOMATION_SECRET_NAME: ${{ inputs.release-automation-secret-name }}
           SQS_INTEGRATION: ${{ inputs.sqs-integration == true && 'true' || 'false' }}
           SQC_INTEGRATION: ${{ inputs.sqc-integration == true && 'true' || 'false' }}
+          SQC_PLUGINS_DEPLOYER_INTEGRATION: ${{ inputs.sqc-plugins-deployer-integration == true && 'true' || 'false' }}
         run: |
           echo "## 🔄 Update Analyzers" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -809,6 +828,7 @@ jobs:
           echo "### Results" >> $GITHUB_STEP_SUMMARY
           if [ "$SQS_INTEGRATION" = "true" ]; then echo "- SQS PR: ${{ steps.update-sqs.outputs.pull-request-url }}" >> $GITHUB_STEP_SUMMARY; fi
           if [ "$SQC_INTEGRATION" = "true" ]; then echo "- SQC PR: ${{ steps.update-sqc.outputs.pull-request-url }}" >> $GITHUB_STEP_SUMMARY; fi
+          if [ "$SQC_INTEGRATION" = "true" ] && [ "$SQC_PLUGINS_DEPLOYER_INTEGRATION" = "true" ]; then echo "- Plugins Deployer PR: ${{ steps.update-plugins-deployer.outputs.pull-request-url }}" >> $GITHUB_STEP_SUMMARY; fi
 
   # This step summarizes the results of the entire release process.
   # It checks the outcomes of all previous steps and generates a summary indicating whether the release was
@@ -847,6 +867,7 @@ jobs:
           SQC_TICKET_URL: ${{ needs.create-integration-tickets.outputs.sqc-ticket-url || 'not created' }}
           SQS_PR_URL: ${{ needs.update-analyzers.outputs.sqs-pull-request-url || 'not created' }}
           SQC_PR_URL: ${{ needs.update-analyzers.outputs.sqc-pull-request-url || 'not created' }}
+          PLUGINS_DEPLOYER_PR_URL: ${{ inputs.sqc-plugins-deployer-integration == true && needs.update-analyzers.outputs.plugins-deployer-pull-request-url || 'not created' }}
           BUMP_VERSION_PR_URL: ${{ needs.bump-version.outputs.pull-request-url || 'not created' }}
           RESULT_CHECK_RELEASABILITY: ${{ needs.check-releasability.result }}
           RESULT_UPDATE_RULE_METADATA: ${{ needs.update-rule-metadata.result }}
@@ -892,11 +913,12 @@ jobs:
             echo "  - SQC Integration Ticket: $SQC_TICKET_URL"
             echo "  - SQS Analyzer PR: $SQS_PR_URL"
             echo "  - SQC Analyzer PR: $SQC_PR_URL"
+            echo "  - Plugins Deployer PR: $PLUGINS_DEPLOYER_PR_URL"
             echo "  - Bump Version PR: $BUMP_VERSION_PR_URL"
 
             echo "## Guidance"
             if [[ "$ALL_SUCCESS" == "true" ]]; then
-              echo "- Review and merge the bump version, SQS and SQC PRs."
+              echo "- Review and merge the bump version, SQS, SQC, and Plugins Deployer PRs."
               echo "- Update integration ticket statuses (ensure SQS ticket fix versions are set)."
             else
               echo "- Check failed jobs for error messages and re-run as needed."
