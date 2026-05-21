@@ -3,9 +3,7 @@
 #
 # Environment variables (required):
 #   PLUGINS_YAML     - path to plugins.yaml
-#   PLUGIN_ARTIFACTS - comma-separated artifact names (e.g. "security,security-java-frontend")
-#                      Falls back to PLUGIN_NAME if empty.
-#   PLUGIN_NAME      - plugin name used as fallback when PLUGIN_ARTIFACTS is empty
+#   PLUGIN_NAME      - plugin name; anchor key is derived from this (e.g. java, go-enterprise, dotnet-enterprise)
 #   RELEASE_VERSION  - new version string (e.g. 1.2.3.45678)
 
 set -euo pipefail
