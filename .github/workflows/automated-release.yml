@@ -187,6 +187,33 @@ on:
       release-version:
         description: "Released version in major.minor.patch.build format"
         value: ${{ jobs.prepare-release.outputs.release-version }}
+      jira-release-url:
+        description: "URL of the Jira release page"
+        value: ${{ jobs.prepare-release.outputs.jira-release-url }}
+      release-ticket-url:
+        description: "URL of the Jira REL release ticket"
+        value: ${{ jobs.create-release-ticket.outputs.release-ticket-url }}
+      github-release-url:
+        description: "URL of the published GitHub release"
+        value: ${{ jobs.publish-github-release.outputs.github-release-url }}
+      sqs-ticket-url:
+        description: "URL of the SQS integration ticket"
+        value: ${{ jobs.create-integration-tickets.outputs.sqs-ticket-url }}
+      sqc-ticket-url:
+        description: "URL of the SQC integration ticket"
+        value: ${{ jobs.create-integration-tickets.outputs.sqc-ticket-url }}
+      sqs-pull-request-url:
+        description: "URL of the SQS analyzer-update pull request"
+        value: ${{ jobs.update-analyzers.outputs.sqs-pull-request-url }}
+      sqc-pull-request-url:
+        description: "URL of the SQC analyzer-update pull request"
+        value: ${{ jobs.update-analyzers.outputs.sqc-pull-request-url }}
+      plugins-deployer-pull-request-url:
+        description: "URL of the plugins-deployer pull request"
+        value: ${{ jobs.update-analyzers.outputs.plugins-deployer-pull-request-url }}
+      bump-version-pull-request-url:
+        description: "URL of the version-bump pull request"
+        value: ${{ jobs.bump-version.outputs.pull-request-url }}
 env:
   JIRA_PROJECT_KEY: ${{ inputs.jira-project-key }}
   USE_JIRA_SANDBOX: ${{ inputs.use-jira-sandbox == true && 'true' || 'false' }}
