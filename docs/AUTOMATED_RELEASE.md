@@ -62,6 +62,8 @@ This workflow composes several actions from this repository:
 | `sq-cli-short-description`   | Short summary of SQ CLI related changes                                                                         | No       | -            |
 | `sqs-integration`            | Create SQS integration ticket and PR                                                                            | No       | `true`       |
 | `sqc-integration`            | Create SQC integration ticket and PR                                                                            | No       | `true`       |
+| `ktlo-jira-project-key`      | Jira project key where the KTLO epic lives. Defaults to `jira-project-key` if not provided.                    | No       | -            |
+| `ktlo-epic-name-pattern`     | Regex pattern to match the KTLO epic summary                                                                    | No       | `KTLO`       |
 | `runner-environment`         | Runner labels/environment                                                                                       | No       | `sonar-m`    |
 | `release-process`            | Release process documentation URL                                                                               | No       | General page |
 | `verbose`                    | When `true`, posts per-job summaries and a final run summary                                                    | No       | `false`      |
