@@ -7,6 +7,14 @@ on:
         description: "Jira project key"
         required: true
         type: string
+      ktlo-jira-project-key:
+        description: "Jira project key where the KTLO epic lives. Defaults to jira-project-key if not provided."
+        required: false
+        type: string
+      ktlo-epic-name-pattern:
+        description: "Regex pattern to match the KTLO epic summary. Defaults to 'KTLO'."
+        required: false
+        type: string
       project-name:
         description: "Project name"
         required: true
@@ -692,7 +700,8 @@ jobs:
         id: resolve-ktlo-epic
         uses: SonarSource/release-github-actions/resolve-ktlo-epic@v1
         with:
-          jira-project: ${{ inputs.jira-project-key }}
+          jira-project: ${{ inputs.ktlo-jira-project-key || inputs.jira-project-key }}
+          epic-name-pattern: ${{ inputs.ktlo-epic-name-pattern || 'KTLO' }}
           use-jira-sandbox: ${{ inputs.use-jira-sandbox }}
 
       - name: Create SQC Ticket
