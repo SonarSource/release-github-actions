@@ -47,6 +47,9 @@ jobs:
 
   test-notify-slack:
     uses: ./.github/workflows/test-notify-slack.yml
+    permissions:
+      contents: read
+      id-token: write
 
   test-lock-branch:
     uses: ./.github/workflows/test-lock-branch.yml
