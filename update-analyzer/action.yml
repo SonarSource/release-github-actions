@@ -1,5 +1,5 @@
 name: 'Update Analyzer'
-description: 'Updates the version of a specified analyzer in SonarQube or SonarCloud and creates a pull request.'
+description: 'Updates the version of a specified analyzer in SonarQube, SonarCloud, or SQAA and creates a pull request.'
 author: 'SonarSource'
 
 inputs:
@@ -7,8 +7,11 @@ inputs:
     description: 'The new version to set for the analyzer (e.g., 1.12.0.12345).'
     required: true
   ticket-key:
-    description: 'The Jira ticket number (e.g., SONAR-12345 or SC-12345). This determines the target product.'
+    description: 'The Jira ticket number (e.g., SONAR-12345 or SC-12345). Used for commit messages and branch naming.'
     required: true
+  target:
+    description: 'The target product to update: sqs, sqc, or sqaa. When not provided, falls back to ticket-key prefix (SONAR-* → sqs, SC-* → sqc).'
+    required: false
   plugin-name:
     description: 'The language key of the plugin to update (e.g., architecture, java, csharp).'
     required: true
@@ -53,16 +56,35 @@ runs:
       shell: bash
       env:
         TICKET_KEY: ${{ inputs.ticket-key }}
+        TARGET: ${{ inputs.target }}
         DRAFT: ${{ inputs.draft }}
       run: |
-        if [[ "$TICKET_KEY" == SONAR-* ]]; then
-          echo "PRODUCT_REPOSITORY=sonar-enterprise" >> $GITHUB_ENV
-          echo "BUILD_GRADLE_FILE=build.gradle" >> $GITHUB_ENV
+        # Resolve target: explicit input takes precedence over ticket-key prefix
+        if [[ -n "$TARGET" ]]; then
+          RESOLVED_TARGET="$TARGET"
+        elif [[ "$TICKET_KEY" == SONAR-* ]]; then
+          RESOLVED_TARGET="sqs"
         elif [[ "$TICKET_KEY" == SC-* ]]; then
-          echo "PRODUCT_REPOSITORY=sonarcloud-core" >> $GITHUB_ENV
-          echo "BUILD_GRADLE_FILE=private/edition-sonarcloud/build.gradle" >> $GITHUB_ENV
+          RESOLVED_TARGET="sqc"
         else
-          echo "::error::Invalid ticket format. Must start with SONAR- or SC-."
+          echo "::error::Cannot determine target. Provide 'target' input or a ticket-key starting with SONAR- or SC-."
+          exit 1
+        fi
+
+        if [[ "$RESOLVED_TARGET" == "sqs" ]]; then
+          echo "PRODUCT_REPOSITORY=sonar-enterprise" >> $GITHUB_ENV
+          echo "BUILD_FILE=build.gradle" >> $GITHUB_ENV
+          echo "TARGET_FORMAT=gradle" >> $GITHUB_ENV
+        elif [[ "$RESOLVED_TARGET" == "sqc" ]]; then
+          echo "PRODUCT_REPOSITORY=sonarcloud-core" >> $GITHUB_ENV
+          echo "BUILD_FILE=private/edition-sonarcloud/build.gradle" >> $GITHUB_ENV
+          echo "TARGET_FORMAT=gradle" >> $GITHUB_ENV
+        elif [[ "$RESOLVED_TARGET" == "sqaa" ]]; then
+          echo "PRODUCT_REPOSITORY=sonar-analysis-as-a-service" >> $GITHUB_ENV
+          echo "BUILD_FILE=gradle/libs.versions.toml" >> $GITHUB_ENV
+          echo "TARGET_FORMAT=toml" >> $GITHUB_ENV
+        else
+          echo "::error::Invalid target '$RESOLVED_TARGET'. Must be sqs, sqc, or sqaa."
           exit 1
         fi
 
@@ -77,7 +99,7 @@ runs:
       with:
         repository: SonarSource/${{ env.PRODUCT_REPOSITORY }}
         ref: ${{ inputs.base-branch }}
-        sparse-checkout: ${{ env.BUILD_GRADLE_FILE }}
+        sparse-checkout: ${{ env.BUILD_FILE }}
         sparse-checkout-cone-mode: false
         fetch-depth: 0
         token: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
@@ -88,9 +110,10 @@ runs:
         PLUGIN_ARTIFACTS: ${{ inputs.plugin-artifacts }}
         PLUGIN_NAME: ${{ inputs.plugin-name }}
         RELEASE_VERSION: ${{ inputs.release-version }}
+        BUILD_FILE: ${{ env.BUILD_FILE }}
+        TARGET_FORMAT: ${{ env.TARGET_FORMAT }}
       run: |
         set -euo pipefail
-        # Prepare the list of plugins to update
         if [[ -n "$PLUGIN_ARTIFACTS" ]]; then
           echo "Using plugin-artifacts: $PLUGIN_ARTIFACTS"
           IFS=',' read -ra PLUGINS <<< "$PLUGIN_ARTIFACTS"
@@ -99,15 +122,18 @@ runs:
           PLUGINS=("${PLUGIN_NAME}.*")
         fi
 
-        # Update each plugin
         for plugin in "${PLUGINS[@]}"; do
           plugin=$(echo "$plugin" | xargs)
-          echo "Updating analyzer version in ${{ env.BUILD_GRADLE_FILE }} for plugin $plugin"
-          sed -i "s/\(:sonar-$plugin-plugin:\)[0-9.]*/\1$RELEASE_VERSION/g" ${{ env.BUILD_GRADLE_FILE }}
+          echo "Updating analyzer version in $BUILD_FILE for plugin $plugin"
+          if [[ "$TARGET_FORMAT" == "toml" ]]; then
+            sed -i "s/^\(sonar-$plugin\s*=\s*\"\)[0-9.]*/\1$RELEASE_VERSION/" "$BUILD_FILE"
+          else
+            sed -i "s/\(:sonar-$plugin-plugin:\)[0-9.]*/\1$RELEASE_VERSION/g" "$BUILD_FILE"
+          fi
         done
 
         echo "Showing diff:"
-        git --no-pager diff ${{ env.BUILD_GRADLE_FILE }}
+        git --no-pager diff "$BUILD_FILE"
 
     - name: Create Pull Request
       id: create_pr

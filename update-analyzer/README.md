@@ -1,23 +1,31 @@
 # Update Analyzer Action
 
-This GitHub Action automates the process of updating an analyzer's version within SonarQube or SonarCloud. It checks out the respective product repository, modifies the `build.gradle` file with the new version, and creates a pull request with the changes.
+This GitHub Action automates the process of updating an analyzer's version within SonarQube Server (SQS), SonarCloud (SQC), or SonarQube Analysis-as-a-Service (SQAA). It checks out the respective product repository, modifies the build file with the new version, and creates a pull request with the changes.
 
 ## Description
 
 The action updates analyzer versions by:
-1. Determining the target repository based on the ticket prefix (`SONAR-` for SonarQube or `SC-` for SonarCloud)
-2. Checking out the appropriate product repository (`sonar-enterprise` or `sonarcloud-core`)
-3. Updating the analyzer version in the build.gradle file using sed commands
+1. Determining the target repository based on the `target` input (or falling back to ticket prefix for backward compatibility)
+2. Checking out the appropriate product repository (`sonar-enterprise`, `sonarcloud-core`, or `sonar-analysis-as-a-service`)
+3. Updating the analyzer version in the build file using sed commands
 4. Creating a pull request with the changes using the specified GitHub token from Vault
+
+| Target | Repository | Build file | Version format |
+|--------|-----------|------------|----------------|
+| `sqs` | `sonar-enterprise` | `build.gradle` | `:sonar-X-plugin:VERSION` |
+| `sqc` | `sonarcloud-core` | `private/edition-sonarcloud/build.gradle` | `:sonar-X-plugin:VERSION` |
+| `sqaa` | `sonar-analysis-as-a-service` | `gradle/libs.versions.toml` | `sonar-X = "VERSION"` |
 
 ## Prerequisites
 
-The `secret-name` provided to the action must have the following permissions for the target repository (e.g., `SonarSource/sonar-enterprise`):
+The `secret-name` provided to the action must have the following permissions for the target repository:
 
 * `contents: write`
 * `pull-requests: write`
 
 An example PR how to request a token with those permissions can be found [here](https://github.com/SonarSource/re-terraform-aws-vault/pull/6693).
+
+> **Note:** For SQAA targets, the secret must also have access to `SonarSource/sonar-analysis-as-a-service`. This requires a re-terraform update to grant the token the necessary permissions.
 
 ## Dependencies
 
@@ -31,10 +39,11 @@ This action depends on:
 | Input               | Description                                                                                                                                                                                                                                                           | Required | Default  |
 |---------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|----------|
 | `release-version`   | The new version to set for the analyzer (e.g., `1.12.0.12345`).                                                                                                                                                                                                       | `true`   |          |
-| `ticket-key`        | The Jira ticket number. Must start with `SONAR-` (for SonarQube) or `SC-` (for SonarCloud).                                                                                                                                                                           | `true`   |          |
-| `plugin-name`       | The language key of the plugin to update. It will always be used as a part of the PR title and commit message. It can be used to match the artifact in the build script (i.e. it should be the `X` in `sonar-X-plugin`), unless `plugin-artifacts` input is provided. | `true`   |          |
+| `ticket-key`        | The Jira ticket number. Used for commit messages and branch naming. Must start with `SONAR-` or `SC-` when `target` is not provided (for backward-compatible routing).                                                                                                | `true`   |          |
+| `target`            | The target product: `sqs`, `sqc`, or `sqaa`. When not provided, falls back to routing via ticket-key prefix (`SONAR-*` → sqs, `SC-*` → sqc).                                                                                                                         | `false`  |          |
+| `plugin-name`       | The language key of the plugin to update. It will always be used as a part of the PR title and commit message. It can be used to match the artifact in the build script (i.e. it should be the `X` in `sonar-X-plugin` or `sonar-X` in TOML), unless `plugin-artifacts` input is provided. | `true`   |          |
 | `secret-name`       | Name of the secret for GitHub token to fetch from the vault that has permissions to create pull requests in the target Github repository.                                                                                                                             | `true`   |          |
-| `plugin-artifacts`  | Comma-separated list of plugin artifact names (any `X` in `sonar-X-plugin`) that will be used instead of `plugin-name` when provided.                                                                                                                                 | `false`  |          |
+| `plugin-artifacts`  | Comma-separated list of plugin artifact names that will be used instead of `plugin-name` when provided.                                                                                                                                                               | `false`  |          |
 | `base-branch`       | The base branch for the pull request.                                                                                                                                                                                                                                 | `false`  | `master` |
 | `draft`             | A boolean value (`true`/`false`) to control if the pull request is created as a draft. When `true`, the commit message is prefixed with `[DO NOT MERGE]` instead of the ticket key.                                                                                   | `false`  | `false`  |
 | `reviewers`         | A comma-separated list of GitHub usernames to request a review from (e.g., `user1,user2`).                                                                                                                                                                            | `false`  |          |
@@ -101,30 +110,43 @@ This action depends on:
     secret-name: 'jvm-release-automation'
 ```
 
+### Updating SQAA (sonar-analysis-as-a-service)
+
+```yaml
+- name: Update Analyzer in SQAA
+  uses: SonarSource/release-github-actions/update-analyzer@v1
+  with:
+    release-version: '1.12.0.12345'
+    ticket-key: 'SC-12345'
+    target: 'sqaa'
+    plugin-name: 'java'
+    secret-name: 'sonar-java-release-automation'
+```
+
+This updates `gradle/libs.versions.toml` in `sonar-analysis-as-a-service`, changing `sonar-java = "OLD"` to `sonar-java = "1.12.0.12345"`.
+
 ## Implementation Details
 
 The action uses a composite action that:
 - Uses the SonarSource Vault action wrapper to securely retrieve GitHub tokens
-- Determines the target repository based on ticket prefix validation
-- Uses sparse checkout for efficient repository cloning (only the build.gradle file)
-- Updates analyzer versions using sed pattern matching for `sonar-X-plugin` artifacts
+- Determines the target repository and build file from the `target` input (or ticket-key prefix for backward compatibility)
+- Uses sparse checkout for efficient repository cloning (only the relevant build file)
+- Updates analyzer versions using sed: Gradle format (`:sonar-X-plugin:VERSION`) for sqs/sqc, TOML format (`sonar-X = "VERSION"`) for sqaa
 - Creates pull requests with standardized naming conventions and commit messages
 - Supports both single plugin updates and multiple plugin artifacts in one PR
 
 ## Error Handling
 
 The action will fail with a non-zero exit code if:
-- The ticket format is invalid (doesn't start with `SONAR-` or `SC-`)
+- No valid target can be determined (invalid `target` input or unrecognized ticket-key prefix)
 - The Vault token retrieval fails
 - The target repository checkout fails
-- The build.gradle file modification fails
+- The build file modification fails
 - The pull request creation fails
 
 ## Notes
 
-- This action specifically targets SonarSource product repositories (`sonar-enterprise` and `sonarcloud-core`)
-- The action uses sparse checkout to minimize data transfer and processing time
 - Branch naming follows the pattern: `{plugin-name}/update-analyzer-{release-version}`
 - Commit messages and PR titles follow standardized formats for consistency
-- The action supports both individual plugin updates and batch updates for multiple related plugins
 - All GitHub tokens are securely retrieved from HashiCorp Vault using the SonarSource wrapper action
+- For SQAA, the secret must be granted access to `sonar-analysis-as-a-service` via re-terraform
