@@ -255,9 +255,9 @@ The PR updates `gradle/libs.versions.toml` in `sonar-analysis-as-a-service`, cha
 To create a CLI integration ticket, enable `create-cli-ticket`. 
 Use `sq-cli-short-description` to describe changes relevant for CLI integrations; falls back to `short-description` if not provided.
 
-| Input | Jira Project | Description |
-|-------|--------------|-------------|
-| `create-cli-ticket` | CLI | SonarQube CLI scanner |
+| Input               | Jira Project | Description           |
+|---------------------|--------------|----------------------|
+| `create-cli-ticket` | CLI          | SonarQube CLI scanner |
 
 ### Artifact Attachment
 
