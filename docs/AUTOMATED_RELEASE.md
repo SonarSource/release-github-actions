@@ -16,7 +16,7 @@ The workflow orchestrates these steps:
 6. Publish a GitHub release (draft or final)
 7. Release the current Jira version and create the next version in Jira
 8. Optionally create integration tickets (SLVS, SLVSCODE, SLE, SLI, SQC, SQS)
-9. Optionally open analyzer update PRs in SQS and SQC
+9. Optionally open analyzer update PRs in SQS, SQC, and/or SQAA
 10. Optionally post per-job and final workflow summaries when `verbose` is enabled
 
 ## Dependencies
@@ -44,6 +44,7 @@ This workflow composes several actions from this repository:
 | `plugin-name`                | Plugin name                                                                                                     | Yes      | -            |
 | `plugin-artifacts-sqs`       | Artifact identifier(s) for SQS; falls back to `plugin-name`                                                     | No       | -            |
 | `plugin-artifacts-sqc`       | Artifact identifier(s) for SQC; falls back to `plugin-name`                                                     | No       | -            |
+| `plugin-artifacts-sqaa`      | Artifact identifier(s) for SQAA; falls back to `plugin-name`                                                    | No       | -            |
 | `use-jira-sandbox`           | Use Jira sandbox                                                                                                | No       | `true`       |
 | `is-draft-release`           | Create the GitHub release as a draft                                                                            | No       | `true`       |
 | `pm-email`                   | Product manager email to assign the release ticket after technical release                                      | Yes      | -            |
@@ -62,6 +63,7 @@ This workflow composes several actions from this repository:
 | `sq-cli-short-description`   | Short summary of SQ CLI related changes                                                                         | No       | -            |
 | `sqs-integration`            | Create SQS integration ticket and PR                                                                            | No       | `true`       |
 | `sqc-integration`            | Create SQC integration ticket and PR                                                                            | No       | `true`       |
+| `sqaa-integration`           | Create a PR in `sonar-analysis-as-a-service` updating the analyzer version. Requires `sqc-integration: true` (reuses the SC ticket key). | No       | `false`      |
 | `ktlo-jira-project-key`      | Jira project key where the KTLO epic lives. Defaults to `jira-project-key` if not provided.                    | No       | -            |
 | `ktlo-epic-name-pattern`     | Regex pattern to match the KTLO epic summary                                                                    | No       | `KTLO`       |
 | `runner-environment`         | Runner labels/environment                                                                                       | No       | `sonar-m`    |
@@ -75,9 +77,20 @@ This workflow composes several actions from this repository:
 
 ## Outputs
 
-| Output        | Description                                                |
-|---------------|------------------------------------------------------------|
-| `new-version` | The newly created Jira version name (from the Jira release job) |
+| Output                          | Description                                              |
+|---------------------------------|----------------------------------------------------------|
+| `new-version`                   | The newly created Jira version name                      |
+| `release-version`               | Released version in `major.minor.patch.build` format     |
+| `jira-release-url`              | URL of the Jira release page                             |
+| `release-ticket-url`            | URL of the Jira REL release ticket                       |
+| `github-release-url`            | URL of the published GitHub release                      |
+| `sqs-ticket-url`                | URL of the SQS integration ticket                        |
+| `sqc-ticket-url`                | URL of the SQC integration ticket                        |
+| `sqs-pull-request-url`          | URL of the SQS analyzer-update pull request              |
+| `sqc-pull-request-url`          | URL of the SQC analyzer-update pull request              |
+| `plugins-deployer-pull-request-url` | URL of the plugins-deployer pull request             |
+| `sqaa-pull-request-url`         | URL of the SQAA analyzer-update pull request             |
+| `bump-version-pull-request-url` | URL of the version-bump pull request                     |
 
 ## Environment Variables
 
@@ -164,7 +177,7 @@ To set up this workflow in your repository, you need to complete the following p
      ```yaml
      release_automation: &release_automation
        suffix: release-automation
-       description: access to sonar-enterprise and sonarcloud-core repositories to create PRs to update analyzers
+       description: access to other repositories to create PRs to update analyzers
        organization: SonarSource
        permissions:
          contents: write
@@ -173,8 +186,9 @@ To set up this workflow in your repository, you need to complete the following p
    - Add to your repository's `github.customs` section:
      ```yaml
      - <<: *release_automation
-       repositories: [your-repo-name, sonar-enterprise, sonarcloud-core]
+       repositories: [your-repo-name, sonar-enterprise, sonarcloud-core, sonar-plugins-deployer, sonar-analysis-as-a-service]
      ```
+   - If you do not use SQAA integration, `sonar-analysis-as-a-service` can be omitted.
    - Example PR: https://github.com/SonarSource/re-terraform-aws-vault/pull/8406
 
 3. **Release Workflow**:
@@ -223,6 +237,19 @@ When your analyzer is used by SonarLint, you can enable integration ticket creat
 
 Use `sq-ide-short-description` to describe changes relevant for IDE integrations.
 
+### SQAA Integration
+
+To automatically open a PR in `sonar-analysis-as-a-service` updating the analyzer version after release, enable `sqaa-integration: true`. This requires `sqc-integration: true` as it reuses the SC Jira ticket key.
+
+```yaml
+sqc-integration: true
+sqaa-integration: true
+```
+
+The PR updates `gradle/libs.versions.toml` in `sonar-analysis-as-a-service`, changing `sonar-{plugin-name} = "old-version"` to the new release version.
+
+> **Prerequisites:** The release-automation secret must have `contents: write` and `pull-requests: write` access to `sonar-analysis-as-a-service`. Add it to `repositories` in `re-terraform-aws-vault`.
+
 ### CLI Integration
 
 To create a CLI integration ticket, enable `create-cli-ticket`. 
@@ -259,6 +286,7 @@ Artifacts from Repox can be attached to the GitHub release draft using the `rele
 - Review and merge the bump-version PR
 - Review and merge the SQS PR in sonar-enterprise
 - Review and merge the SQC PR in sonarcloud-core
+- Review and merge the SQAA PR in sonar-analysis-as-a-service (if `sqaa-integration` is enabled)
 - Update integration ticket statuses in Jira
 - Set fix versions on the SONAR ticket
 
