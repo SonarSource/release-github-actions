@@ -816,6 +816,13 @@ jobs:
       plugins-deployer-pull-request-url: ${{ steps.update-plugins-deployer.outputs.pull-request-url }}
       sqaa-pull-request-url: ${{ steps.update-sqaa.outputs.pull-request-url }}
     steps:
+      - name: Validate SQAA prerequisites
+        if: ${{ inputs.sqaa-integration && !inputs.sqc-integration }}
+        shell: bash
+        run: |
+          echo "::error::sqaa-integration requires sqc-integration to be true (SQAA reuses the SC ticket key)."
+          exit 1
+
       - name: Update analyzer in SQS
         id: update-sqs
         if: ${{ inputs.sqs-integration }}

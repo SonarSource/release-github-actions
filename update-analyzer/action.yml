@@ -119,16 +119,17 @@ runs:
           IFS=',' read -ra PLUGINS <<< "$PLUGIN_ARTIFACTS"
         else
           echo "Using plugin-name: $PLUGIN_NAME"
-          PLUGINS=("${PLUGIN_NAME}.*")
+          PLUGINS=("$PLUGIN_NAME")
         fi
 
         for plugin in "${PLUGINS[@]}"; do
           plugin=$(echo "$plugin" | xargs)
           echo "Updating analyzer version in $BUILD_FILE for plugin $plugin"
           if [[ "$TARGET_FORMAT" == "toml" ]]; then
-            sed -i "s/^\(sonar-$plugin\s*=\s*\"\)[0-9.]*/\1$RELEASE_VERSION/" "$BUILD_FILE"
+            # exact key: sonar-<plugin> = "..." (no greedy prefix match)
+            sed -i "s/^\(sonar-${plugin}[[:space:]]*=[[:space:]]*\"\)[0-9.]*/\1$RELEASE_VERSION/" "$BUILD_FILE"
           else
-            sed -i "s/\(:sonar-$plugin-plugin:\)[0-9.]*/\1$RELEASE_VERSION/g" "$BUILD_FILE"
+            sed -i "s/\(:sonar-${plugin}-plugin:\)[0-9.]*/\1$RELEASE_VERSION/g" "$BUILD_FILE"
           fi
         done
 
