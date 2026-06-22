@@ -1,0 +1,54 @@
+name: Test Update Analysis as a Service Action
+
+on:
+  workflow_call:
+  pull_request:
+    paths:
+      - 'update-analysis-as-a-service/**'
+      - '.github/workflows/automated-release.yml'
+      - '.github/workflows/test-update-analysis-as-a-service.yml'
+  push:
+    branches:
+      - master
+      - v*
+    paths:
+      - 'update-analysis-as-a-service/**'
+      - '.github/workflows/automated-release.yml'
+      - '.github/workflows/test-update-analysis-as-a-service.yml'
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: github-ubuntu-latest-s
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Run shell unit tests
+        run: bash update-analysis-as-a-service/test_update_libs_versions_toml.sh
+
+  static-tests:
+    name: Static Tests
+    runs-on: github-ubuntu-latest-s
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Verify reusable workflow exposes SQAA integration
+        run: |
+          grep -q "sqaa-integration:" .github/workflows/automated-release.yml
+          grep -q "plugin-artifacts-sqaa:" .github/workflows/automated-release.yml
+          grep -q "sqaa-base-branch:" .github/workflows/automated-release.yml
+          grep -q "sqaa-reviewers:" .github/workflows/automated-release.yml
+          grep -q "sqaa-pull-request-url:" .github/workflows/automated-release.yml
+          grep -q "Update analyzer in Analysis as a Service" .github/workflows/automated-release.yml
+          grep -q "base-branch: .*sqaa-base-branch" .github/workflows/automated-release.yml
+          grep -q "reviewers: .*sqaa-reviewers" .github/workflows/automated-release.yml
+
+      - name: Verify action creates a pull request
+        run: |
+          grep -q "SonarSource/release-github-actions/create-pull-request@v1" update-analysis-as-a-service/action.yml
+          grep -q "SonarSource/sonar-analysis-as-a-service" update-analysis-as-a-service/action.yml

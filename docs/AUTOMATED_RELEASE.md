@@ -44,6 +44,9 @@ This workflow composes several actions from this repository:
 | `plugin-name`                | Plugin name                                                                                                     | Yes      | -            |
 | `plugin-artifacts-sqs`       | Artifact identifier(s) for SQS; falls back to `plugin-name`                                                     | No       | -            |
 | `plugin-artifacts-sqc`       | Artifact identifier(s) for SQC; falls back to `plugin-name`                                                     | No       | -            |
+| `plugin-artifacts-sqaa`      | Artifact identifier(s) for SQAA; falls back to `plugin-name`                                                    | No       | -            |
+| `sqaa-base-branch`           | Base branch for the SQAA pull request                                                                           | No       | `master`     |
+| `sqaa-reviewers`             | Comma-separated list of GitHub usernames to request a review on the SQAA pull request                           | No       | -            |
 | `use-jira-sandbox`           | Use Jira sandbox                                                                                                | No       | `true`       |
 | `is-draft-release`           | Create the GitHub release as a draft                                                                            | No       | `true`       |
 | `pm-email`                   | Product manager email to assign the release ticket after technical release                                      | Yes      | -            |
@@ -62,6 +65,7 @@ This workflow composes several actions from this repository:
 | `sq-cli-short-description`   | Short summary of SQ CLI related changes                                                                         | No       | -            |
 | `sqs-integration`            | Create SQS integration ticket and PR                                                                            | No       | `true`       |
 | `sqc-integration`            | Create SQC integration ticket and PR                                                                            | No       | `true`       |
+| `sqaa-integration`           | Create SQAA PR in sonar-analysis-as-a-service                                                                   | No       | `false`      |
 | `ktlo-jira-project-key`      | Jira project key where the KTLO epic lives. Defaults to `jira-project-key` if not provided.                    | No       | -            |
 | `ktlo-epic-name-pattern`     | Regex pattern to match the KTLO epic summary                                                                    | No       | `KTLO`       |
 | `runner-environment`         | Runner labels/environment                                                                                       | No       | `sonar-m`    |
@@ -76,9 +80,10 @@ This workflow composes several actions from this repository:
 
 ## Outputs
 
-| Output        | Description                                                |
-|---------------|------------------------------------------------------------|
-| `new-version` | The newly created Jira version name (from the Jira release job) |
+| Output                  | Description                                                |
+|-------------------------|------------------------------------------------------------|
+| `new-version`           | The newly created Jira version name (from the Jira release job) |
+| `sqaa-pull-request-url` | URL of the SQAA analyzer-update pull request               |
 
 ## Environment Variables
 
