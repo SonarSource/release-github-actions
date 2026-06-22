@@ -138,6 +138,11 @@ on:
         required: false
         type: boolean
         default: true
+      freeze-branch-slack-notification:
+        description: "Send Slack notification when freezing/unfreezing the branch"
+        required: false
+        type: boolean
+        default: true
       check-releasability:
         description: "Check the releasability status after freezing the branch"
         required: false
@@ -240,7 +245,7 @@ jobs:
         with:
           branch: ${{ inputs.branch }}
           freeze: true
-          slack-channel: ${{ inputs.slack-channel }}
+          slack-channel: ${{ inputs.freeze-branch-slack-notification == true && inputs.slack-channel || '' }}
       - name: Summary
         if: ${{ inputs.verbose }}
         shell: bash
@@ -540,7 +545,7 @@ jobs:
         with:
           branch: ${{ inputs.branch }}
           freeze: false
-          slack-channel: ${{ inputs.slack-channel }}
+          slack-channel: ${{ inputs.freeze-branch-slack-notification == true && inputs.slack-channel || '' }}
       - name: Summary
         if: ${{ inputs.verbose }}
         shell: bash
