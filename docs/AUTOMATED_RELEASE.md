@@ -68,6 +68,7 @@ This workflow composes several actions from this repository:
 | `release-process`            | Release process documentation URL                                                                               | No       | General page |
 | `verbose`                    | When `true`, posts per-job summaries and a final run summary                                                    | No       | `false`      |
 | `freeze-branch`              | When `true`, locks the target branch during the release and unlocks it after publishing                         | No       | `true`       |
+| `freeze-branch-slack-notification` | When `false`, suppresses Slack notifications for the freeze and unfreeze steps                           | No       | `true`       |
 | `check-releasability`        | When `true`, verifies the releasability status on the branch before proceeding                                  | No       | `true`       |
 | `slack-channel`              | Slack channel to notify when locking/unlocking the branch                                                       | No       | -            |
 | `release-artifacts-public`   | Newline-separated Repox paths from public repositories to attach to the GitHub release                          | No       | -            |
