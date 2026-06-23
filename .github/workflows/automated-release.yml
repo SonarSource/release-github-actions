@@ -127,10 +127,10 @@ on:
         type: boolean
         default: true
       sqaa-integration:
-        description: "Create SQAA PR in sonar-analysis-as-a-service"
+        description: "Create SQAA PR in sonar-analysis-as-a-service when sqc-integration is true"
         required: false
         type: boolean
-        default: false
+        default: true
       sqc-plugins-deployer-integration:
         description: "Also create a PR in sonar-plugins-deployer when sqc-integration is true. Disabled by default during the transition period."
         required: false
@@ -898,7 +898,7 @@ jobs:
     runs-on: ${{ inputs.runner-environment }}
     needs: [ prepare-release ]
     if: |
-      inputs.sqaa-integration &&
+      inputs.sqc-integration && inputs.sqaa-integration &&
       !cancelled() &&
       needs.prepare-release.result == 'success'
     permissions:
