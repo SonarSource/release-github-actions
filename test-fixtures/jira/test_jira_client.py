@@ -8,7 +8,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from jira_client import get_jira_instance, eprint
+from jira_client import get_jira_instance, eprint, safe_path
 
 
 class TestEprint(unittest.TestCase):
@@ -81,6 +81,21 @@ class TestGetJiraInstance(unittest.TestCase):
         with self.assertRaises(SystemExit) as cm:
             get_jira_instance('https://test.atlassian.net/')
         self.assertEqual(cm.exception.code, 1)
+
+
+class TestSafePath(unittest.TestCase):
+    def test_valid_path_returns_resolved(self):
+        import tempfile, os
+        with tempfile.TemporaryDirectory() as d:
+            p = os.path.join(d, 'state.json')
+            self.assertEqual(safe_path(p, base=d), os.path.realpath(p))
+
+    def test_traversal_exits(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(SystemExit) as cm:
+                safe_path('../../etc/passwd', base=d)
+            self.assertEqual(cm.exception.code, 1)
 
 
 if __name__ == '__main__':
