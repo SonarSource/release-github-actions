@@ -1,4 +1,5 @@
 import argparse
+import os
 import sys
 
 # The entire file was written by AI.
@@ -17,6 +18,14 @@ def main():
     parser.add_argument('--changelogUrl', required=True, help='Changelog URL')
     parser.add_argument('--downloadUrl', required=True, help='Download URL')
     args = parser.parse_args()
+
+    base_dir = os.path.realpath(os.getcwd()) + os.sep
+    file_path = os.path.join(base_dir, args.file)
+    canonical_path = os.path.realpath(file_path)
+    if not canonical_path.startswith(base_dir):
+        print('ERROR: Access denied - file path is outside the working directory', file=sys.stderr)
+        sys.exit(1)
+    args.file = canonical_path
 
     # First pass: find the current publicVersions value to move it to archivedVersions
     old_public_version = None
