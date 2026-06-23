@@ -1,0 +1,99 @@
+name: 'Update Version PR'
+description: 'Checks out a target repository, runs a caller-supplied edit script, and opens a pull request.'
+author: 'SonarSource'
+
+inputs:
+  secret-name:
+    description: 'Name of the vault secret to fetch. Resolves to development/github/token/SonarSource-<secret-name>.'
+    required: true
+  target-repo:
+    description: 'The target repository to check out (e.g. SonarSource/sonar-plugins-deployer).'
+    required: true
+  sparse-paths:
+    description: 'Sparse-checkout path(s) for the target file(s).'
+    required: true
+  base-branch:
+    description: 'The base branch to check out and target for the pull request.'
+    required: false
+    default: 'master'
+  edit-script:
+    description: 'Absolute path to the script that edits the checked-out file(s). Typically ${{ github.action_path }}/script.sh from the caller.'
+    required: true
+  edit-env:
+    description: 'Newline-separated KEY=VALUE pairs exported into the environment before running the edit script.'
+    required: false
+    default: ''
+  commit-message:
+    description: 'The commit message for the pull request.'
+    required: true
+  title:
+    description: 'The title of the pull request.'
+    required: true
+  body:
+    description: 'The body of the pull request.'
+    required: false
+    default: ''
+  branch:
+    description: 'The branch name for the pull request.'
+    required: true
+  draft:
+    description: 'Create the pull request as a draft.'
+    required: false
+    default: 'false'
+  reviewers:
+    description: 'A comma-separated list of GitHub usernames to request a review from.'
+    required: false
+    default: ''
+
+outputs:
+  pull-request-url:
+    description: 'The URL of the created or updated pull request.'
+    value: ${{ steps.create-pr.outputs.pull-request-url }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Get GitHub token from Vault
+      id: secrets
+      uses: SonarSource/vault-action-wrapper@v3
+      with:
+        secrets: |
+          development/github/token/SonarSource-${{ inputs.secret-name }} token | GITHUB_TOKEN;
+
+    - name: Checkout target repository
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        repository: ${{ inputs.target-repo }}
+        ref: ${{ inputs.base-branch }}
+        sparse-checkout: ${{ inputs.sparse-paths }}
+        sparse-checkout-cone-mode: false
+        fetch-depth: 0
+        token: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
+
+    - name: Run edit script
+      shell: bash
+      env:
+        EDIT_SCRIPT: ${{ inputs.edit-script }}
+        EDIT_ENV: ${{ inputs.edit-env }}
+      run: |
+        set -euo pipefail
+        # Export caller-supplied environment variables
+        while IFS= read -r line; do
+          [[ -z "$line" ]] && continue
+          export "$line"
+        done <<< "$EDIT_ENV"
+        bash "$EDIT_SCRIPT"
+
+    - name: Create Pull Request
+      id: create-pr
+      uses: SonarSource/release-github-actions/create-pull-request@v1
+      with:
+        token: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
+        author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+        commit-message: ${{ inputs.commit-message }}
+        title: ${{ inputs.title }}
+        body: ${{ inputs.body }}
+        base: ${{ inputs.base-branch }}
+        branch: ${{ inputs.branch }}
+        draft: ${{ inputs.draft }}
+        reviewers: ${{ inputs.reviewers }}

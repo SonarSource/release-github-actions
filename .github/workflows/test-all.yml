@@ -56,3 +56,6 @@ jobs:
 
   test-create-pull-request:
     uses: ./.github/workflows/test-create-pull-request.yml
+
+  test-update-version-pr:
+    uses: ./.github/workflows/test-update-version-pr.yml

@@ -1,0 +1,119 @@
+name: Test Update Version PR Action
+
+on:
+  workflow_call:
+  pull_request:
+    paths:
+      - 'update-version-pr/**'
+      - '.github/workflows/test-update-version-pr.yml'
+  push:
+    branches:
+      - branch-*
+    paths:
+      - 'update-version-pr/**'
+      - '.github/workflows/test-update-version-pr.yml'
+  workflow_dispatch:
+
+jobs:
+  schema-validation:
+    name: Schema Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify composite action type
+        run: |
+          set -euo pipefail
+          if grep -q 'using: .composite.' update-version-pr/action.yml; then
+            echo "PASS: using: composite found"
+          else
+            echo "FAIL: using: composite not found"
+            exit 1
+          fi
+
+      - name: Verify expected inputs exist
+        run: |
+          set -euo pipefail
+          INPUTS=(
+            secret-name target-repo sparse-paths base-branch
+            edit-script edit-env
+            commit-message title body branch draft reviewers
+          )
+          for input in "${INPUTS[@]}"; do
+            if grep -q "^  ${input}:" update-version-pr/action.yml; then
+              echo "PASS: input '${input}' found"
+            else
+              echo "FAIL: input '${input}' not found"
+              exit 1
+            fi
+          done
+
+      - name: Verify expected outputs exist
+        run: |
+          set -euo pipefail
+          OUTPUTS=(pull-request-url)
+          for output in "${OUTPUTS[@]}"; do
+            if grep -q "^  ${output}:" update-version-pr/action.yml; then
+              echo "PASS: output '${output}' found"
+            else
+              echo "FAIL: output '${output}' not found"
+              exit 1
+            fi
+          done
+
+      - name: Verify bash steps use set -euo pipefail
+        run: |
+          set -euo pipefail
+          BASH_STEPS=$(grep -c 'shell: bash' update-version-pr/action.yml)
+          PIPEFAIL_COUNT=$(grep -c 'set -euo pipefail' update-version-pr/action.yml)
+          echo "Bash steps: ${BASH_STEPS}, pipefail occurrences: ${PIPEFAIL_COUNT}"
+          if [ "$PIPEFAIL_COUNT" -ge "$BASH_STEPS" ]; then
+            echo "PASS: all bash steps use set -euo pipefail"
+          else
+            echo "FAIL: not all bash steps use set -euo pipefail"
+            exit 1
+          fi
+
+      - name: Verify inputs are passed via env (no direct interpolation in run blocks)
+        env:
+          PATTERN: '\$\{\{ inputs\.'
+        run: |
+          set -euo pipefail
+          in_run_block=false
+          found_violation=false
+          while IFS= read -r line; do
+            if echo "$line" | grep -qE '^\s+run: \|'; then
+              in_run_block=true
+              continue
+            fi
+            if $in_run_block && echo "$line" | grep -qE '^\s{4,6}[a-z]'; then
+              in_run_block=false
+            fi
+            if $in_run_block && echo "$line" | grep -qE "$PATTERN"; then
+              if ! echo "$line" | grep -qE '^\s*#'; then
+                echo "FAIL: direct input interpolation in run block: $line"
+                found_violation=true
+              fi
+            fi
+          done < update-version-pr/action.yml
+          if $found_violation; then
+            exit 1
+          else
+            echo "PASS: no direct input interpolation in run blocks"
+          fi
+
+      - name: Summary
+        run: echo "All schema checks passed"
+
+  unit-tests:
+    name: Unit Tests (update-analyzer edit script)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Run update_build_gradle.sh tests
+        run: bash update-analyzer/test_update_build_gradle.sh
