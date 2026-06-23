@@ -129,8 +129,8 @@ for artifact in "${artifacts[@]}"; do
   fi
 
   if ! key="$(find_version_key "$artifact")"; then
-    echo "::error::No version key found for artifact '${artifact}' in ${LIBS_VERSIONS_TOML}. Tried: $(candidate_keys "$artifact" | paste -sd ', ' -)" >&2
-    exit 1
+    echo "::warning::No version key found for artifact '${artifact}' in ${LIBS_VERSIONS_TOML}. Tried: $(candidate_keys "$artifact" | paste -sd ', ' -). Skipping." >&2
+    continue
   fi
 
   already_updated=false
@@ -150,8 +150,8 @@ for artifact in "${artifacts[@]}"; do
 done
 
 if [[ "${#updated_keys[@]}" -eq 0 ]]; then
-  echo "::error::No plugin artifacts were provided to update." >&2
-  exit 1
+  echo "::warning::No version keys were updated — analyzer likely not yet onboarded to SQAA. No PR will be created." >&2
+  exit 0
 fi
 
 echo "Showing diff:"

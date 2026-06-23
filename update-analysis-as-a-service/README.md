@@ -36,6 +36,10 @@ The `secret-name` provided to the action must have the following permissions on 
 |--------------------|--------------------------------------|
 | `pull-request-url` | The URL of the created pull request. |
 
+## Unonboarded Analyzers
+
+If no matching version key is found for an artifact in `gradle/libs.versions.toml`, the artifact is **skipped with a warning** — the action does not fail. When all artifacts are skipped (none found), the action exits cleanly with no PR created. This allows the SQAA integration to be enabled by default for all analyzers without breaking ones not yet onboarded to `sonar-analysis-as-a-service`.
+
 ## Version Key Resolution
 
 For each artifact, the action strips a `-enterprise` suffix and then resolves version keys in this order:

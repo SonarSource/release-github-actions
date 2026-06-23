@@ -191,8 +191,21 @@ done
 
 T=$(mktemp -d)
 make_libs_versions_toml "$T"
-run_test "unknown plugin fails" 1 \
+run_test "unknown plugin is skipped without failing" 0 \
   bash -c "LIBS_VERSIONS_TOML='$T/gradle/libs.versions.toml' PLUGIN_NAME='nonexistent-plugin-xyz' RELEASE_VERSION='1.0.0.1' bash '$SCRIPT'"
+assert_contains "unknown plugin leaves toml unchanged" "$T/gradle/libs.versions.toml" 'sonar-python = "5.23.0.33560"'
+rm -rf "$T"
+
+T=$(mktemp -d)
+make_libs_versions_toml "$T"
+LIBS_VERSIONS_TOML="$T/gradle/libs.versions.toml" PLUGIN_NAME="python" PLUGIN_ARTIFACTS="python,nonexistent-plugin-xyz" RELEASE_VERSION="5.24.0.6" \
+  bash "$SCRIPT" >/dev/null 2>&1 && actual_mixed=0 || actual_mixed=$?
+if [[ "$actual_mixed" -eq 0 ]]; then
+  assert_contains "mixed artifacts: known key updated" "$T/gradle/libs.versions.toml" 'sonar-python = "5.24.0.6"'
+else
+  echo "FAIL mixed artifacts: unknown should be skipped, known updated (exit $actual_mixed)"
+  FAIL=$((FAIL+1))
+fi
 rm -rf "$T"
 
 echo ""
