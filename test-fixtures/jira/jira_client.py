@@ -13,6 +13,16 @@ def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 
+def safe_path(path, base=None):
+    """Resolve path and ensure it stays within base (cwd by default). Exits 1 if it escapes."""
+    base_dir = os.path.realpath(base or os.getcwd())
+    resolved = os.path.realpath(os.path.join(base_dir, path))
+    if resolved != base_dir and not resolved.startswith(base_dir + os.sep):
+        print(f'ERROR: path {path!r} is outside the allowed directory', file=sys.stderr)
+        sys.exit(1)
+    return resolved
+
+
 def get_jira_instance(jira_url):
     """
     Initializes and returns a JIRA client instance.
