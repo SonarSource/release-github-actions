@@ -21,7 +21,7 @@ inputs:
     default: 'master'
   ticket-key:
     description: 'The Jira ticket key (e.g., SC-12345). Used as the PR title and commit message prefix.'
-    required: false
+    required: true
   draft:
     description: 'A boolean value to control if the pull request is created as a draft. When true, the title and commit message are prefixed with [DO NOT MERGE].'
     required: false

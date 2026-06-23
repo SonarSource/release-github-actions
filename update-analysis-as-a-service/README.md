@@ -25,7 +25,7 @@ The `secret-name` provided to the action must have the following permissions on 
 | `plugin-name`       | The language key of the plugin to update. Used in the PR title and as the default version-key source.           | `true`   |          |
 | `secret-name`       | Name of the Vault secret for a GitHub token with access to `sonar-analysis-as-a-service`.                       | `true`   |          |
 | `plugin-artifacts`  | Comma-separated analyzer artifact names to update instead of `plugin-name`.                                     | `false`  |          |
-| `ticket-key`        | The Jira ticket key (e.g., `SC-12345`). Used as the PR title and commit message prefix.                         | `false`  |          |
+| `ticket-key`        | The Jira ticket key (e.g., `SC-12345`). Used as the PR title and commit message prefix.                         | `true`   |          |
 | `base-branch`       | The base branch for the pull request.                                                                          | `false`  | `master` |
 | `draft`             | Whether to create the pull request as a draft. When `true`, prefixes title and commit with `[DO NOT MERGE]`.   | `false`  | `false`  |
 | `reviewers`         | A comma-separated list of GitHub usernames to request a review from.                                            | `false`  |          |
