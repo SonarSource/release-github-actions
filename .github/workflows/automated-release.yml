@@ -896,11 +896,12 @@ jobs:
   update-analysis-as-a-service:
     name: Update Analyzer in Analysis as a Service
     runs-on: ${{ inputs.runner-environment }}
-    needs: [ prepare-release ]
+    needs: [ prepare-release, create-integration-tickets ]
     if: |
       inputs.sqc-integration && inputs.sqaa-integration &&
       !cancelled() &&
-      needs.prepare-release.result == 'success'
+      needs.prepare-release.result == 'success' &&
+      needs.create-integration-tickets.result == 'success'
     permissions:
       id-token: write
     outputs:
@@ -911,6 +912,7 @@ jobs:
         uses: SonarSource/release-github-actions/update-analysis-as-a-service@v1
         with:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
+          ticket-key: ${{ needs.create-integration-tickets.outputs.sqc-ticket-key }}
           plugin-name: ${{ inputs.plugin-name }}
           secret-name: ${{ inputs.release-automation-secret-name || format('sonar-{0}-release-automation', inputs.plugin-name) }}
           plugin-artifacts: ${{ inputs.plugin-artifacts-sqaa }}

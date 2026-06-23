@@ -19,8 +19,11 @@ inputs:
     description: 'The base branch for the pull request.'
     required: false
     default: 'master'
+  ticket-key:
+    description: 'The Jira ticket key (e.g., SC-12345). Used as the PR title and commit message prefix.'
+    required: false
   draft:
-    description: 'A boolean value to control if the pull request is created as a draft. When true, the commit message is prefixed with [DO NOT MERGE].'
+    description: 'A boolean value to control if the pull request is created as a draft. When true, the title and commit message are prefixed with [DO NOT MERGE].'
     required: false
     default: 'false'
   reviewers:
@@ -50,11 +53,12 @@ runs:
       shell: bash
       env:
         DRAFT: ${{ inputs.draft }}
+        TICKET_KEY: ${{ inputs.ticket-key }}
       run: |
         if [[ "$DRAFT" == "true" ]]; then
           echo "commit-prefix=[DO NOT MERGE]" >> "$GITHUB_OUTPUT"
         else
-          echo "commit-prefix=[AaaS]" >> "$GITHUB_OUTPUT"
+          echo "commit-prefix=$TICKET_KEY" >> "$GITHUB_OUTPUT"
         fi
 
     - name: Checkout sonar-analysis-as-a-service
