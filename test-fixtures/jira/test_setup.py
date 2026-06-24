@@ -246,8 +246,9 @@ class TestMain(unittest.TestCase):
         ]):
             main()
 
+        resolved_path = os.path.realpath(custom_path)
         for call_args in mock_write_state.call_args_list:
-            self.assertEqual(call_args[0][1], custom_path)
+            self.assertEqual(call_args[0][1], resolved_path)
 
 
 class TestWriteState(unittest.TestCase):
