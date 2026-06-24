@@ -35,6 +35,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          pip install -e .
           cd resolve-ktlo-epic
           pip install -r requirements.txt
           pip install pytest pytest-cov
@@ -78,7 +79,9 @@ jobs:
           python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install -r test-fixtures/jira/requirements.txt
+        run: |
+          pip install -e .
+          pip install -r test-fixtures/jira/requirements.txt
 
       - name: Create KTLO epic test fixtures
         id: setup
