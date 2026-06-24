@@ -4,6 +4,9 @@
 import os
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'shared'))
+from path_utils import safe_path  # noqa: E402
+
 from jira import JIRA
 from jira.exceptions import JIRAError
 
@@ -11,16 +14,6 @@ from jira.exceptions import JIRAError
 def eprint(*args, **kwargs):
     """Prints messages to stderr for logging."""
     print(*args, file=sys.stderr, **kwargs)
-
-
-def safe_path(path, base=None):
-    # ponytail: keep in sync with sonar-update-center-release/update.py; called here with base=dirname
-    resolved = os.path.realpath(path)
-    base_dir = os.path.realpath(base) if base else os.path.dirname(resolved)
-    if resolved != base_dir and not resolved.startswith(base_dir + os.sep):
-        print(f'ERROR: path {path!r} is outside the allowed directory', file=sys.stderr)
-        sys.exit(1)
-    return resolved
 
 
 def get_jira_instance(jira_url):

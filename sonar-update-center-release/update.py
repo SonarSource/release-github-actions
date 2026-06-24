@@ -2,15 +2,8 @@ import argparse
 import os
 import sys
 
-
-def safe_path(path, base=None):
-    # ponytail: keep in sync with test-fixtures/jira/jira_client.py; called here with base=cwd
-    resolved = os.path.realpath(path)
-    base_dir = os.path.realpath(base) if base else os.path.realpath(os.getcwd())
-    if resolved != base_dir and not resolved.startswith(base_dir + os.sep):
-        print(f'ERROR: path {path!r} is outside the allowed directory', file=sys.stderr)
-        sys.exit(1)
-    return resolved
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'shared'))
+from path_utils import safe_path
 
 
 PUBLIC_VERSION = 'publicVersions='
