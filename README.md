@@ -37,60 +37,29 @@ A centralized collection of reusable GitHub Actions designed to streamline and a
 
 ## Release lock gate
 
-> This section covers the **analyzer release path** (`automated-release.yml`). The DevEx/IDE
-> path (`ide-automated-release.yml`) is separate and not covered here.
+> Analyzer release path (`automated-release.yml`) only. `ide-automated-release.yml` is not covered here.
 
-### The problem
+When a release is triggered, `automated-release.yml` strips auto-merge from all open PRs and
+(optionally) freezes the branch. After publishing the GitHub release the branch unfreezes, and
+the workflow creates a version-bump PR (`bot/prepare-next-development-iteration-*`).
 
-`automated-release.yml` freezes the branch at the start of the release to prevent unintended
-merges. But the freeze ends **before** the version-bump PR is created:
+From that point, `release-lock` — a required status check backed by a thin `release-lock.yml`
+caller in the analyzer repo — gates what can merge:
 
-```
-disable-auto-merge → freeze → check → prepare → publish-github-release
-                                                       ↓
-                            UNFREEZE ─────────────────┘
-                               ↓
-                       release-in-jira → bump-version (creates version-bump PR)
-```
+| PR | `release-lock` status |
+|---|---|
+| Version-bump PR | ✅ `success` — may merge |
+| Every other open PR | ❌ `failure` — "Release in progress — merge the version-bump PR first" |
 
-Between the unfreeze and the bump PR being merged, the branch is open. Other PRs can merge
-into that gap, leaving the branch at the released version with unbumped build files.
+The release DRI merges the version-bump PR. On merge, `release-lock.yml` automatically resets
+all remaining open PRs to ✅ green — developers do not need to push or retrigger anything.
 
-The freeze (`lock_branch: true`) cannot extend past the unfreeze — it is all-or-nothing
-read-only for everyone, including the release DRI, and the bump PR push itself needs an
-unfrozen branch.
+The gate logic lives in the reusable
+`SonarSource/release-github-actions/.github/workflows/release-lock.yml@v1`; analyzer repos
+hold only a 5-line caller. Updates propagate automatically on the next `@v1` resolve.
 
-### The solution
-
-A thin caller workflow (`release-lock.yml`) in each analyzer repo delegates to the reusable
-`SonarSource/release-github-actions/.github/workflows/release-lock.yml@v1`, which sets a
-`release-lock` commit status on every open PR.
-When a version-bump PR (head branch `bot/prepare-next-development-iteration-*`) is open:
-
-- **Version-bump PR** → ✅ `success` (can merge)
-- **Every other PR** → ❌ `failure` — "Release in progress — merge the version-bump PR first"
-
-When the bump PR merges, the reusable workflow sweeps all open PRs (paginated, including drafts)
-and resets each to ✅ green **automatically** — developers do not need to push or retrigger.
-Logic updates propagate to all repos on the next `@v1` resolve.
-
-At release start, the workflow also strips **auto-merge** from all open PRs to close the race
-where a pre-approved PR with pending CI would auto-merge before the bump PR opens.
-
-### Adoption (two phases, per repo, non-breaking)
-
-**Phase 1 — Add the workflow (unenforced).** Run the `automated-release-setup` skill (Step 5c)
-in your analyzer repo. It adds `release-lock.yml`. The check reports statuses but is not a
-required check, so it gates nothing. Observe over a release or two.
-
-**Phase 2 — Enforce.** When confident, run Step 5d of the skill. It registers `release-lock`
-as a required status check. Now only the bump PR can merge while a release is in progress.
-
-Repos that never run the skill release exactly as before — the only universal change is the
-auto-merge sweep at release start.
-
-See [docs/AUTOMATED_RELEASE.md](docs/AUTOMATED_RELEASE.md#release-lock-gate) for the full
-rollout plan, the freeze-coexistence guarantee, and the migration guide.
+See [docs/AUTOMATED_RELEASE.md](docs/AUTOMATED_RELEASE.md#release-lock-gate) for adoption
+steps and the freeze-coexistence guarantee.
 
 ## Claude Code Skills
 
