@@ -4,7 +4,8 @@
 import os
 import sys
 
-from shared.path_utils import safe_path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'shared'))
+from path_utils import safe_path
 
 from jira import JIRA
 from jira.exceptions import JIRAError

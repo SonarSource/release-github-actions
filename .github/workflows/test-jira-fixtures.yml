@@ -31,7 +31,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -e .
           cd test-fixtures/jira
           pip install -r requirements.txt
           pip install pytest pytest-cov
@@ -76,9 +75,7 @@ jobs:
           python-version: '3.10'
 
       - name: Install dependencies
-        run: |
-          pip install -e .
-          pip install -r test-fixtures/jira/requirements.txt
+        run: pip install -r test-fixtures/jira/requirements.txt
 
       - name: Create test fixtures
         id: setup
