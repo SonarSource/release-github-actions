@@ -8,6 +8,8 @@ Usage:
 
 import argparse
 import json
+import os
+import sys
 
 from jira_client import get_jira_instance, eprint
 from jira.exceptions import JIRAError
@@ -33,15 +35,21 @@ def main():
 
     jira = get_jira_instance(args.jira_url)
 
+    base_dir = os.path.realpath(os.getcwd()) + os.sep
+    state_file_path = os.path.realpath(os.path.join(base_dir, args.state_file))
+    if not state_file_path.startswith(base_dir):
+        eprint("Access denied: state file path is outside the working directory.")
+        sys.exit(1)
+
     try:
-        with open(args.state_file) as f:
+        with open(state_file_path) as f:
             state = json.load(f)
         epic_keys = state.get("epic_keys", [])
     except FileNotFoundError:
-        eprint(f"Warning: State file {args.state_file} not found. Nothing to clean up.")
+        eprint(f"Warning: State file {state_file_path} not found. Nothing to clean up.")
         return
     except json.JSONDecodeError:
-        eprint(f"Warning: State file {args.state_file} is not valid JSON. Nothing to clean up.")
+        eprint(f"Warning: State file {state_file_path} is not valid JSON. Nothing to clean up.")
         return
 
     delete_epics(jira, epic_keys)

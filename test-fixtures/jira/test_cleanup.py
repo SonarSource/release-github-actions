@@ -127,22 +127,20 @@ class TestMain(unittest.TestCase):
             "issue_keys": ["PROJ-1", "PROJ-2"]
         }
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-            json.dump(state, f)
-            state_file = f.name
+        with tempfile.TemporaryDirectory() as tmpdir:
+            state_file = os.path.join(tmpdir, 'state.json')
+            with open(state_file, 'w') as f:
+                json.dump(state, f)
 
-        try:
             with patch('sys.argv', [
                 'cleanup.py',
                 '--jira-url', 'https://sandbox.atlassian.net/',
                 '--state-file', state_file
-            ]):
+            ]), patch('os.getcwd', return_value=tmpdir):
                 main()
 
             self.assertEqual(mock_jira.issue.call_count, 2)
             mock_jira.version.assert_called_once_with('67890')
-        finally:
-            os.unlink(state_file)
 
     @patch('cleanup.get_jira_instance')
     @patch('sys.argv', [
@@ -185,7 +183,7 @@ class TestMain(unittest.TestCase):
     @patch('sys.argv', [
         'cleanup.py',
         '--jira-url', 'https://sandbox.atlassian.net/',
-        '--state-file', '/nonexistent/path/state.json'
+        '--state-file', 'nonexistent_state.json'
     ])
     def test_main_handles_missing_state_file(self, mock_get_jira):
         """Main should not crash when state file does not exist."""
@@ -196,6 +194,24 @@ class TestMain(unittest.TestCase):
         main()
 
         # No issues or versions to delete
+        mock_jira.issue.assert_not_called()
+        mock_jira.version.assert_not_called()
+
+    @patch('cleanup.get_jira_instance')
+    @patch('sys.argv', [
+        'cleanup.py',
+        '--jira-url', 'https://sandbox.atlassian.net/',
+        '--state-file', '/nonexistent/path/state.json'
+    ])
+    def test_main_rejects_state_file_outside_cwd(self, mock_get_jira):
+        """Test that a state file path outside the working directory is rejected."""
+        mock_jira = Mock()
+        mock_get_jira.return_value = mock_jira
+
+        with self.assertRaises(SystemExit) as cm:
+            main()
+
+        self.assertEqual(cm.exception.code, 1)
         mock_jira.issue.assert_not_called()
         mock_jira.version.assert_not_called()
 

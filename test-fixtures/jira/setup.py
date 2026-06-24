@@ -22,7 +22,12 @@ STATE_FILE_DEFAULT = "/tmp/jira-fixtures.json"
 
 def write_state(state, state_file):
     """Writes the current state to state_file so cleanup can run even on partial failure."""
-    with open(state_file, "w") as f:
+    base_dir = os.path.realpath(os.getcwd()) + os.sep
+    canonical_path = os.path.realpath(os.path.join(base_dir, state_file))
+    if not canonical_path.startswith(base_dir):
+        eprint(f"Access denied: state file path '{state_file}' is outside the working directory.")
+        sys.exit(1)
+    with open(canonical_path, "w") as f:
         json.dump(state, f)
 
 

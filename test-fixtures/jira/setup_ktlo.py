@@ -21,6 +21,17 @@ from jira_client import get_jira_instance, eprint
 STATE_FILE_DEFAULT = os.path.join(os.path.expanduser("~"), ".cache", "jira-ktlo-fixtures.json")
 
 
+def validate_state_file_path(untrusted_path):
+    """Validate and resolve the state file path, preventing path traversal."""
+    base_dir = os.path.realpath(os.getcwd()) + os.sep
+    file_path = os.path.join(base_dir, untrusted_path)
+    canonical_path = os.path.realpath(file_path)
+    if not canonical_path.startswith(base_dir):
+        eprint("Access denied: state file path is outside the working directory.")
+        sys.exit(1)
+    return canonical_path
+
+
 def create_epic(jira, project_key, summary):
     fields = {
         'project': project_key,
@@ -57,15 +68,16 @@ def main():
     project = args.project_key
 
     # Ensure state file directory exists with restrictive permissions
-    state_dir = os.path.dirname(args.state_file)
-    if state_dir and not os.path.exists(state_dir):
+    state_file = validate_state_file_path(args.state_file)
+    state_dir = os.path.dirname(state_file)
+    if not os.path.exists(state_dir):
         os.makedirs(state_dir, mode=0o700)
 
     state = {"epic_keys": []}
 
     def add(epic):
         state["epic_keys"].append(epic.key)
-        with open(args.state_file, "w") as f:
+        with open(state_file, "w") as f:
             json.dump(state, f)
 
     one_match = create_epic(jira, project, f"GHA KTLO test fixture {run_id} — one match")
@@ -90,7 +102,7 @@ def main():
         "multi_b_key": multi_b.key,
         "no_match_key": no_match.key,
     })
-    with open(args.state_file, "w") as f:
+    with open(state_file, "w") as f:
         json.dump(state, f)
 
     print(json.dumps(state))

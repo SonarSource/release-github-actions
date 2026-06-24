@@ -257,7 +257,7 @@ class TestWriteState(unittest.TestCase):
         """write_state should serialize state as JSON to the given path."""
         state = {"version_id": "123", "version_name": "99.42", "issue_keys": ["PROJ-1"]}
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, dir=os.getcwd()) as f:
             state_file = f.name
         self.addCleanup(os.remove, state_file)
 

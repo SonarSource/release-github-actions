@@ -12,6 +12,7 @@ Usage:
 
 import argparse
 import json
+import os
 import sys
 
 from jira_client import get_jira_instance, eprint
@@ -57,8 +58,13 @@ def main():
     issue_keys = [k for k in args.issue_keys.split(',') if k] if args.issue_keys else []
 
     if args.state_file:
+        base_dir = os.path.realpath(os.getcwd()) + os.sep
+        canonical_path = os.path.realpath(os.path.join(base_dir, args.state_file))
+        if not canonical_path.startswith(base_dir):
+            eprint(f"Error: State file path {args.state_file} is outside the working directory. Access denied.")
+            sys.exit(1)
         try:
-            with open(args.state_file) as f:
+            with open(canonical_path) as f:
                 state = json.load(f)
             version_id = state.get('version_id', version_id)
             issue_keys = state.get('issue_keys', issue_keys)
