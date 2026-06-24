@@ -1,11 +1,10 @@
 import os
 import sys
 import tempfile
-import textwrap
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from update import safe_path
+from path_utils import safe_path
 
 
 class TestSafePath(unittest.TestCase):
