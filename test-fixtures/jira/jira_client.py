@@ -4,8 +4,7 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'shared'))
-from path_utils import safe_path  # noqa: E402
+from shared.path_utils import safe_path
 
 from jira import JIRA
 from jira.exceptions import JIRAError

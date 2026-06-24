@@ -48,6 +48,10 @@ runs:
       with:
         python-version: '3.x'
 
+    - name: Install shared dependencies
+      shell: bash
+      run: pip install -e "$GITHUB_ACTION_PATH/.."
+
     - name: Update File
       shell: bash
       env:
