@@ -60,7 +60,7 @@ def main():
     parser.add_argument("--jira-url", required=True, help="URL of the Jira instance.")
     parser.add_argument("--state-file", default=STATE_FILE_DEFAULT, help="Path to write state JSON for cleanup.")
     args = parser.parse_args()
-    args.state_file = safe_path(args.state_file)
+    args.state_file = safe_path(args.state_file, base=os.path.dirname(os.path.abspath(args.state_file)))
 
     jira = get_jira_instance(args.jira_url)
 

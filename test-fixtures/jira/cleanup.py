@@ -12,6 +12,7 @@ Usage:
 
 import argparse
 import json
+import os
 import sys
 
 from jira_client import get_jira_instance, eprint, safe_path
@@ -57,7 +58,7 @@ def main():
     issue_keys = [k for k in args.issue_keys.split(',') if k] if args.issue_keys else []
 
     if args.state_file:
-        args.state_file = safe_path(args.state_file)
+        args.state_file = safe_path(args.state_file, base=os.path.dirname(os.path.abspath(args.state_file)))
         try:
             with open(args.state_file) as f:
                 state = json.load(f)
