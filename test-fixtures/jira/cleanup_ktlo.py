@@ -8,8 +8,9 @@ Usage:
 
 import argparse
 import json
+import os
 
-from jira_client import get_jira_instance, eprint
+from jira_client import get_jira_instance, eprint, safe_path
 from jira.exceptions import JIRAError
 
 
@@ -30,6 +31,7 @@ def main():
     parser.add_argument("--jira-url", required=True)
     parser.add_argument("--state-file", required=True)
     args = parser.parse_args()
+    args.state_file = safe_path(args.state_file)
 
     jira = get_jira_instance(args.jira_url)
 

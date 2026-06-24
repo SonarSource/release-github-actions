@@ -16,7 +16,7 @@ import json
 import os
 import sys
 
-from jira_client import get_jira_instance, eprint
+from jira_client import get_jira_instance, eprint, safe_path
 
 STATE_FILE_DEFAULT = os.path.join(os.path.expanduser("~"), ".cache", "jira-ktlo-fixtures.json")
 
@@ -51,6 +51,7 @@ def main():
     parser.add_argument("--jira-url", required=True)
     parser.add_argument("--state-file", default=STATE_FILE_DEFAULT)
     args = parser.parse_args()
+    args.state_file = safe_path(args.state_file)
 
     jira = get_jira_instance(args.jira_url)
     run_id = args.run_id
