@@ -501,6 +501,187 @@ Create a PR in the `re-terraform-aws-vault` repository to add the release-automa
    - [ ] Test automated release workflow with dry-run"
    ```
 
+### Step 5c: Add `release-lock.yml` (Phase 1 — unenforced status check)
+
+This step adds the `release-lock` commit status workflow to the repo. While the check is not yet
+required, it reports a green/red status on every PR so the team can observe correct behavior over
+one or two releases before enforcing it (Phase 2).
+
+**What it does:** When a version-bump PR (head branch `bot/prepare-next-development-iteration-*`)
+is open, all other PRs get a red `release-lock` status; the bump PR itself gets green. When the
+bump PR merges, all other open PRs automatically flip back to green — developers do not need to
+retrigger anything.
+
+Create `.github/workflows/release-lock${EXT}` (use the same extension detected in Step 1c):
+
+```yaml
+name: Release lock
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, closed]
+
+permissions:
+  statuses: write
+  pull-requests: read
+
+jobs:
+  release-lock:
+    name: Set release-lock status
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set release-lock status
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+          PR_ACTION: ${{ github.event.action }}
+        run: |
+          BUMP_BRANCH_PREFIX="bot/prepare-next-development-iteration-"
+          CONTEXT="release-lock"
+
+          post_status() {
+            local sha="$1" state="$2" description="$3"
+            gh api --method POST \
+              "/repos/${GH_REPO}/statuses/${sha}" \
+              -f state="$state" \
+              -f context="$CONTEXT" \
+              -f description="$description"
+          }
+
+          if [[ "$PR_HEAD_BRANCH" == ${BUMP_BRANCH_PREFIX}* ]]; then
+            # This is the version-bump PR.
+            if [[ "$PR_ACTION" == "closed" ]]; then
+              # Bump PR merged/abandoned — reset all other open PRs to green.
+              echo "Bump PR closed. Resetting all open PRs to green..."
+              prs=$(gh pr list --state open --json number,headRefOid --limit 1000 \
+                    --jq '.[] | "\(.number) \(.headRefOid)"')
+              while IFS=' ' read -r num sha; do
+                [ -z "$num" ] && continue
+                echo "  Resetting PR #$num (${sha:0:7}) to success"
+                post_status "$sha" "success" "No release in progress"
+              done <<< "$prs"
+            else
+              # Bump PR opened/updated — mark itself green, all others red.
+              echo "Bump PR opened/updated. Setting bump PR green, all others red..."
+              post_status "$PR_HEAD_SHA" "success" "Version-bump PR — may merge"
+              prs=$(gh pr list --state open --json number,headRefOid --limit 1000 \
+                    --jq '.[] | "\(.number) \(.headRefOid)"')
+              while IFS=' ' read -r num sha; do
+                [ -z "$num" ] && continue
+                [ "$num" -eq "$PR_NUMBER" ] && continue  # skip bump PR itself
+                echo "  Blocking PR #$num (${sha:0:7})"
+                post_status "$sha" "failure" "Release in progress — merge the version-bump PR first"
+              done <<< "$prs"
+            fi
+          else
+            # Normal PR event — check if a bump PR is currently open.
+            bump_pr=$(gh pr list --state open --head "${BUMP_BRANCH_PREFIX}" \
+                      --json number --jq '.[0].number' 2>/dev/null || true)
+            if [ -n "$bump_pr" ] && [ "$bump_pr" != "null" ]; then
+              echo "Bump PR #$bump_pr is open. Blocking this PR."
+              post_status "$PR_HEAD_SHA" "failure" \
+                "Release in progress — merge the version-bump PR (#${bump_pr}) first"
+            else
+              echo "No bump PR open. Setting this PR to success."
+              post_status "$PR_HEAD_SHA" "success" "No release in progress"
+            fi
+          fi
+```
+
+> **Note on `--head` filtering:** The `gh pr list --head` flag matches on the exact head branch
+> name, not a prefix. The `bump_pr=$(gh pr list --state open --head "${BUMP_BRANCH_PREFIX}"…)`
+> call above will only find a bump PR if the branch name is exactly the prefix (unlikely). For
+> the normal-PR path, this is fine — `gh pr list` with the bump-PR detection loop would be
+> needed for strict prefix matching. A simpler equivalent that works for a single bump PR:
+> ```bash
+> bump_pr=$(gh pr list --state open --json number,headRefName \
+>   --jq '.[] | select(.headRefName | startswith("'"${BUMP_BRANCH_PREFIX}"'")) | .number' \
+>   | head -1)
+> ```
+> Use this `jq`-based approach instead of `--head` for the normal-PR branch of the script.
+
+**Corrected normal-PR branch (replace the `bump_pr=` line above with):**
+```bash
+bump_pr=$(gh pr list --state open --json number,headRefName --limit 200 \
+  --jq '.[] | select(.headRefName | startswith("'"${BUMP_BRANCH_PREFIX}"'")) | .number' \
+  | head -1)
+```
+
+Stage and commit alongside the `automated-release${EXT}` file:
+```bash
+git add .github/workflows/release-lock${EXT}
+```
+
+**Important:** `pull_request_target` runs with the base branch's code, so the workflow above
+is safe — it does **not** check out any untrusted PR code. Never add a `checkout` step to this
+workflow unless you understand the security implications of `pull_request_target`.
+
+---
+
+### Step 5d: Register `release-lock` as a required check (Phase 2 — gated, do separately)
+
+> ⚠️ **Do not perform this step in the same skill run as Step 5c.** Only run Phase 2 when the
+> team has observed Phase 1 behaving correctly over one or two real releases. Registering a
+> required check without a working reporter blocks **all** PRs.
+
+When the team is confident, register `release-lock` as a required status check on the branch.
+This enforces the gate: while a bump PR is open, all other PRs are blocked from merging.
+
+**Prerequisite:** The `-lock` admin Vault token must be available. Its path is
+`development/github/token/{REPO_OWNER_NAME_DASH}-lock` (e.g., `sonar-apex` →
+`development/github/token/sonar-apex-lock`). This token already has admin branch-protection
+write (used by the freeze/unfreeze jobs). Confirm the secret is available before running.
+
+**Step 5d-1:** Get the current branch protection settings to preserve all existing contexts:
+```bash
+CURRENT=$(gh api "/repos/${REPO}/branches/${BRANCH}/protection" \
+  --jq '.required_status_checks.contexts // []')
+echo "Current contexts: $CURRENT"
+```
+
+**Step 5d-2:** Add `release-lock` to the contexts list and update protection. Use the
+[`lock-branch` action](../lock-branch/) in a one-shot job or run the Vault-authenticated API
+call directly (the lock-branch action preserves contexts at `lock_branch.py:105-112` — you can
+also run it as `freeze: false` to trigger a no-op unfreeze that re-writes the protection and
+preserves contexts).
+
+The safest approach is to use the GitHub UI:
+1. Go to **Settings → Branches → Branch protection rules** → edit the rule for `master` (or
+   the release branch).
+2. Under **Require status checks to pass before merging**, search for and add `release-lock`.
+3. Save.
+
+Or via the API (requires admin token):
+```bash
+# Get current contexts
+contexts=$(gh api "/repos/${REPO}/branches/${BRANCH}/protection" \
+  --jq '[.required_status_checks.contexts[]]')
+
+# Append release-lock and update (one-liner — adjust if contexts is already an array)
+gh api --method PUT "/repos/${REPO}/branches/${BRANCH}/protection" \
+  --input - <<EOF
+{
+  "required_status_checks": {
+    "strict": false,
+    "contexts": $(echo "$contexts" | jq '. + ["release-lock"]')
+  },
+  "enforce_admins": true,
+  "required_pull_request_reviews": null,
+  "restrictions": null
+}
+EOF
+```
+
+> **Freeze coexistence:** Once `release-lock` is registered, it survives freeze/unfreeze cycles
+> — `lock_branch.py` (`lock_branch.py:105-112`) preserves `required_status_checks.contexts`
+> on every PUT, so the context is never dropped.
+
+---
+
 ### Step 6: Testing Instructions
 
 Provide these instructions to the user:

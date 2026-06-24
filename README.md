@@ -35,6 +35,60 @@ A centralized collection of reusable GitHub Actions designed to streamline and a
 |----------|-------------|
 | [Automated Release Workflow](docs/AUTOMATED_RELEASE.md) | Orchestrates the end-to-end release across Jira and GitHub, with optional integration tickets and analyzer PRs |
 
+## Release lock gate
+
+> This section covers the **analyzer release path** (`automated-release.yml`). The DevEx/IDE
+> path (`ide-automated-release.yml`) is separate and not covered here.
+
+### The problem
+
+`automated-release.yml` freezes the branch at the start of the release to prevent unintended
+merges. But the freeze ends **before** the version-bump PR is created:
+
+```
+disable-auto-merge → freeze → check → prepare → publish-github-release
+                                                       ↓
+                            UNFREEZE ─────────────────┘
+                               ↓
+                       release-in-jira → bump-version (creates version-bump PR)
+```
+
+Between the unfreeze and the bump PR being merged, the branch is open. Other PRs can merge
+into that gap, leaving the branch at the released version with unbumped build files.
+
+The freeze (`lock_branch: true`) cannot extend past the unfreeze — it is all-or-nothing
+read-only for everyone, including the release DRI, and the bump PR push itself needs an
+unfrozen branch.
+
+### The solution
+
+A per-repo workflow (`release-lock.yml`) sets a `release-lock` commit status on every open PR.
+When a version-bump PR (head branch `bot/prepare-next-development-iteration-*`) is open:
+
+- **Version-bump PR** → ✅ `success` (can merge)
+- **Every other PR** → ❌ `failure` — "Release in progress — merge the version-bump PR first"
+
+When the bump PR merges, `release-lock.yml` sweeps all open PRs (paginated, including drafts)
+and resets each to ✅ green **automatically** — developers do not need to push or retrigger.
+
+At release start, the workflow also strips **auto-merge** from all open PRs to close the race
+where a pre-approved PR with pending CI would auto-merge before the bump PR opens.
+
+### Adoption (two phases, per repo, non-breaking)
+
+**Phase 1 — Add the workflow (unenforced).** Run the `automated-release-setup` skill (Step 5c)
+in your analyzer repo. It adds `release-lock.yml`. The check reports statuses but is not a
+required check, so it gates nothing. Observe over a release or two.
+
+**Phase 2 — Enforce.** When confident, run Step 5d of the skill. It registers `release-lock`
+as a required status check. Now only the bump PR can merge while a release is in progress.
+
+Repos that never run the skill release exactly as before — the only universal change is the
+auto-merge sweep at release start.
+
+See [docs/AUTOMATED_RELEASE.md](docs/AUTOMATED_RELEASE.md#release-lock-gate) for the full
+rollout plan, the freeze-coexistence guarantee, and the migration guide.
+
 ## Claude Code Skills
 
 This repository includes Claude Code skills for automating common tasks related to release workflows. Skills are instruction files (`.claude/skills/<skill-name>/SKILL.md`) that teach Claude Code how to perform specific tasks, using YAML frontmatter for metadata followed by detailed instructions.
