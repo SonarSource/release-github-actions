@@ -2,6 +2,78 @@
 
 A centralized collection of reusable GitHub Actions designed to streamline and automate every stage of the analyzer release process. This repository serves as a versatile toolbox, offering modular automations to eliminate manual, repetitive steps and reduce friction across squads managing analyzer projects. Whether standardizing changelog generation, automating version bumps, handling release publishing, or coordinating cross-repository tasks, these actions help teams back away from cumbersome workflows and focus more on code quality. Pick and combine the automations best suited for your analyzer’s unique release requirements, and easily extend the toolbox to cover new scenarios as they arise.
 
+## Automated Release Workflow
+
+> Analyzer release path (`automated-release.yml`). The DevEx/IDE path (`ide-automated-release.yml`) is separate.
+
+The automated release workflow orchestrates the full end-to-end release process. It is triggered
+manually via `workflow_dispatch` from the analyzer repo.
+
+### What happens when you trigger a release
+
+```
+┌─ release triggered ──────────────────────────────────────────────────────────┐
+│                                                                               │
+│  disable-auto-merge ──────────────────────────────────────────────────────►  │
+│  (strips auto-merge from all open PRs with it enabled, if bump-version: true)│
+│                                                                               │
+│  freeze-branch ────────────────────────────────────────────────────────────► │
+│  (locks the branch — optional, via freeze-branch input)                       │
+│                         │                                                     │
+│                         ▼                                                     │
+│               check-releasability                                             │
+│               (verifies the branch is releasable)                             │
+│                         │                                                     │
+│                         ▼                                                     │
+│               prepare-release                                                 │
+│               (resolves version, fetches Jira release notes)                  │
+│                         │                                                     │
+│           ┌─────────────┴──────────────────────┐                             │
+│           ▼                                     ▼                             │
+│  create-release-ticket              publish-github-release                    │
+│  (creates REL ticket in Jira)       (publishes the GitHub release)            │
+│           │                                     │                             │
+│           └────────────┬────────────────────────┘                             │
+│                        ▼                                                      │
+│               UNFREEZE branch                                                 │
+│                        │                                                      │
+│                        ▼                                                      │
+│               release-in-jira                                                 │
+│               (releases Jira version, creates next version)                   │
+│                        │                                                      │
+│           ┌────────────┴──────────────────┐                                  │
+│           ▼                               ▼                                   │
+│  bump-version                   create-integration-tickets                    │
+│  (opens version-bump PR)        (SLVS / SLE / SLI / SQS / SQC / ...)        │
+│           │                               │                                   │
+│           │                               ▼                                   │
+│           │                     update-analyzer PRs                           │
+│           │                     (PRs in sonar-enterprise, sonarcloud-core)    │
+│           ▼                                                                   │
+│  ◀── release DRI merges the version-bump PR ──────────────────────────────── │
+└───────────────────────────────────────────────────────────────────────────────┘
+```
+
+### The release lock gate
+
+While the version-bump PR is open, a `release-lock` required status check prevents any other PR
+from merging into the branch:
+
+| PR | `release-lock` status |
+|---|---|
+| Version-bump PR | ✅ `success` — may merge |
+| Every other open PR | ❌ `failure` — "Release in progress — merge the version-bump PR first" |
+
+When the DRI merges the version-bump PR, all other open PRs automatically flip back to ✅ green
+— developers do not need to push or retrigger anything.
+
+The gate is implemented as a thin `release-lock.yml` caller in the analyzer repo that delegates
+to the reusable `SonarSource/release-github-actions/.github/workflows/release-lock.yml@v1`.
+Logic updates propagate to all repos on the next `@v1` resolve.
+
+See [docs/AUTOMATED_RELEASE.md](docs/AUTOMATED_RELEASE.md) for full input reference, adoption
+steps, and the freeze-coexistence guarantee.
+
 ## Available Actions
 
 | Action                                                                  | Description |
@@ -28,38 +100,6 @@ A centralized collection of reusable GitHub Actions designed to streamline and a
 | [Update Plugins Deployer](update-plugins-deployer/README.md)            | Updates a plugin version in sonar-plugins-deployer and creates a pull request |
 | [Update Release Ticket Status](update-release-ticket-status/README.md)  | Updates the status of a Jira release ticket and can change its assignee |
 | [Update Rule Metadata](update-rule-metadata/README.md)                  | Automates updating rule metadata across all supported languages using the rule-api tooling |
-
-## Available Workflows
-
-| Workflow | Description |
-|----------|-------------|
-| [Automated Release Workflow](docs/AUTOMATED_RELEASE.md) | Orchestrates the end-to-end release across Jira and GitHub, with optional integration tickets and analyzer PRs |
-
-## Release lock gate
-
-> Analyzer release path (`automated-release.yml`) only. `ide-automated-release.yml` is not covered here.
-
-When a release is triggered, `automated-release.yml` strips auto-merge from all open PRs and
-(optionally) freezes the branch. After publishing the GitHub release the branch unfreezes, and
-the workflow creates a version-bump PR (`bot/prepare-next-development-iteration-*`).
-
-From that point, `release-lock` — a required status check backed by a thin `release-lock.yml`
-caller in the analyzer repo — gates what can merge:
-
-| PR | `release-lock` status |
-|---|---|
-| Version-bump PR | ✅ `success` — may merge |
-| Every other open PR | ❌ `failure` — "Release in progress — merge the version-bump PR first" |
-
-The release DRI merges the version-bump PR. On merge, `release-lock.yml` automatically resets
-all remaining open PRs to ✅ green — developers do not need to push or retrigger anything.
-
-The gate logic lives in the reusable
-`SonarSource/release-github-actions/.github/workflows/release-lock.yml@v1`; analyzer repos
-hold only a 5-line caller. Updates propagate automatically on the next `@v1` resolve.
-
-See [docs/AUTOMATED_RELEASE.md](docs/AUTOMATED_RELEASE.md#release-lock-gate) for adoption
-steps and the freeze-coexistence guarantee.
 
 ## Claude Code Skills
 
