@@ -62,14 +62,17 @@ unfrozen branch.
 
 ### The solution
 
-A per-repo workflow (`release-lock.yml`) sets a `release-lock` commit status on every open PR.
+A thin caller workflow (`release-lock.yml`) in each analyzer repo delegates to the reusable
+`SonarSource/release-github-actions/.github/workflows/release-lock.yml@v1`, which sets a
+`release-lock` commit status on every open PR.
 When a version-bump PR (head branch `bot/prepare-next-development-iteration-*`) is open:
 
 - **Version-bump PR** → ✅ `success` (can merge)
 - **Every other PR** → ❌ `failure` — "Release in progress — merge the version-bump PR first"
 
-When the bump PR merges, `release-lock.yml` sweeps all open PRs (paginated, including drafts)
+When the bump PR merges, the reusable workflow sweeps all open PRs (paginated, including drafts)
 and resets each to ✅ green **automatically** — developers do not need to push or retrigger.
+Logic updates propagate to all repos on the next `@v1` resolve.
 
 At release start, the workflow also strips **auto-merge** from all open PRs to close the race
 where a pre-approved PR with pending CI would auto-merge before the bump PR opens.
