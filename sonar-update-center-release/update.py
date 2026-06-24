@@ -4,9 +4,9 @@ import sys
 
 
 def safe_path(path, base=None):
-    """Resolve path and ensure it stays within base (cwd by default). Exits 1 if it escapes."""
-    base_dir = os.path.realpath(base or os.getcwd())
-    resolved = os.path.realpath(os.path.join(base_dir, path))
+    # ponytail: keep in sync with test-fixtures/jira/jira_client.py; called here with base=cwd
+    resolved = os.path.realpath(path)
+    base_dir = os.path.realpath(base) if base else os.path.realpath(os.getcwd())
     if resolved != base_dir and not resolved.startswith(base_dir + os.sep):
         print(f'ERROR: path {path!r} is outside the allowed directory', file=sys.stderr)
         sys.exit(1)
