@@ -8,7 +8,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from jira_client import get_jira_instance, eprint
+from jira_client import get_jira_instance, eprint, JIRA_URL_PROD, JIRA_URL_SANDBOX
 
 
 class TestEprint(unittest.TestCase):
@@ -27,21 +27,21 @@ class TestGetJiraInstance(unittest.TestCase):
     def test_missing_credentials_raises(self):
         """Should raise SystemExit when JIRA_USER and JIRA_TOKEN are not set."""
         with self.assertRaises(SystemExit) as cm:
-            get_jira_instance('https://test.atlassian.net/')
+            get_jira_instance('false')
         self.assertEqual(cm.exception.code, 1)
 
     @patch.dict(os.environ, {'JIRA_USER': 'user'}, clear=True)
     def test_missing_token_raises(self):
         """Should raise SystemExit when JIRA_TOKEN is not set."""
         with self.assertRaises(SystemExit) as cm:
-            get_jira_instance('https://test.atlassian.net/')
+            get_jira_instance('false')
         self.assertEqual(cm.exception.code, 1)
 
     @patch.dict(os.environ, {'JIRA_TOKEN': 'token'}, clear=True)
     def test_missing_user_raises(self):
         """Should raise SystemExit when JIRA_USER is not set."""
         with self.assertRaises(SystemExit) as cm:
-            get_jira_instance('https://test.atlassian.net/')
+            get_jira_instance('false')
         self.assertEqual(cm.exception.code, 1)
 
     @patch.dict(os.environ, {'JIRA_USER': 'test_user', 'JIRA_TOKEN': 'test_token'})
@@ -52,11 +52,11 @@ class TestGetJiraInstance(unittest.TestCase):
         mock_jira.server_info.return_value = {}
         mock_jira_class.return_value = mock_jira
 
-        result = get_jira_instance('https://test.atlassian.net/')
+        result = get_jira_instance('false')
 
         self.assertEqual(result, mock_jira)
         mock_jira_class.assert_called_once_with(
-            'https://test.atlassian.net/',
+            JIRA_URL_PROD,
             basic_auth=('test_user', 'test_token')
         )
         mock_jira.server_info.assert_called_once()
@@ -69,7 +69,7 @@ class TestGetJiraInstance(unittest.TestCase):
         mock_jira_class.side_effect = JIRAError(status_code=401, text="Unauthorized")
 
         with self.assertRaises(SystemExit) as cm:
-            get_jira_instance('https://test.atlassian.net/')
+            get_jira_instance('false')
         self.assertEqual(cm.exception.code, 1)
 
     @patch.dict(os.environ, {'JIRA_USER': 'test_user', 'JIRA_TOKEN': 'test_token'})
@@ -79,7 +79,7 @@ class TestGetJiraInstance(unittest.TestCase):
         mock_jira_class.side_effect = Exception("Connection refused")
 
         with self.assertRaises(SystemExit) as cm:
-            get_jira_instance('https://test.atlassian.net/')
+            get_jira_instance('false')
         self.assertEqual(cm.exception.code, 1)
 
 
