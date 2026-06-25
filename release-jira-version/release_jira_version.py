@@ -22,10 +22,10 @@ def main():
     )
     parser.add_argument("--project-key", required=True, help="The key of the Jira project (e.g., SONARIAC).")
     parser.add_argument("--version-name", required=True, help="The name for the next version.")
-    parser.add_argument('--jira-url', required=True, help="URL of the Jira instance to use.")
+    parser.add_argument('--use-sandbox', default='false', help='Use Jira sandbox (true/false).')
     args = parser.parse_args()
 
-    jira = get_jira_instance(args.jira_url)
+    jira = get_jira_instance(args.use_sandbox)
 
     eprint(f"Searching for version '{args.version_name}' in project '{args.project_key}'")
 

@@ -47,10 +47,10 @@ runs:
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
         INPUT_JIRA_PROJECT: ${{ inputs.jira-project }}
         INPUT_EPIC_NAME_PATTERN: ${{ inputs.epic-name-pattern }}
-        INPUT_JIRA_URL: "https://sonarsource${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && '-sandbox-608' || '' }}.atlassian.net/"
+        USE_SANDBOX: ${{ inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX }}
       run: |
         python ${{ github.action_path }}/resolve_ktlo_epic.py \
           --jira-project "$INPUT_JIRA_PROJECT" \
           --epic-name-pattern "$INPUT_EPIC_NAME_PATTERN" \
-          --jira-url "$INPUT_JIRA_URL" \
+          --use-sandbox "$USE_SANDBOX" \
           >> $GITHUB_OUTPUT

@@ -126,7 +126,7 @@ class TestMain(unittest.TestCase):
     @patch('sys.argv', [
         'resolve_ktlo_epic.py',
         '--jira-project', 'CPP',
-        '--jira-url', 'https://sonarsource.atlassian.net/',
+        '--use-sandbox', 'false',
     ])
     @patch('resolve_ktlo_epic.get_jira_instance')
     @patch('resolve_ktlo_epic.resolve_ktlo_epic')
@@ -140,7 +140,7 @@ class TestMain(unittest.TestCase):
     @patch('sys.argv', [
         'resolve_ktlo_epic.py',
         '--jira-project', 'CPP',
-        '--jira-url', 'https://sonarsource.atlassian.net/',
+        '--use-sandbox', 'false',
     ])
     @patch('resolve_ktlo_epic.get_jira_instance')
     @patch('resolve_ktlo_epic.resolve_ktlo_epic')
@@ -156,7 +156,7 @@ class TestMain(unittest.TestCase):
         'resolve_ktlo_epic.py',
         '--jira-project', 'CPP',
         '--epic-name-pattern', r'KTLO\s+\d{4}',
-        '--jira-url', 'https://sonarsource.atlassian.net/',
+        '--use-sandbox', 'false',
     ])
     @patch('resolve_ktlo_epic.get_jira_instance')
     @patch('resolve_ktlo_epic.resolve_ktlo_epic')
@@ -169,7 +169,7 @@ class TestMain(unittest.TestCase):
     @patch('sys.argv', [
         'resolve_ktlo_epic.py',
         '--jira-project', 'CPP',
-        '--jira-url', 'https://sonarsource.atlassian.net/',
+        '--use-sandbox', 'false',
     ])
     @patch('resolve_ktlo_epic.get_jira_instance')
     @patch('resolve_ktlo_epic.resolve_ktlo_epic')

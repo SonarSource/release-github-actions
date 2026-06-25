@@ -88,7 +88,7 @@ runs:
       env:
         JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
-        JIRA_URL: "https://sonarsource${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && '-sandbox-608' || '' }}.atlassian.net/"
+        USE_SANDBOX: ${{ inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX }}
         TICKET_DESCRIPTION: |
           ${{ inputs.ticket-description }}${{ inputs.jira-release-url && inputs.ticket-description && '
 
@@ -103,7 +103,7 @@ runs:
           --ticket-summary "$TICKET_SUMMARY" \
           --target-jira-project "$INPUT_TARGET_JIRA_PROJECT" \
           --release-ticket-key "$INPUT_RELEASE_TICKET_KEY" \
-          --jira-url="$JIRA_URL" \
+          --use-sandbox="$USE_SANDBOX" \
           --link-type "$INPUT_LINK_TYPE" \
           ${TICKET_DESCRIPTION:+--ticket-description "$TICKET_DESCRIPTION"} \
           ${INPUT_PARENT_EPIC:+--parent-epic "$INPUT_PARENT_EPIC"} >> $GITHUB_OUTPUT

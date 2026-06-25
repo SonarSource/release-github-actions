@@ -16,11 +16,20 @@ def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 
-def get_jira_instance(jira_url):
+JIRA_URL_PROD    = "https://sonarsource.atlassian.net/"
+JIRA_URL_SANDBOX = "https://sonarsource-sandbox-608.atlassian.net/"
+
+
+def get_jira_instance(use_sandbox):
     """
     Initializes and returns a JIRA client instance.
-    Authentication is handled via JIRA_USER and JIRA_TOKEN environment variables.
+    Accepts use_sandbox as bool or 'true'/'false' string.
+    Authentication via JIRA_USER and JIRA_TOKEN environment variables.
     """
+    if isinstance(use_sandbox, str):
+        use_sandbox = use_sandbox.lower() == 'true'
+    jira_url = JIRA_URL_SANDBOX if use_sandbox else JIRA_URL_PROD
+
     jira_user = os.environ.get('JIRA_USER')
     jira_token = os.environ.get('JIRA_TOKEN')
 

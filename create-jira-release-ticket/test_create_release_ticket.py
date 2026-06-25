@@ -130,7 +130,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         '--project-name', 'Test Project',
         '--version', '1.0.0',
         '--short-description', 'Test release',
-        '--jira-url', 'https://test.jira.com',
+        '--use-sandbox', 'false',
         '--jira-release-url', 'https://jira.com/release/notes'
     ])
     @patch('create_release_ticket.get_jira_instance')
@@ -150,7 +150,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         main()
 
         # Verify get_jira_instance was called with correct URL
-        mock_get_jira.assert_called_once_with('https://test.jira.com')
+        mock_get_jira.assert_called_once_with('false')
 
         # Verify create_release_ticket was called
         mock_create_ticket.assert_called_once()
@@ -175,7 +175,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         '--version', '1.0.0',
         '--short-description', 'Test release',
         '--due-date', '2029-12-24',
-        '--jira-url', 'https://sandbox.jira.com',
+        '--use-sandbox', 'true',
         '--jira-release-url', 'https://sandbox.jira.com/release/notes',
         '--documentation-status', 'Ready',
         '--rule-props-changed', 'Yes',
@@ -198,7 +198,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         main()
 
         # Verify get_jira_instance was called with sandbox URL
-        mock_get_jira.assert_called_once_with('https://sandbox.jira.com')
+        mock_get_jira.assert_called_once_with('true')
 
         # Verify create_release_ticket was called with correct parameters
         mock_create_ticket.assert_called_once()
@@ -208,7 +208,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         self.assertEqual(args.project_name, 'Test Project')
         self.assertEqual(args.version, '1.0.0')
         self.assertEqual(args.short_description, 'Test release')
-        self.assertEqual(args.jira_url, 'https://sandbox.jira.com')
+        self.assertEqual(args.use_sandbox, 'true')
         self.assertEqual(args.jira_release_url, 'https://sandbox.jira.com/release/notes')
         self.assertEqual(args.documentation_status, 'Ready')
         self.assertEqual(args.rule_props_changed, 'Yes')

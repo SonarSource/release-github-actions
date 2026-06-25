@@ -422,7 +422,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         '--ticket-summary', 'Integration for TestProject 1.0.0',
         '--release-ticket-key', 'REL-123',
         '--target-jira-project', 'INT',
-        '--jira-url', 'https://sonarsource.atlassian.net/',
+        '--use-sandbox', 'false',
         '--link-type', 'relates to'
     ])
     @patch('create_integration_ticket.get_jira_instance')
@@ -450,8 +450,8 @@ class TestCreateIntegrationTicket(unittest.TestCase):
 
         main()
 
-        # Verify get_jira_instance was called with correct URL
-        mock_get_jira.assert_called_once_with('https://sonarsource.atlassian.net/')
+        # Verify get_jira_instance was called with correct flag
+        mock_get_jira.assert_called_once_with('false')
 
         # Verify validate_release_ticket was called
         mock_validate_release_ticket.assert_called_once_with(mock_jira, 'REL-123')
@@ -464,7 +464,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         self.assertEqual(args.ticket_summary, 'Integration for TestProject 1.0.0')
         self.assertEqual(args.release_ticket_key, 'REL-123')
         self.assertEqual(args.target_jira_project, 'INT')
-        self.assertEqual(args.jira_url, 'https://sonarsource.atlassian.net/')
+        self.assertEqual(args.use_sandbox, 'false')
         self.assertEqual(args.link_type, 'relates to')
 
         # Verify link_tickets was called
@@ -484,7 +484,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         '--ticket-summary', 'Minimal integration ticket',
         '--release-ticket-key', 'REL-456',
         '--target-jira-project', 'TEST',
-        '--jira-url', 'https://sonarsource-sandbox-608.atlassian.net/'
+        '--use-sandbox', 'true'
     ])
     @patch('create_integration_ticket.get_jira_instance')
     @patch('create_integration_ticket.validate_release_ticket')
@@ -511,8 +511,8 @@ class TestCreateIntegrationTicket(unittest.TestCase):
 
         main()
 
-        # Verify get_jira_instance was called with sandbox URL
-        mock_get_jira.assert_called_once_with('https://sonarsource-sandbox-608.atlassian.net/')
+        # Verify get_jira_instance was called with sandbox flag
+        mock_get_jira.assert_called_once_with('true')
 
         # Verify parameters were parsed correctly with defaults
         call_args = mock_create_ticket.call_args[0]
@@ -520,7 +520,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         self.assertEqual(args.ticket_summary, 'Minimal integration ticket')
         self.assertEqual(args.release_ticket_key, 'REL-456')
         self.assertEqual(args.target_jira_project, 'TEST')
-        self.assertEqual(args.jira_url, 'https://sonarsource-sandbox-608.atlassian.net/')
+        self.assertEqual(args.use_sandbox, 'true')
         self.assertEqual(args.link_type, 'relates to')  # default
 
         # Verify link_tickets was called with default link type
@@ -534,7 +534,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         '--ticket-description', 'This ticket has a detailed description',
         '--release-ticket-key', 'REL-789',
         '--target-jira-project', 'DESC',
-        '--jira-url', 'https://sonarsource.atlassian.net/',
+        '--use-sandbox', 'false',
         '--link-type', 'depends on'
     ])
     @patch('create_integration_ticket.get_jira_instance')
@@ -562,8 +562,8 @@ class TestCreateIntegrationTicket(unittest.TestCase):
 
         main()
 
-        # Verify get_jira_instance was called with correct URL
-        mock_get_jira.assert_called_once_with('https://sonarsource.atlassian.net/')
+        # Verify get_jira_instance was called with correct flag
+        mock_get_jira.assert_called_once_with('false')
 
         # Verify validate_release_ticket was called
         mock_validate_release_ticket.assert_called_once_with(mock_jira, 'REL-789')
@@ -577,7 +577,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         self.assertEqual(args.ticket_description, 'This ticket has a detailed description')
         self.assertEqual(args.release_ticket_key, 'REL-789')
         self.assertEqual(args.target_jira_project, 'DESC')
-        self.assertEqual(args.jira_url, 'https://sonarsource.atlassian.net/')
+        self.assertEqual(args.use_sandbox, 'false')
         self.assertEqual(args.link_type, 'depends on')
 
         # Verify link_tickets was called

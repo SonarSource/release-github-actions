@@ -55,7 +55,7 @@ def main():
     parser.add_argument("--project-name", required=True, help="The display name of the project (e.g., SonarIaC).")
     parser.add_argument("--version", required=True, help="The version being released (e.g., 11.44.2).")
     parser.add_argument("--short-description", required=True, help="A short description for the release.")
-    parser.add_argument("--jira-url", required=True, help="The Jira server URL to connect to.")
+    parser.add_argument("--use-sandbox", default="false", help="Use Jira sandbox (true/false).")
     parser.add_argument("--documentation-status", default="N/A", help="Status of the documentation.")
     parser.add_argument("--rule-props-changed", default="No", choices=['Yes', 'No'],
                         help="Whether rule properties have changed.")
@@ -65,7 +65,7 @@ def main():
 
     args = parser.parse_args()
 
-    jira = get_jira_instance(args.jira_url)
+    jira = get_jira_instance(args.use_sandbox)
 
     eprint(f"Using release URL: {args.jira_release_url}")
     ticket = create_release_ticket(jira, args, args.jira_release_url)

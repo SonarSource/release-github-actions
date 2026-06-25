@@ -6,8 +6,8 @@ Deletes issues and versions by ID. Idempotent: succeeds even if
 resources have already been deleted or never existed.
 
 Usage:
-    python cleanup.py --jira-url https://sandbox.atlassian.net/ --version-id 12345 --issue-keys SONARIAC-100,SONARIAC-101
-    python cleanup.py --jira-url https://sandbox.atlassian.net/ --state-file /tmp/setup-state.json
+    python cleanup.py --use-sandbox true --version-id 12345 --issue-keys SONARIAC-100,SONARIAC-101
+    python cleanup.py --use-sandbox true --state-file /tmp/setup-state.json
 """
 
 import argparse
@@ -46,13 +46,13 @@ def delete_version(jira, version_id):
 
 def main():
     parser = argparse.ArgumentParser(description="Clean up Jira test fixtures.")
-    parser.add_argument("--jira-url", required=True, help="URL of the Jira instance.")
+    parser.add_argument("--use-sandbox", default="false", help="Use Jira sandbox (true/false).")
     parser.add_argument("--version-id", help="ID of the version to delete.")
     parser.add_argument("--issue-keys", default="", help="Comma-separated issue keys to delete.")
     parser.add_argument("--state-file", help="Path to JSON state file from setup.py.")
     args = parser.parse_args()
 
-    jira = get_jira_instance(args.jira_url)
+    jira = get_jira_instance(args.use_sandbox)
 
     version_id = args.version_id
     issue_keys = [k for k in args.issue_keys.split(',') if k] if args.issue_keys else []

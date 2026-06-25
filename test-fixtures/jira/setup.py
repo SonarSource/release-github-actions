@@ -6,7 +6,7 @@ Creates a version and sample issues linked to it via fixVersion.
 Outputs a JSON object with created resource IDs for use by cleanup.py.
 
 Usage:
-    python setup.py --project-key SONARIAC --run-id 12345 --jira-url https://sandbox.atlassian.net/
+    python setup.py --project-key SONARIAC --run-id 12345 --use-sandbox true
 """
 
 import argparse
@@ -57,12 +57,12 @@ def main():
     parser = argparse.ArgumentParser(description="Set up Jira test fixtures.")
     parser.add_argument("--project-key", required=True, help="Jira project key (e.g., SONARIAC).")
     parser.add_argument("--run-id", required=True, help="Unique run identifier for naming.")
-    parser.add_argument("--jira-url", required=True, help="URL of the Jira instance.")
+    parser.add_argument("--use-sandbox", default="false", help="Use Jira sandbox (true/false).")
     parser.add_argument("--state-file", default=STATE_FILE_DEFAULT, help="Path to write state JSON for cleanup.")
     args = parser.parse_args()
     args.state_file = safe_path(args.state_file)
 
-    jira = get_jira_instance(args.jira_url)
+    jira = get_jira_instance(args.use_sandbox)
 
     version = create_test_version(jira, args.project_key, args.run_id)
 

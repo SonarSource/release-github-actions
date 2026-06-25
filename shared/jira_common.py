@@ -14,6 +14,9 @@ standalone via @v1, which checks out the whole repo, so this file is present at
 import os
 import sys
 
+JIRA_URL_PROD    = "https://sonarsource.atlassian.net/"
+JIRA_URL_SANDBOX = "https://sonarsource-sandbox-608.atlassian.net/"
+
 # Jira custom field IDs — single source of truth (also documented in CLAUDE.md).
 CUSTOM_FIELDS = {
     'SHORT_DESCRIPTION': 'customfield_10146',
@@ -24,6 +27,13 @@ CUSTOM_FIELDS = {
 }
 
 
+def get_jira_url(use_sandbox):
+    """Return the Jira URL for the given environment. Accepts bool, 'true'/'false' string, or None."""
+    if isinstance(use_sandbox, str):
+        use_sandbox = use_sandbox.lower() == 'true'
+    return JIRA_URL_SANDBOX if use_sandbox else JIRA_URL_PROD
+
+
 def eprint(*args, **kwargs):
     """
     Print to stderr, keeping diagnostics separate from stdout (which carries the
@@ -32,16 +42,17 @@ def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 
-def get_jira_instance(jira_url):
+def get_jira_instance(use_sandbox):
     """
-    Initialize and return a JIRA client, authenticating with the JIRA_USER /
-    JIRA_TOKEN environment variables. Exits(1) on missing credentials or auth
-    failure.
+    Initialize and return a JIRA client for the given environment.
+    Accepts the same values as get_jira_url: bool, 'true'/'false' string, or None.
+    Authenticates with JIRA_USER / JIRA_TOKEN env vars. Exits(1) on failure.
     """
     # Imported here so callers that only need eprint/CUSTOM_FIELDS don't pull in jira.
     from jira import JIRA
     from jira.exceptions import JIRAError
 
+    jira_url = get_jira_url(use_sandbox)
     jira_user = os.environ.get('JIRA_USER')
     jira_token = os.environ.get('JIRA_TOKEN')
 

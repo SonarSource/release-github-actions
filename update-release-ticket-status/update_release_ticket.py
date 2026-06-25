@@ -80,12 +80,12 @@ def main():
                         help="The target status for the ticket.")
     parser.add_argument("--assignee", required=False, default=None,
                         help="The email of the user to assign the ticket to.")
-    parser.add_argument('--jira-url', required=True,
-                        help="The Jira server URL to connect to.")
+    parser.add_argument('--use-sandbox', default='false',
+                        help='Use Jira sandbox (true/false).')
 
     args = parser.parse_args()
 
-    jira = get_jira_instance(args.jira_url)
+    jira = get_jira_instance(args.use_sandbox)
     update_ticket_status(jira, args.ticket_key, args.status, args.assignee)
 
     eprint("\n" + "=" * 50)

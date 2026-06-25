@@ -141,13 +141,19 @@ from jira_common import eprint, get_jira_instance, CUSTOM_FIELDS
 
 Rule: if a helper exists in ≥2 actions and you need a third copy, put it in `shared/` with a test in `shared/test_*.py` instead.
 
-### Canonical JIRA URL expression
+### Jira URL resolution
 
-All `action.yml` files that pass a Jira URL to a script must use this single expression:
+Jira URL selection lives entirely in `shared/jira_common.py` (`JIRA_URL_PROD`, `JIRA_URL_SANDBOX`, `get_jira_url()`). **No `action.yml` constructs a URL.**
+
+All `action.yml` files pass the sandbox flag through as an env var and forward it to the script:
 ```yaml
-JIRA_URL: "https://sonarsource${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && '-sandbox-608' || '' }}.atlassian.net/"
+env:
+  USE_SANDBOX: ${{ inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX }}
+run: |
+  python script.py --use-sandbox="$USE_SANDBOX"
 ```
-This is the single source of the domain string — a future domain change is one edit, not seven.
+
+Scripts call `get_jira_instance(args.use_sandbox)` — URL resolution happens inside. Only scripts that need the URL string directly (e.g. for constructing issue links) also import `get_jira_url`. A future domain change is one edit in `shared/jira_common.py`.
 
 ### Things that LOOK like duplication but MUST stay per-action
 

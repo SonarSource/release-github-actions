@@ -85,7 +85,7 @@ runs:
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
         PROJECT_KEY_INPUT: ${{ inputs.jira-project-key || env.JIRA_PROJECT_KEY }}
         VERSION_NAME: ${{ steps.determine-new-version-name.outputs.new-version-name }}
-        JIRA_URL: "https://sonarsource${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && '-sandbox-608' || '' }}.atlassian.net/"
+        USE_SANDBOX: ${{ inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX }}
       run: |
         if [[ -z "$PROJECT_KEY_INPUT" ]]; then
           echo "::error::Both jira-project-key input and JIRA_PROJECT_KEY environment variable are missing. One must be provided."
@@ -95,5 +95,5 @@ runs:
         python ${{ github.action_path }}/create_jira_version.py \
           --project-key="$PROJECT_KEY_INPUT" \
           --version-name="$VERSION_NAME" \
-          --jira-url="$JIRA_URL" \
+          --use-sandbox="$USE_SANDBOX" \
           >> $GITHUB_OUTPUT

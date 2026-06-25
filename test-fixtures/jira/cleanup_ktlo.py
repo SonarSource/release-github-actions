@@ -3,7 +3,7 @@
 Cleans up KTLO epic test fixtures created by setup_ktlo.py.
 
 Usage:
-    python cleanup_ktlo.py --jira-url https://sandbox.atlassian.net/ --state-file ~/.cache/jira-ktlo-fixtures.json
+    python cleanup_ktlo.py --use-sandbox true --state-file ~/.cache/jira-ktlo-fixtures.json
 """
 
 import argparse
@@ -28,12 +28,12 @@ def delete_epics(jira, epic_keys):
 
 def main():
     parser = argparse.ArgumentParser(description="Clean up KTLO epic test fixtures.")
-    parser.add_argument("--jira-url", required=True)
+    parser.add_argument("--use-sandbox", default="false")
     parser.add_argument("--state-file", required=True)
     args = parser.parse_args()
     args.state_file = safe_path(args.state_file)
 
-    jira = get_jira_instance(args.jira_url)
+    jira = get_jira_instance(args.use_sandbox)
 
     try:
         with open(args.state_file) as f:

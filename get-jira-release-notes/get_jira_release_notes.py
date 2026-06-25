@@ -12,7 +12,7 @@ import sys
 from collections import defaultdict
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'shared'))
-from jira_common import eprint, get_jira_instance
+from jira_common import eprint, get_jira_instance, get_jira_url
 from jira.exceptions import JIRAError
 
 
@@ -132,7 +132,7 @@ def main():
                         help="The name of the 'fixVersion' in Jira. This will also be used as the version in the title.")
     parser.add_argument("--issue-types", default="",
                         help="Optional comma-separated list of issue types to include, in order.")
-    parser.add_argument("--jira-url", required=True, help="The Jira server URL.")
+    parser.add_argument("--use-sandbox", default="false", help="Use Jira sandbox (true/false).")
     
     args = parser.parse_args()
 
@@ -150,20 +150,21 @@ def main():
         ]
         eprint(f"Using default issue type order: {category_order}")
 
-    jira = get_jira_instance(args.jira_url)
+    jira_url = get_jira_url(args.use_sandbox)
+    jira = get_jira_instance(args.use_sandbox)
 
     # Get version ID for URL generation
     version_id = get_version_id(jira, args.project_key, args.version_name)
 
     # Generate release notes URL and issue filter URL
-    release_notes_url = generate_release_notes_url(args.jira_url, args.project_key, version_id)
-    release_issue_filter_url = generate_release_issue_filter_url(args.jira_url, version_id)
+    release_notes_url = generate_release_notes_url(jira_url, args.project_key, version_id)
+    release_issue_filter_url = generate_release_issue_filter_url(jira_url, version_id)
 
     # Get project name and issues for both formats
     project_name = get_project_name(jira, args.project_key)
     issues = get_issues_for_release(jira, args.project_key, args.version_name)
-    markdown_notes = format_notes_as_markdown(issues, args.jira_url, project_name, args.version_name, category_order)
-    jira_markup_notes = format_notes_as_jira_markup(issues, args.jira_url, project_name, args.version_name, category_order)
+    markdown_notes = format_notes_as_markdown(issues, jira_url, project_name, args.version_name, category_order)
+    jira_markup_notes = format_notes_as_jira_markup(issues, jira_url, project_name, args.version_name, category_order)
 
     # Output results for GitHub Actions
     # Using multiline string format for the release notes

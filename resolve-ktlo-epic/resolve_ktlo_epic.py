@@ -56,10 +56,10 @@ def main():
     parser.add_argument("--jira-project", required=True, help="Jira project key (e.g. CPP).")
     parser.add_argument("--epic-name-pattern", default="KTLO",
                         help="Regex pattern matched against epic summaries (default: KTLO).")
-    parser.add_argument("--jira-url", required=True, help="Jira server URL.")
+    parser.add_argument("--use-sandbox", default="false", help="Use Jira sandbox (true/false).")
     args = parser.parse_args()
 
-    jira = get_jira_instance(args.jira_url)
+    jira = get_jira_instance(args.use_sandbox)
     epic_key = resolve_ktlo_epic(jira, args.jira_project, args.epic_name_pattern)
 
     print(f"epic_key={epic_key or ''}")

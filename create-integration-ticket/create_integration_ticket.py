@@ -145,8 +145,8 @@ def main():
                        help="The key of the ticket to link to (e.g., REL-123).")
     parser.add_argument("--target-jira-project", required=True,
                        help="The key of the project where the ticket will be created (e.g., SQS).")
-    parser.add_argument("--jira-url", required=True,
-                        help="The Jira server URL to connect to.")
+    parser.add_argument("--use-sandbox", default="false",
+                        help="Use Jira sandbox (true/false).")
     parser.add_argument("--link-type", default="relates to",
                        help="The type of link to create (e.g., 'relates to', 'depends on').")
     parser.add_argument("--parent-epic",
@@ -155,7 +155,7 @@ def main():
     args = parser.parse_args()
 
     # Initialize Jira client
-    jira = get_jira_instance(args.jira_url)
+    jira = get_jira_instance(args.use_sandbox)
 
     # Validate the release ticket exists
     release_ticket = validate_release_ticket(jira, args.release_ticket_key)

@@ -90,7 +90,7 @@ class TestUpdateReleaseTicket(unittest.TestCase):
         'update_release_ticket.py',
         '--ticket-key', 'REL-123',
         '--status', 'Start Progress',
-        '--jira-url', 'https://test.jira.com'
+        '--use-sandbox', 'false'
     ])
     @patch('update_release_ticket.get_jira_instance')
     @patch('update_release_ticket.update_ticket_status')
@@ -104,7 +104,7 @@ class TestUpdateReleaseTicket(unittest.TestCase):
         main()
 
         # Verify get_jira_instance was called with correct URL
-        mock_get_jira.assert_called_once_with('https://test.jira.com')
+        mock_get_jira.assert_called_once_with('false')
 
         # Verify update_ticket_status was called with correct parameters
         mock_update_ticket.assert_called_once_with(mock_jira, 'REL-123', 'Start Progress', None)
@@ -121,7 +121,7 @@ class TestUpdateReleaseTicket(unittest.TestCase):
         '--ticket-key', 'REL-456',
         '--status', 'Technical Release Done',
         '--assignee', 'user@example.com',
-        '--jira-url', 'https://sandbox.jira.com'
+        '--use-sandbox', 'true'
     ])
     @patch('update_release_ticket.get_jira_instance')
     @patch('update_release_ticket.update_ticket_status')
@@ -135,7 +135,7 @@ class TestUpdateReleaseTicket(unittest.TestCase):
         main()
 
         # Verify get_jira_instance was called with sandbox URL
-        mock_get_jira.assert_called_once_with('https://sandbox.jira.com')
+        mock_get_jira.assert_called_once_with('true')
 
         # Verify update_ticket_status was called with assignee
         mock_update_ticket.assert_called_once_with(mock_jira, 'REL-456', 'Technical Release Done', 'user@example.com')
@@ -151,7 +151,7 @@ class TestUpdateReleaseTicket(unittest.TestCase):
         'update_release_ticket.py',
         '--ticket-key', 'REL-789',
         '--status', 'Invalid Status',
-        '--jira-url', 'https://test.jira.com'
+        '--use-sandbox', 'false'
     ])
     def test_main_invalid_status(self):
         """Test main function with invalid status choice."""
