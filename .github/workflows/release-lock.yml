@@ -52,17 +52,12 @@ jobs:
                 post_status "$sha" "success" "No release in progress"
               done <<< "$prs"
             else
-              # Bump PR opened/updated — mark itself green, all others red.
-              echo "Bump PR opened/updated. Setting bump PR green, all others red..."
+              # Bump PR opened/updated — mark itself green.
+              # Other open PRs were already set to failure by the release-start sweep
+              # in automated-release.yml (set-release-lock job). PRs that open after
+              # that sweep are handled by path B below when their own PR event fires.
+              echo "Bump PR opened/updated. Setting bump PR green..."
               post_status "$PR_HEAD_SHA" "success" "Version-bump PR — may merge"
-              prs=$(gh pr list --state open --json number,headRefOid --limit 1000 \
-                    --jq '.[] | "\(.number) \(.headRefOid)"')
-              while IFS=' ' read -r num sha; do
-                [ -z "$num" ] && continue
-                [ "$num" -eq "$PR_NUMBER" ] && continue  # skip bump PR itself
-                echo "  Blocking PR #$num (${sha:0:7})"
-                post_status "$sha" "failure" "Release in progress — merge the version-bump PR first"
-              done <<< "$prs"
             fi
           else
             # Normal PR event — check if a bump PR is currently open.

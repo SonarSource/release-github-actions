@@ -282,6 +282,42 @@ jobs:
           done
           echo "Auto-merge sweep complete."
 
+  # Post release-lock=failure to all open PRs as soon as the release starts, closing the window
+  # between release trigger and bump PR creation where non-bump PRs could otherwise merge freely.
+  # Runs in parallel with disable-auto-merge and freeze-branch.
+  # When the bump PR opens, release-lock.yml re-fires and refines the statuses (bump PR → success,
+  # others stay failure). On bump PR close, release-lock.yml resets all to success.
+  set-release-lock:
+    name: Set release-lock on open PRs
+    if: ${{ inputs.bump-version }}
+    runs-on: ${{ inputs.runner-environment }}
+    permissions:
+      statuses: write
+      pull-requests: read
+    steps:
+      - name: Post release-lock failure to all open PRs
+        shell: bash
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          prs=$(gh pr list --state open --json number,headRefOid --jq '.[]')
+          if [ -z "$prs" ]; then
+            echo "No open PRs found."
+            exit 0
+          fi
+          echo "$prs" | while IFS= read -r pr_json; do
+            pr_number=$(echo "$pr_json" | jq -r '.number')
+            sha=$(echo "$pr_json" | jq -r '.headRefOid')
+            echo "Setting release-lock=failure on PR #$pr_number ($sha)"
+            gh api --method POST "repos/$REPO/statuses/$sha" \
+              -f state=failure \
+              -f context=release-lock \
+              -f description="Release in progress — merge the version-bump PR first"
+          done
+          echo "Release-lock sweep complete."
+
   # This job freezes the specified branch to prevent changes during the release process.
   freeze-branch:
     name: Freeze ${{ inputs.branch }} branch
