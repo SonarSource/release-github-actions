@@ -10,36 +10,11 @@ import argparse
 import os
 import re
 import sys
-from jira import JIRA
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'shared'))
+from jira_common import eprint, get_jira_instance
 from jira.exceptions import JIRAError
 
-
-# noinspection DuplicatedCode
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
-
-
-# noinspection DuplicatedCode
-def get_jira_instance(jira_url):
-    jira_user = os.environ.get('JIRA_USER')
-    jira_token = os.environ.get('JIRA_TOKEN')
-
-    if not jira_user or not jira_token:
-        eprint("Error: JIRA_USER and JIRA_TOKEN environment variables must be set.")
-        sys.exit(1)
-
-    eprint(f"Connecting to Jira at: {jira_url}")
-    try:
-        client = JIRA(jira_url, basic_auth=(jira_user, jira_token), get_server_info=True)
-        eprint("Jira authentication successful.")
-        return client
-    except JIRAError as e:
-        eprint(f"Error: Jira authentication failed. Status: {e.status_code}")
-        eprint(f"Response text: {e.text}")
-        sys.exit(1)
-    except Exception as e:
-        eprint(f"An unexpected error occurred during Jira connection: {e}")
-        sys.exit(1)
 
 
 def resolve_ktlo_epic(jira, project, pattern):

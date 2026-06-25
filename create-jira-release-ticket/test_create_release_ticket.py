@@ -14,7 +14,7 @@ from io import StringIO
 # Add the current directory to the path to import our module
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from create_release_ticket import get_jira_instance, create_release_ticket, main
+from create_release_ticket import create_release_ticket, main
 from jira.exceptions import JIRAError
 
 
@@ -26,35 +26,6 @@ class TestCreateReleaseTicket(unittest.TestCase):
             'JIRA_USER': 'test_user',
             'JIRA_TOKEN': 'test_token'
         }
-
-    @patch.dict(os.environ, {})
-    def test_get_jira_instance_missing_credentials(self):
-        """Test that get_jira_instance exits when credentials are missing."""
-        with self.assertRaises(SystemExit) as cm:
-            get_jira_instance('https://test.jira.com')
-        self.assertEqual(cm.exception.code, 1)
-
-    @patch.dict(os.environ, {'JIRA_USER': 'test', 'JIRA_TOKEN': 'token'})
-    @patch('create_release_ticket.JIRA')
-    def test_get_jira_instance_success(self, mock_jira_class):
-        """Test successful JIRA instance creation."""
-        mock_jira = Mock()
-        mock_jira_class.return_value = mock_jira
-
-        result = get_jira_instance('https://prod.com')
-
-        self.assertEqual(result, mock_jira)
-        mock_jira_class.assert_called_once_with('https://prod.com', basic_auth=('test', 'token'), get_server_info=True)
-
-    @patch.dict(os.environ, {'JIRA_USER': 'test', 'JIRA_TOKEN': 'token'})
-    @patch('create_release_ticket.JIRA')
-    def test_get_jira_instance_auth_failure(self, mock_jira_class):
-        """Test JIRA instance creation with authentication failure."""
-        mock_jira_class.side_effect = JIRAError(status_code=401, text="Unauthorized")
-
-        with self.assertRaises(SystemExit) as cm:
-            get_jira_instance('https://prod.com')
-        self.assertEqual(cm.exception.code, 1)
 
     def test_create_release_ticket_with_all_fields(self):
         """Test creating release ticket with all fields."""

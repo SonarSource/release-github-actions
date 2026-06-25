@@ -13,7 +13,7 @@ from unittest.mock import Mock, patch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from resolve_ktlo_epic import get_jira_instance, resolve_ktlo_epic, warn, main
+from resolve_ktlo_epic import resolve_ktlo_epic, warn, main
 from jira.exceptions import JIRAError
 
 
@@ -22,44 +22,6 @@ def _make_epic(key, summary):
     epic.key = key
     epic.fields.summary = summary
     return epic
-
-
-class TestGetJiraInstance(unittest.TestCase):
-
-    @patch.dict(os.environ, {}, clear=True)
-    def test_missing_credentials_exits(self):
-        with self.assertRaises(SystemExit) as cm:
-            get_jira_instance('https://sonarsource.atlassian.net/')
-        self.assertEqual(cm.exception.code, 1)
-
-    @patch.dict(os.environ, {'JIRA_USER': 'user', 'JIRA_TOKEN': 'token'})
-    @patch('resolve_ktlo_epic.JIRA')
-    def test_success_returns_client(self, mock_jira_class):
-        mock_client = Mock()
-        mock_jira_class.return_value = mock_client
-        result = get_jira_instance('https://sonarsource.atlassian.net/')
-        self.assertEqual(result, mock_client)
-        mock_jira_class.assert_called_once_with(
-            'https://sonarsource.atlassian.net/',
-            basic_auth=('user', 'token'),
-            get_server_info=True,
-        )
-
-    @patch.dict(os.environ, {'JIRA_USER': 'user', 'JIRA_TOKEN': 'token'})
-    @patch('resolve_ktlo_epic.JIRA')
-    def test_auth_failure_exits(self, mock_jira_class):
-        mock_jira_class.side_effect = JIRAError(status_code=401, text='Unauthorized')
-        with self.assertRaises(SystemExit) as cm:
-            get_jira_instance('https://sonarsource.atlassian.net/')
-        self.assertEqual(cm.exception.code, 1)
-
-    @patch.dict(os.environ, {'JIRA_USER': 'user', 'JIRA_TOKEN': 'token'})
-    @patch('resolve_ktlo_epic.JIRA')
-    def test_unexpected_error_exits(self, mock_jira_class):
-        mock_jira_class.side_effect = Exception('network error')
-        with self.assertRaises(SystemExit) as cm:
-            get_jira_instance('https://sonarsource.atlassian.net/')
-        self.assertEqual(cm.exception.code, 1)
 
 
 class TestResolveKtloEpic(unittest.TestCase):

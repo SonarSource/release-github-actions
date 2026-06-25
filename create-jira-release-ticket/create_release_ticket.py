@@ -8,59 +8,10 @@ This script automates the creation of an 'Ask for release' ticket in Jira.
 import argparse
 import os
 import sys
-from jira import JIRA
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'shared'))
+from jira_common import eprint, get_jira_instance, CUSTOM_FIELDS
 from jira.exceptions import JIRAError
-
-CUSTOM_FIELDS = {
-    'SHORT_DESCRIPTION': 'customfield_10146',
-    'LINK_TO_RELEASE_NOTES': 'customfield_10145',
-    'DOCUMENTATION_STATUS': 'customfield_10147',
-    'RULE_PROPS_CHANGED': 'customfield_11263',
-    'SONARLINT_CHANGELOG': 'customfield_11264',
-}
-
-
-# noinspection DuplicatedCode
-def eprint(*args, **kwargs):
-    """
-    Prints messages to the standard error stream (stderr).
-
-    This function serves as a dedicated logger for informational messages,
-    warnings, or errors. In a CI/CD pipeline, this ensures that diagnostic
-    output is kept separate from the primary result of the script, which is
-    written to standard output (stdout). This separation allows for cleaner
-    data parsing and redirection.
-    """
-    print(*args, file=sys.stderr, **kwargs)
-
-
-# noinspection DuplicatedCode
-def get_jira_instance(jira_url):
-    """
-    Initializes and returns a JIRA client instance.
-    """
-    jira_user = os.environ.get('JIRA_USER')
-    jira_token = os.environ.get('JIRA_TOKEN')
-
-    if not jira_user or not jira_token:
-        eprint("Error: JIRA_USER and JIRA_TOKEN environment variables must be set.")
-        sys.exit(1)
-
-    eprint(f"Connecting to JIRA server at: {jira_url}")
-    eprint(f"Authenticating with user: {jira_user}")
-
-    try:
-        jira_client = JIRA(jira_url, basic_auth=(jira_user, jira_token), get_server_info=True)
-        eprint("JIRA authentication successful.")
-        return jira_client
-    except JIRAError as e:
-        eprint(f"Error: JIRA authentication failed. Status: {e.status_code}")
-        eprint("Please check your JIRA URL, user, and token.")
-        eprint(f"Response text: {e.text}")
-        sys.exit(1)
-    except Exception as e:
-        eprint(f"An unexpected error occurred during JIRA connection: {e}")
-        sys.exit(1)
 
 
 def create_release_ticket(jira_client, args, link_to_release_notes):

@@ -82,6 +82,8 @@ action-name/
 - Input precedence: explicit input > environment variable > default
 
 ### Jira Custom Field IDs
+
+Defined in `shared/jira_common.py` as the `CUSTOM_FIELDS` dict — single source of truth:
 ```python
 customfield_10146  # SHORT_DESCRIPTION
 customfield_10145  # LINK_TO_RELEASE_NOTES
@@ -121,3 +123,42 @@ run: echo "$INPUT_BRANCH"
 ```
 
 This prevents tag mutation attacks where a malicious actor could change what code a tag points to.
+
+## Golden Architecture
+
+Every action is a self-contained composite invoked as `SonarSource/release-github-actions/<action>@v1`. Consumers pin `@v1`; `release.yml` fast-forwards it on release. **Internal refactors are transparent; changing an action's `inputs:`/`outputs:` is a breaking change — treat the input/output surface as a public API.**
+
+### Shared Python code
+
+Common helpers live in `shared/` (`eprint`, `get_jira_instance`, `CUSTOM_FIELDS`). Import via:
+```python
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'shared'))
+from jira_common import eprint, get_jira_instance, CUSTOM_FIELDS
+```
+
+**Do NOT package `shared/` with `pyproject.toml` / `pip install -e .`** — that forces an install step into every consumer workflow. `@v1` checks out the whole repo, so `../shared` is already on disk at runtime. (See reverted commit `ad8a663`.)
+
+Rule: if a helper exists in ≥2 actions and you need a third copy, put it in `shared/` with a test in `shared/test_*.py` instead.
+
+### Canonical JIRA URL expression
+
+All `action.yml` files that pass a Jira URL to a script must use this single expression:
+```yaml
+JIRA_URL: "https://sonarsource${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && '-sandbox-608' || '' }}.atlassian.net/"
+```
+This is the single source of the domain string — a future domain change is one edit, not seven.
+
+### Things that LOOK like duplication but MUST stay per-action
+
+- **Vault credential blocks.** A nested composite can only export secrets via `$GITHUB_ENV`, exposing them to every later step in the job. Keep the vault block inline per action.
+- **`inputs.x || env.X` + `if [[ -z ]]` guard.** Mandated by the Security section above (no user input interpolated into `run:`) and the input-precedence rule. Removing it reintroduces injection risk.
+- **Orchestrator fan-outs** (integration-ticket steps, analyzer steps in `automated-release.yml`). They surface *named* job outputs consumed by downstream jobs, and reference same-job step outputs; a `matrix` job cannot expose per-cell named outputs. Keep explicit steps.
+- **setup-python + `pip install` preamble.** Byte-identical across actions and kept pinned by `update-action-versions.yml`. Don't wrap it in a composite for line count.
+
+### Conventions for every new action
+
+- `using: "composite"`; Python 3.10; use the canonical JIRA URL expression above.
+- Outputs via stdout `key=value` → `action.yml` redirects `>> $GITHUB_OUTPUT`; diagnostics via `eprint()` to stderr.
+- External (non-SonarSource) actions pinned to a full commit SHA with a version comment.
+- New action → `README.md` in its directory + link from root `README.md`.

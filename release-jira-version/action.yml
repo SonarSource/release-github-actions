@@ -50,8 +50,7 @@ runs:
       env:
         JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
-        JIRA_PROD_URL: "https://sonarsource.atlassian.net/"
-        JIRA_SANDBOX_URL: "https://sonarsource-sandbox-608.atlassian.net/"
+        JIRA_URL: "https://sonarsource${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && '-sandbox-608' || '' }}.atlassian.net/"
       run: |
         PROJECT_KEY="${{ inputs.jira-project-key || env.JIRA_PROJECT_KEY }}"
         
@@ -63,5 +62,5 @@ runs:
         python ${{ github.action_path }}/release_jira_version.py \
         --project-key="$PROJECT_KEY" \
         --version-name="${{ inputs.jira-version-name || env.JIRA_VERSION_NAME || steps.determine-version-name.outputs.VERSION_NAME }}" \
-        --jira-url="${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && env.JIRA_SANDBOX_URL || env.JIRA_PROD_URL }}" \
+        --jira-url="$JIRA_URL" \
         >> $GITHUB_OUTPUT

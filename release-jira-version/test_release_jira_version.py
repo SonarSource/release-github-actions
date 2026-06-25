@@ -14,7 +14,7 @@ from io import StringIO
 # Add the current directory to the path to import our module
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from release_jira_version import get_jira_instance, main
+from release_jira_version import main
 from jira.exceptions import JIRAError
 
 
@@ -26,51 +26,6 @@ class TestReleaseJiraVersion(unittest.TestCase):
             'JIRA_USER': 'test_user',
             'JIRA_TOKEN': 'test_token'
         }
-
-    @patch.dict(os.environ, {})
-    def test_get_jira_instance_missing_credentials(self):
-        """Test that get_jira_instance exits when credentials are missing."""
-        with self.assertRaises(SystemExit) as cm:
-            get_jira_instance('https://test.jira.com')
-        self.assertEqual(cm.exception.code, 1)
-
-    # noinspection DuplicatedCode
-    @patch.dict(os.environ, {'JIRA_USER': 'test', 'JIRA_TOKEN': 'token'})
-    @patch('release_jira_version.JIRA')
-    def test_get_jira_instance_success(self, mock_jira_class):
-        """Test successful JIRA instance creation."""
-        mock_jira = Mock()
-        mock_jira.server_info.return_value = {}
-        mock_jira_class.return_value = mock_jira
-
-        result = get_jira_instance('https://prod.com')
-
-        self.assertEqual(result, mock_jira)
-        mock_jira_class.assert_called_once_with('https://prod.com', basic_auth=('test', 'token'))
-        mock_jira.server_info.assert_called_once()
-
-    @patch.dict(os.environ, {'JIRA_USER': 'test', 'JIRA_TOKEN': 'token'})
-    @patch('release_jira_version.JIRA')
-    def test_get_jira_instance_different_url(self, mock_jira_class):
-        """Test JIRA instance creation with different URL."""
-        mock_jira = Mock()
-        mock_jira.server_info.return_value = {}
-        mock_jira_class.return_value = mock_jira
-
-        result = get_jira_instance('https://sandbox.com')
-
-        self.assertEqual(result, mock_jira)
-        mock_jira_class.assert_called_once_with('https://sandbox.com', basic_auth=('test', 'token'))
-
-    @patch.dict(os.environ, {'JIRA_USER': 'test', 'JIRA_TOKEN': 'token'})
-    @patch('release_jira_version.JIRA')
-    def test_get_jira_instance_auth_failure(self, mock_jira_class):
-        """Test JIRA instance creation with authentication failure."""
-        mock_jira_class.side_effect = JIRAError(status_code=401, text="Unauthorized")
-
-        with self.assertRaises(SystemExit) as cm:
-            get_jira_instance('https://prod.com')
-        self.assertEqual(cm.exception.code, 1)
 
     # noinspection DuplicatedCode
     @patch('sys.argv', ['release_jira_version.py', '--project-key', 'TEST', '--version-name', '1.0.0', '--jira-url', 'https://test.jira.com'])

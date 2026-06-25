@@ -9,7 +9,9 @@ import argparse
 import os
 import re
 import sys
-from jira import JIRA
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'shared'))
+from jira_common import eprint, get_jira_instance
 from jira.exceptions import JIRAError
 
 
@@ -23,41 +25,6 @@ def normalize_version_name(version_name):
     if match:
         return match.group(1)
     return version_name
-
-
-# noinspection DuplicatedCode
-def eprint(*args, **kwargs):
-    """Prints messages to the standard error stream (stderr) for logging."""
-    print(*args, file=sys.stderr, **kwargs)
-
-
-# noinspection DuplicatedCode
-def get_jira_instance(jira_url):
-    """
-    Initializes and returns a JIRA client instance.
-    Authentication is handled via environment variables.
-    """
-    jira_user = os.environ.get('JIRA_USER')
-    jira_token = os.environ.get('JIRA_TOKEN')
-
-    if not jira_user or not jira_token:
-        eprint("Error: JIRA_USER and JIRA_TOKEN environment variables must be set.")
-        sys.exit(1)
-
-    eprint(f"Connecting to JIRA server at: {jira_url}")
-    try:
-        jira_client = JIRA(jira_url, basic_auth=(jira_user, jira_token))
-        # Verify connection
-        jira_client.server_info()
-        eprint("JIRA authentication successful.")
-        return jira_client
-    except JIRAError as e:
-        eprint(f"Error: JIRA authentication failed. Status: {e.status_code}")
-        eprint(f"Response text: {e.text}")
-        sys.exit(1)
-    except Exception as e:
-        eprint(f"An unexpected error occurred during JIRA connection: {e}")
-        sys.exit(1)
 
 
 def find_existing_version(jira, project_key, version_name):
