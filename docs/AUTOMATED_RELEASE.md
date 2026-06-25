@@ -145,13 +145,115 @@ jobs:
 - When `freeze-branch: true`, the workflow will:
   - Lock the specified branch at the start of the release
   - Proceed with the release steps
-  - Unlock the branch after the GitHub release is published
+  - Unlock the branch after the GitHub release is published — **before** the version-bump PR is created
   - Send lock/unlock notifications to the configured `slack-channel` if provided
+  - **Note:** The freeze window ends before the version-bump PR is created (see [Release lock gate](#release-lock-gate) below for how to protect that window).
+- **Auto-merge sweep (runs when `bump-version: true`):** When the release will create a
+  version-bump PR, the workflow strips auto-merge from all open PRs that have it enabled. This
+  prevents the race where a pre-approved PR with auto-merge enabled and CI still running would
+  otherwise merge mid-release before the version-bump PR opens. PR owners can re-enable
+  auto-merge after the release. This is best-effort — a PR that re-enables auto-merge and
+  completes CI in the brief window before the version-bump PR opens may still slip through;
+  the release-lock gate (see below) guards against this.
 - When `release-notes` is empty, Jira release notes are fetched and used.
 - Integration tickets and analyzer update PRs are created only if their respective flags are enabled and prerequisites are met.
 - Summaries:
   - Each job includes a "Summary" step that writes to `$GITHUB_STEP_SUMMARY` only when `verbose: true`.
 - Permissions and environments are scoped per job to minimize required privileges.
+
+## Release lock gate
+
+> **Scope:** Analyzer release path (`automated-release.yml`) only. The DevEx/IDE path
+> (`ide-automated-release.yml`) is separate and not covered here.
+
+### The problem
+
+The release workflow unfreezes the branch right after publishing the GitHub release, **before**
+the version-bump PR is created. The actual job ordering is:
+
+```
+disable-auto-merge → freeze → check → prepare → publish-github-release
+                                                        ↓
+                             UNFREEZE ←─────────────────┘
+                                ↓
+                        release-in-jira → bump-version (creates version-bump PR)
+```
+
+Between the unfreeze and the bump PR being created (and merged), the branch is open. Other
+developers' PRs can merge into that gap, leaving the branch at the released version with
+unbumped pom/gradle files.
+
+`lock_branch: true` (the freeze) cannot be extended to cover this window — it is all-or-nothing
+read-only for everyone including the release DRI, and the bump PR push itself requires an
+unfrozen branch.
+
+### The solution: `release-lock` required status check
+
+The "release in progress" signal is **"a version-bump PR is open."** A thin caller workflow
+(`release-lock.yml`) in each analyzer repo delegates to the reusable
+`SonarSource/release-github-actions/.github/workflows/release-lock.yml@v1`, which sets a
+`release-lock` commit status on every open PR:
+
+| Condition | Status on other PRs | Status on bump PR |
+|---|---|---|
+| No bump PR open | ✅ `success` — "No release in progress" | — |
+| Bump PR open | ❌ `failure` — "Release in progress — merge the version-bump PR first" | ✅ `success` |
+| Bump PR merged/abandoned | ✅ `success` (auto-reset, no retrigger needed) | — |
+
+The version-bump PR is identified by its head branch prefix
+`bot/prepare-next-development-iteration-` (invariant across Maven/Gradle/custom paths).
+
+When the bump PR closes, the reusable workflow sweeps all open PRs (paginated, drafts included)
+and resets each to green **automatically** — developers do not need to push or retrigger.
+Logic updates propagate to all repos on the next `@v1` resolve; no per-repo changes needed.
+
+### Adopt the gate (two-phase, per repo, via the setup skill)
+
+> The gate is **opt-in** and non-breaking. A repo with no `release-lock.yml` and no required
+> check releases exactly as before — the only change for all callers is the auto-merge sweep at
+> release start.
+
+#### Phase 1 — Add the workflow (unenforced)
+
+Run the `automated-release-setup` skill (Step 5c). It creates a thin `release-lock.yml` caller
+in your repo that delegates all logic to the reusable
+`SonarSource/release-github-actions/.github/workflows/release-lock.yml@v1`.
+The check reports green/red on PRs but is **not required**, so it gates nothing. Observe over
+one or two real releases that the statuses behave correctly (other PRs go red while a bump PR
+is open; all reset to green when it merges).
+
+#### Phase 2 — Enforce (when ready)
+
+Run Step 5d of the skill (deliberately separate from Step 5c). It registers `release-lock` as
+a **required** status check on the branch. After this: while a bump PR is open, only that PR
+can merge. The DRI merges it by hand; the gate clears automatically.
+
+> **Sequencing matters for the upcoming `freeze-branch` default flip:** once `release-lock` is
+> enforced (Phase 2), the `lock_branch` freeze becomes redundant. A future release of
+> `release-github-actions` will flip `freeze-branch`'s default from `true` to `false`. A repo
+> must reach Phase 2 **before** picking up that default flip, or it will briefly have neither
+> guard. Watch the release notes for that change.
+
+### The freeze survives lock-branch cycles
+
+`lock_branch.py` (lines 105–112) preserves all entries in `required_status_checks.contexts`
+on every freeze/unfreeze PUT — once `release-lock` is registered as a required check it is
+never dropped by the freeze/unfreeze cycle.
+
+### Migrating an existing repo
+
+If your repo already calls `automated-release.yml` and you want to adopt the gate:
+
+1. Run the `automated-release-setup` skill (`/automated-release-setup`) in your analyzer repo.
+2. When prompted, run Step 5c to add `release-lock.yml` — a thin caller that delegates to
+   the reusable workflow in `release-github-actions`.
+3. Trigger a release (dry-run is fine) and observe the `release-lock` status on any open PRs.
+4. Once satisfied, run Step 5d to register the check as required.
+5. The next release will gate non-bump PRs automatically.
+
+No changes to your `automated-release.yml` caller workflow are needed — the gate is entirely
+driven by the `release-lock.yml` you add to your repo. Logic improvements in
+`release-github-actions` propagate automatically on the next `@v1` resolve.
 
 ## Setup
 

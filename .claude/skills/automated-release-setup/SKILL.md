@@ -501,6 +501,109 @@ Create a PR in the `re-terraform-aws-vault` repository to add the release-automa
    - [ ] Test automated release workflow with dry-run"
    ```
 
+### Step 5c: Add `release-lock.yml` (Phase 1 — unenforced status check)
+
+This step adds the `release-lock` commit status workflow to the repo. While the check is not yet
+required, it reports a green/red status on every PR so the team can observe correct behavior over
+one or two releases before enforcing it (Phase 2).
+
+**What it does:** When a version-bump PR (head branch `bot/prepare-next-development-iteration-*`)
+is open, all other PRs get a red `release-lock` status; the bump PR itself gets green. When the
+bump PR merges, all other open PRs automatically flip back to green — developers do not need to
+retrigger anything.
+
+The logic lives in a reusable workflow in `release-github-actions`. Create a thin caller at
+`.github/workflows/release-lock${EXT}` (use the same extension detected in Step 1c):
+
+```yaml
+name: Release lock
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, closed]
+
+jobs:
+  release-lock:
+    uses: SonarSource/release-github-actions/.github/workflows/release-lock.yml@v1
+    permissions:
+      statuses: write
+      pull-requests: read
+```
+
+That's the entire file — all logic is in the reusable workflow and updates automatically with
+`@v1`.
+
+Stage and commit alongside the `automated-release${EXT}` file:
+```bash
+git add .github/workflows/release-lock${EXT}
+```
+
+**Important:** `pull_request_target` runs with the base branch's code, so the caller above
+is safe — it does **not** check out any untrusted PR code. Never add a `checkout` step to this
+workflow unless you understand the security implications of `pull_request_target`.
+
+---
+
+### Step 5d: Register `release-lock` as a required check (Phase 2 — gated, do separately)
+
+> ⚠️ **Do not perform this step in the same skill run as Step 5c.** Only run Phase 2 when the
+> team has observed Phase 1 behaving correctly over one or two real releases. Registering a
+> required check without a working reporter blocks **all** PRs.
+
+When the team is confident, register `release-lock` as a required status check on the branch.
+This enforces the gate: while a bump PR is open, all other PRs are blocked from merging.
+
+**Prerequisite:** The `-lock` admin Vault token must be available. Its path is
+`development/github/token/{REPO_OWNER_NAME_DASH}-lock` (e.g., `sonar-apex` →
+`development/github/token/sonar-apex-lock`). This token already has admin branch-protection
+write (used by the freeze/unfreeze jobs). Confirm the secret is available before running.
+
+**Step 5d-1:** Get the current branch protection settings to preserve all existing contexts:
+```bash
+CURRENT=$(gh api "/repos/${REPO}/branches/${BRANCH}/protection" \
+  --jq '.required_status_checks.contexts // []')
+echo "Current contexts: $CURRENT"
+```
+
+**Step 5d-2:** Add `release-lock` to the contexts list and update protection. Use the
+[`lock-branch` action](../lock-branch/) in a one-shot job or run the Vault-authenticated API
+call directly (the lock-branch action preserves contexts at `lock_branch.py:105-112` — you can
+also run it as `freeze: false` to trigger a no-op unfreeze that re-writes the protection and
+preserves contexts).
+
+The safest approach is to use the GitHub UI:
+1. Go to **Settings → Branches → Branch protection rules** → edit the rule for `master` (or
+   the release branch).
+2. Under **Require status checks to pass before merging**, search for and add `release-lock`.
+3. Save.
+
+Or via the API (requires admin token):
+```bash
+# Get current contexts
+contexts=$(gh api "/repos/${REPO}/branches/${BRANCH}/protection" \
+  --jq '[.required_status_checks.contexts[]]')
+
+# Append release-lock and update (one-liner — adjust if contexts is already an array)
+gh api --method PUT "/repos/${REPO}/branches/${BRANCH}/protection" \
+  --input - <<EOF
+{
+  "required_status_checks": {
+    "strict": false,
+    "contexts": $(echo "$contexts" | jq '. + ["release-lock"]')
+  },
+  "enforce_admins": true,
+  "required_pull_request_reviews": null,
+  "restrictions": null
+}
+EOF
+```
+
+> **Freeze coexistence:** Once `release-lock` is registered, it survives freeze/unfreeze cycles
+> — `lock_branch.py` (`lock_branch.py:105-112`) preserves `required_status_checks.contexts`
+> on every PUT, so the context is never dropped.
+
+---
+
 ### Step 6: Testing Instructions
 
 Provide these instructions to the user:

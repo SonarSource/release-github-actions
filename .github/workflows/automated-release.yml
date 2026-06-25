@@ -253,6 +253,35 @@ env:
   USE_JIRA_SANDBOX: ${{ inputs.use-jira-sandbox == true && 'true' || 'false' }}
 
 jobs:
+  # Strip auto-merge from every open PR before the release touches anything.
+  # Only runs when bump-version is true: the auto-merge race only exists when a version-bump PR
+  # will be created. A pre-approved PR with auto-merge + pending CI could merge mid-release
+  # before the bump PR opens; stripping auto-merge up front closes that window.
+  disable-auto-merge:
+    name: Disable auto-merge on open PRs
+    if: ${{ inputs.bump-version }}
+    runs-on: ${{ inputs.runner-environment }}
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Disable auto-merge on open PRs with auto-merge enabled
+        shell: bash
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pr_numbers=$(gh pr list --state open --json number,autoMergeRequest \
+            --jq '.[] | select(.autoMergeRequest != null) | .number')
+          if [ -z "$pr_numbers" ]; then
+            echo "No open PRs with auto-merge enabled."
+            exit 0
+          fi
+          for pr in $pr_numbers; do
+            echo "Disabling auto-merge on PR #$pr"
+            gh pr merge "$pr" --disable-auto-merge
+          done
+          echo "Auto-merge sweep complete."
+
   # This job freezes the specified branch to prevent changes during the release process.
   freeze-branch:
     name: Freeze ${{ inputs.branch }} branch
