@@ -302,7 +302,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
         run: |
-          prs=$(gh pr list --state open --json number,headRefOid --jq '.[]')
+          prs=$(gh pr list --state open --json number,headRefOid --limit 1000 --jq '.[]')
           if [ -z "$prs" ]; then
             echo "No open PRs found."
             exit 0
@@ -734,6 +734,42 @@ jobs:
           excluded-modules: ${{ inputs.bump-version-exclusions }}
           base-branch: ${{ inputs.branch }}
           tool: ${{ inputs.bump-version-tool }}
+
+  # Reset release-lock to success on all open PRs if the release was aborted before a bump PR
+  # was created. Without this, PRs would stay red indefinitely if releasability/prepare/publish
+  # fails — no bump PR is ever opened, so release-lock.yml's closed-event reset never fires.
+  # Only needed when bump-version is true (that's when set-release-lock ran).
+  # Skipped when bump-version succeeded: the bump PR's closed event will reset statuses instead.
+  clear-release-lock:
+    name: Clear release-lock on abort
+    needs: [ bump-version ]
+    if: ${{ always() && inputs.bump-version && needs.bump-version.result != 'success' }}
+    runs-on: ${{ inputs.runner-environment }}
+    permissions:
+      statuses: write
+      pull-requests: read
+    steps:
+      - name: Reset release-lock to success on all open PRs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          prs=$(gh pr list --state open --json number,headRefOid --limit 1000 --jq '.[]')
+          if [ -z "$prs" ]; then
+            echo "No open PRs found."
+            exit 0
+          fi
+          echo "$prs" | while IFS= read -r pr_json; do
+            pr_number=$(echo "$pr_json" | jq -r '.number')
+            sha=$(echo "$pr_json" | jq -r '.headRefOid')
+            echo "Resetting release-lock on PR #$pr_number ($sha)"
+            gh api --method POST "repos/$REPO/statuses/$sha" \
+              -f state=success \
+              -f context=release-lock \
+              -f description="No release in progress"
+          done
+          echo "Release-lock reset complete."
 
   # This step creates integration tickets in various Jira projects based on the inputs provided.
   # It creates tickets for SLVS, SLVSCODE, SLE, SLI, SQC, and SQS as specified.
