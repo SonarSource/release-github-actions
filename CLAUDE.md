@@ -134,7 +134,7 @@ Source on `master` references sibling actions as `@master` (e.g. `uses: SonarSou
 
 When `release.yml` fast-forwards the `v1` branch to a release tag, it then rewrites every `@master` ref in `action.yml` files and `automated-release.yml` to the exact release commit SHA, then commits. So `v1` is a self-consistent frozen snapshot — no floating refs.
 
-**Do not write new internal `uses:` as `@v1` in `action.yml` or `automated-release.yml`.** Always use `@master`; the release workflow handles pinning automatically.
+**Do not write new internal `uses:` as `@v1` anywhere in this repo** — this applies to `action.yml` files, `automated-release.yml`, and test workflows (`.github/workflows/test-*.yml`). Always use `@master`; the release workflow handles pinning automatically. This includes string-match assertions in test scripts (e.g. `grep -q "...@master"`).
 
 ### Shared Python code
 
