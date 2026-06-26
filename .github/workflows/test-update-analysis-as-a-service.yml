@@ -50,5 +50,5 @@ jobs:
 
       - name: Verify action creates a pull request
         run: |
-          grep -q "SonarSource/release-github-actions/create-pull-request@v1" update-analysis-as-a-service/action.yml
+          grep -q "SonarSource/release-github-actions/create-pull-request@master" update-analysis-as-a-service/action.yml
           grep -q "SonarSource/sonar-analysis-as-a-service" update-analysis-as-a-service/action.yml

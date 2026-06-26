@@ -29,4 +29,20 @@ jobs:
           git fetch --all --tags
           git checkout "$VERSION_BRANCH"
           git reset --hard "$RELEASE_TAG"
+
+          # Pin every internal @master ref to the exact release commit SHA so
+          # the version branch is a frozen snapshot, not a floating reference.
+          RELEASE_SHA=$(git rev-parse "${RELEASE_TAG}^{commit}")
+          find . -type f \( -name "action.yml" -o -name "automated-release.yml" \) \
+            -not -path "./.git/*" \
+            -exec grep -l "SonarSource/release-github-actions/" {} \; \
+            | while read -r f; do
+                sed -i -E "s|(SonarSource/release-github-actions/[^@]+)@master|\1@${RELEASE_SHA}|g" "$f"
+              done
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          # ponytail: || true guards the no-op when nothing changed (e.g. re-release of same SHA)
+          git commit -m "Pin internal action refs to ${RELEASE_SHA} for ${VERSION_BRANCH} snapshot" || true
           git push origin "$VERSION_BRANCH" --force-with-lease
