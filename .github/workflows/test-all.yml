@@ -56,27 +56,3 @@ jobs:
 
   test-create-pull-request:
     uses: ./.github/workflows/test-create-pull-request.yml
-
-  test-bump-version:
-    uses: ./.github/workflows/test-bump-version.yml
-
-  test-notify-failure:
-    uses: ./.github/workflows/test-notify-failure.yml
-    permissions:
-      id-token: write
-      actions: read
-
-  test-resolve-ktlo-epic:
-    uses: ./.github/workflows/test-resolve-ktlo-epic.yml
-    permissions:
-      contents: read
-      id-token: write
-
-  test-update-plugins-deployer:
-    uses: ./.github/workflows/test-update-plugins-deployer.yml
-
-  test-jira-fixtures:
-    uses: ./.github/workflows/test-jira-fixtures.yml
-    permissions:
-      contents: read
-      id-token: write

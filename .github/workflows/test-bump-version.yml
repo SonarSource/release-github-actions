@@ -1,7 +1,6 @@
 name: Test Bump Version Script
 
 on:
-  workflow_call:
   push:
     branches: [ master ]
   pull_request:
