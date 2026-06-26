@@ -45,11 +45,10 @@ class TestGetJiraInstance(unittest.TestCase):
         self.assertEqual(cm.exception.code, 1)
 
     @patch.dict(os.environ, {'JIRA_USER': 'test_user', 'JIRA_TOKEN': 'test_token'})
-    @patch('jira_client.JIRA')
+    @patch('jira.JIRA')
     def test_successful_connection(self, mock_jira_class):
         """Should return a connected JIRA client."""
         mock_jira = Mock()
-        mock_jira.server_info.return_value = {}
         mock_jira_class.return_value = mock_jira
 
         result = get_jira_instance('false')
@@ -57,12 +56,12 @@ class TestGetJiraInstance(unittest.TestCase):
         self.assertEqual(result, mock_jira)
         mock_jira_class.assert_called_once_with(
             JIRA_URL_PROD,
-            basic_auth=('test_user', 'test_token')
+            basic_auth=('test_user', 'test_token'),
+            get_server_info=True
         )
-        mock_jira.server_info.assert_called_once()
 
     @patch.dict(os.environ, {'JIRA_USER': 'test_user', 'JIRA_TOKEN': 'bad_token'})
-    @patch('jira_client.JIRA')
+    @patch('jira.JIRA')
     def test_auth_failure_raises(self, mock_jira_class):
         """Should raise SystemExit on authentication failure."""
         from jira.exceptions import JIRAError
@@ -73,7 +72,7 @@ class TestGetJiraInstance(unittest.TestCase):
         self.assertEqual(cm.exception.code, 1)
 
     @patch.dict(os.environ, {'JIRA_USER': 'test_user', 'JIRA_TOKEN': 'test_token'})
-    @patch('jira_client.JIRA')
+    @patch('jira.JIRA')
     def test_unexpected_error_raises(self, mock_jira_class):
         """Should raise SystemExit on unexpected errors."""
         mock_jira_class.side_effect = Exception("Connection refused")
