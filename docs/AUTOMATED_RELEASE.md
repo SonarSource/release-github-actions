@@ -66,6 +66,7 @@ This workflow composes several actions from this repository:
 | `sqs-integration`            | Create SQS integration ticket and PR                                                                            | No       | `true`       |
 | `sqc-integration`            | Create SQC integration ticket and PR                                                                            | No       | `true`       |
 | `sqaa-integration`           | Create SQAA PR in sonar-analysis-as-a-service. Runs when both this and `sqc-integration` are true. Skipped silently if the analyzer is not yet onboarded to SQAA. | No       | `true`       |
+| `sqc-plugins-deployer-integration` | Deprecated, no-op. SQC integration always uses sonar-plugins-deployer.                                  | No       | `true`       |
 | `ktlo-jira-project-key`      | Jira project key where the KTLO epic lives. Defaults to `jira-project-key` if not provided.                    | No       | -            |
 | `ktlo-epic-name-pattern`     | Regex pattern to match the KTLO epic summary                                                                    | No       | `KTLO`       |
 | `runner-environment`         | Runner labels/environment                                                                                       | No       | `sonar-m`    |
@@ -272,7 +273,7 @@ To set up this workflow in your repository, you need to complete the following p
      ```yaml
      release_automation: &release_automation
        suffix: release-automation
-       description: access to sonar-enterprise and sonarcloud-core repositories to create PRs to update analyzers
+       description: access to sonar-enterprise and sonar-plugins-deployer repositories to create PRs to update analyzers
        organization: SonarSource
        permissions:
          contents: write
@@ -281,7 +282,7 @@ To set up this workflow in your repository, you need to complete the following p
    - Add to your repository's `github.customs` section:
      ```yaml
      - <<: *release_automation
-       repositories: [your-repo-name, sonar-enterprise, sonarcloud-core]
+       repositories: [your-repo-name, sonar-enterprise, sonar-plugins-deployer]
      ```
    - Example PR: https://github.com/SonarSource/re-terraform-aws-vault/pull/8406
 
@@ -366,7 +367,7 @@ Artifacts from Repox can be attached to the GitHub release draft using the `rele
 
 - Review and merge the bump-version PR
 - Review and merge the SQS PR in sonar-enterprise
-- Review and merge the SQC PR in sonarcloud-core
+- Review and merge the SQC PR in sonar-plugins-deployer
 - Update integration ticket statuses in Jira
 - Set fix versions on the SONAR ticket
 
