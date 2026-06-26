@@ -12,7 +12,7 @@ import sys
 from collections import defaultdict
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'shared'))
-from jira_common import eprint, get_jira_instance, get_jira_url
+from jira_common import eprint, get_jira_instance
 from jira.exceptions import JIRAError
 
 
@@ -150,8 +150,8 @@ def main():
         ]
         eprint(f"Using default issue type order: {category_order}")
 
-    jira_url = get_jira_url(args.use_sandbox)
     jira = get_jira_instance(args.use_sandbox)
+    jira_url = jira.server_url
 
     # Get version ID for URL generation
     version_id = get_version_id(jira, args.project_key, args.version_name)

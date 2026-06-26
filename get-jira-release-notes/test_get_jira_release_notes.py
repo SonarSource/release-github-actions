@@ -200,7 +200,6 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
         '--use-sandbox', 'false'
     ])
     @patch('get_jira_release_notes.get_jira_instance')
-    @patch('get_jira_release_notes.get_jira_url')
     @patch('get_jira_release_notes.get_version_id')
     @patch('get_jira_release_notes.get_project_name')
     @patch('get_jira_release_notes.get_issues_for_release')
@@ -212,12 +211,12 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
     @patch('builtins.print')
     def test_main_success(self, mock_print, mock_stderr, mock_generate_filter_url, mock_generate_url,
                           mock_format_jira_markup, mock_format_notes, mock_get_issues, mock_get_project_name,
-                          mock_get_version_id, mock_get_jira_url, mock_get_jira):
+                          mock_get_version_id, mock_get_jira):
         """Test successful main function execution."""
         # Setup mocks
         mock_jira = Mock()
+        mock_jira.server_url = 'https://sonarsource.atlassian.net/'
         mock_get_jira.return_value = mock_jira
-        mock_get_jira_url.return_value = 'https://sonarsource.atlassian.net/'
         mock_get_version_id.return_value = "10001"
         mock_get_project_name.return_value = "Test Project"
         mock_get_issues.return_value = []
@@ -230,7 +229,6 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
 
         # Verify all functions were called correctly
         mock_get_jira.assert_called_once_with('false')
-        mock_get_jira_url.assert_called_once_with('false')
         mock_get_version_id.assert_called_once_with(mock_jira, 'TEST', '1.0.0')
         mock_generate_url.assert_called_once_with('https://sonarsource.atlassian.net/', 'TEST', '10001')
         mock_generate_filter_url.assert_called_once_with('https://sonarsource.atlassian.net/', '10001')
