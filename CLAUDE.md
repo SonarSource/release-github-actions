@@ -128,6 +128,14 @@ This prevents tag mutation attacks where a malicious actor could change what cod
 
 Every action is a self-contained composite invoked as `SonarSource/release-github-actions/<action>@v1`. Consumers pin `@v1`; `release.yml` fast-forwards it on release. **Internal refactors are transparent; changing an action's `inputs:`/`outputs:` is a breaking change — treat the input/output surface as a public API.**
 
+### Internal refs: `@master` on master, frozen SHA on `v1`
+
+Source on `master` references sibling actions as `@master` (e.g. `uses: SonarSource/release-github-actions/get-release-version@master`). This means any test run from `master` always exercises the latest code across all sub-actions.
+
+When `release.yml` fast-forwards the `v1` branch to a release tag, it then rewrites every `@master` ref in `action.yml` files and `automated-release.yml` to the exact release commit SHA, then commits. So `v1` is a self-consistent frozen snapshot — no floating refs.
+
+**Do not write new internal `uses:` as `@v1` anywhere in this repo** — this applies to `action.yml` files, `automated-release.yml`, and test workflows (`.github/workflows/test-*.yml`). Always use `@master`; the release workflow handles pinning automatically. This includes string-match assertions in test scripts (e.g. `grep -q "...@master"`).
+
 ### Shared Python code
 
 Common helpers live in `shared/` (`eprint`, `get_jira_instance`, `CUSTOM_FIELDS`). Import via:
