@@ -14,7 +14,7 @@ from io import StringIO
 # Add the current directory to the path to import our module
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from create_release_ticket import get_jira_instance, create_release_ticket, main
+from create_release_ticket import create_release_ticket, main
 from jira.exceptions import JIRAError
 
 
@@ -26,35 +26,6 @@ class TestCreateReleaseTicket(unittest.TestCase):
             'JIRA_USER': 'test_user',
             'JIRA_TOKEN': 'test_token'
         }
-
-    @patch.dict(os.environ, {})
-    def test_get_jira_instance_missing_credentials(self):
-        """Test that get_jira_instance exits when credentials are missing."""
-        with self.assertRaises(SystemExit) as cm:
-            get_jira_instance('https://test.jira.com')
-        self.assertEqual(cm.exception.code, 1)
-
-    @patch.dict(os.environ, {'JIRA_USER': 'test', 'JIRA_TOKEN': 'token'})
-    @patch('create_release_ticket.JIRA')
-    def test_get_jira_instance_success(self, mock_jira_class):
-        """Test successful JIRA instance creation."""
-        mock_jira = Mock()
-        mock_jira_class.return_value = mock_jira
-
-        result = get_jira_instance('https://prod.com')
-
-        self.assertEqual(result, mock_jira)
-        mock_jira_class.assert_called_once_with('https://prod.com', basic_auth=('test', 'token'), get_server_info=True)
-
-    @patch.dict(os.environ, {'JIRA_USER': 'test', 'JIRA_TOKEN': 'token'})
-    @patch('create_release_ticket.JIRA')
-    def test_get_jira_instance_auth_failure(self, mock_jira_class):
-        """Test JIRA instance creation with authentication failure."""
-        mock_jira_class.side_effect = JIRAError(status_code=401, text="Unauthorized")
-
-        with self.assertRaises(SystemExit) as cm:
-            get_jira_instance('https://prod.com')
-        self.assertEqual(cm.exception.code, 1)
 
     def test_create_release_ticket_with_all_fields(self):
         """Test creating release ticket with all fields."""
@@ -159,7 +130,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         '--project-name', 'Test Project',
         '--version', '1.0.0',
         '--short-description', 'Test release',
-        '--jira-url', 'https://test.jira.com',
+        '--use-sandbox', 'false',
         '--jira-release-url', 'https://jira.com/release/notes'
     ])
     @patch('create_release_ticket.get_jira_instance')
@@ -179,7 +150,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         main()
 
         # Verify get_jira_instance was called with correct URL
-        mock_get_jira.assert_called_once_with('https://test.jira.com')
+        mock_get_jira.assert_called_once_with('false')
 
         # Verify create_release_ticket was called
         mock_create_ticket.assert_called_once()
@@ -204,7 +175,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         '--version', '1.0.0',
         '--short-description', 'Test release',
         '--due-date', '2029-12-24',
-        '--jira-url', 'https://sandbox.jira.com',
+        '--use-sandbox', 'true',
         '--jira-release-url', 'https://sandbox.jira.com/release/notes',
         '--documentation-status', 'Ready',
         '--rule-props-changed', 'Yes',
@@ -227,7 +198,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         main()
 
         # Verify get_jira_instance was called with sandbox URL
-        mock_get_jira.assert_called_once_with('https://sandbox.jira.com')
+        mock_get_jira.assert_called_once_with('true')
 
         # Verify create_release_ticket was called with correct parameters
         mock_create_ticket.assert_called_once()
@@ -237,7 +208,7 @@ class TestCreateReleaseTicket(unittest.TestCase):
         self.assertEqual(args.project_name, 'Test Project')
         self.assertEqual(args.version, '1.0.0')
         self.assertEqual(args.short_description, 'Test release')
-        self.assertEqual(args.jira_url, 'https://sandbox.jira.com')
+        self.assertEqual(args.use_sandbox, 'true')
         self.assertEqual(args.jira_release_url, 'https://sandbox.jira.com/release/notes')
         self.assertEqual(args.documentation_status, 'Ready')
         self.assertEqual(args.rule_props_changed, 'Yes')

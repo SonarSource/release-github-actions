@@ -15,7 +15,7 @@ from io import StringIO
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from create_integration_ticket import (
-    get_jira_instance, validate_release_ticket, create_integration_ticket,
+    validate_release_ticket, create_integration_ticket,
     link_tickets, main
 )
 from jira.exceptions import JIRAError
@@ -29,65 +29,6 @@ class TestCreateIntegrationTicket(unittest.TestCase):
             'JIRA_USER': 'test_user',
             'JIRA_TOKEN': 'test_token'
         }
-
-    @patch.dict(os.environ, {})
-    def test_get_jira_instance_missing_credentials(self):
-        """Test that get_jira_instance exits when credentials are missing."""
-        with self.assertRaises(SystemExit) as cm:
-            get_jira_instance('https://sonarsource.atlassian.net/')
-        self.assertEqual(cm.exception.code, 1)
-
-    @patch.dict(os.environ, {'JIRA_USER': 'test', 'JIRA_TOKEN': 'token'})
-    @patch('create_integration_ticket.JIRA')
-    def test_get_jira_instance_success_prod(self, mock_jira_class):
-        """Test successful JIRA instance creation for production."""
-        mock_jira = Mock()
-        mock_jira_class.return_value = mock_jira
-
-        jira_client = get_jira_instance('https://sonarsource.atlassian.net/')
-
-        self.assertEqual(jira_client, mock_jira)
-        mock_jira_class.assert_called_once_with(
-            'https://sonarsource.atlassian.net/',
-            basic_auth=('test', 'token'),
-            get_server_info=True
-        )
-
-    @patch.dict(os.environ, {'JIRA_USER': 'test', 'JIRA_TOKEN': 'token'})
-    @patch('create_integration_ticket.JIRA')
-    def test_get_jira_instance_success_sandbox(self, mock_jira_class):
-        """Test successful JIRA instance creation for sandbox."""
-        mock_jira = Mock()
-        mock_jira_class.return_value = mock_jira
-
-        jira_client = get_jira_instance('https://sonarsource-sandbox-608.atlassian.net/')
-
-        self.assertEqual(jira_client, mock_jira)
-        mock_jira_class.assert_called_once_with(
-            'https://sonarsource-sandbox-608.atlassian.net/',
-            basic_auth=('test', 'token'),
-            get_server_info=True
-        )
-
-    @patch.dict(os.environ, {'JIRA_USER': 'test', 'JIRA_TOKEN': 'token'})
-    @patch('create_integration_ticket.JIRA')
-    def test_get_jira_instance_auth_failure(self, mock_jira_class):
-        """Test JIRA instance creation with authentication failure."""
-        mock_jira_class.side_effect = JIRAError(status_code=401, text="Unauthorized")
-
-        with self.assertRaises(SystemExit) as cm:
-            get_jira_instance('https://sonarsource.atlassian.net/')
-        self.assertEqual(cm.exception.code, 1)
-
-    @patch.dict(os.environ, {'JIRA_USER': 'test', 'JIRA_TOKEN': 'token'})
-    @patch('create_integration_ticket.JIRA')
-    def test_get_jira_instance_unexpected_error(self, mock_jira_class):
-        """Test JIRA instance creation with unexpected error."""
-        mock_jira_class.side_effect = Exception("Unexpected error")
-
-        with self.assertRaises(SystemExit) as cm:
-            get_jira_instance('https://sonarsource.atlassian.net/')
-        self.assertEqual(cm.exception.code, 1)
 
     def test_validate_release_ticket_success(self):
         """Test successful release ticket validation."""
@@ -481,7 +422,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         '--ticket-summary', 'Integration for TestProject 1.0.0',
         '--release-ticket-key', 'REL-123',
         '--target-jira-project', 'INT',
-        '--jira-url', 'https://sonarsource.atlassian.net/',
+        '--use-sandbox', 'false',
         '--link-type', 'relates to'
     ])
     @patch('create_integration_ticket.get_jira_instance')
@@ -509,8 +450,8 @@ class TestCreateIntegrationTicket(unittest.TestCase):
 
         main()
 
-        # Verify get_jira_instance was called with correct URL
-        mock_get_jira.assert_called_once_with('https://sonarsource.atlassian.net/')
+        # Verify get_jira_instance was called with correct flag
+        mock_get_jira.assert_called_once_with('false')
 
         # Verify validate_release_ticket was called
         mock_validate_release_ticket.assert_called_once_with(mock_jira, 'REL-123')
@@ -523,7 +464,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         self.assertEqual(args.ticket_summary, 'Integration for TestProject 1.0.0')
         self.assertEqual(args.release_ticket_key, 'REL-123')
         self.assertEqual(args.target_jira_project, 'INT')
-        self.assertEqual(args.jira_url, 'https://sonarsource.atlassian.net/')
+        self.assertEqual(args.use_sandbox, 'false')
         self.assertEqual(args.link_type, 'relates to')
 
         # Verify link_tickets was called
@@ -543,7 +484,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         '--ticket-summary', 'Minimal integration ticket',
         '--release-ticket-key', 'REL-456',
         '--target-jira-project', 'TEST',
-        '--jira-url', 'https://sonarsource-sandbox-608.atlassian.net/'
+        '--use-sandbox', 'true'
     ])
     @patch('create_integration_ticket.get_jira_instance')
     @patch('create_integration_ticket.validate_release_ticket')
@@ -570,8 +511,8 @@ class TestCreateIntegrationTicket(unittest.TestCase):
 
         main()
 
-        # Verify get_jira_instance was called with sandbox URL
-        mock_get_jira.assert_called_once_with('https://sonarsource-sandbox-608.atlassian.net/')
+        # Verify get_jira_instance was called with sandbox flag
+        mock_get_jira.assert_called_once_with('true')
 
         # Verify parameters were parsed correctly with defaults
         call_args = mock_create_ticket.call_args[0]
@@ -579,7 +520,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         self.assertEqual(args.ticket_summary, 'Minimal integration ticket')
         self.assertEqual(args.release_ticket_key, 'REL-456')
         self.assertEqual(args.target_jira_project, 'TEST')
-        self.assertEqual(args.jira_url, 'https://sonarsource-sandbox-608.atlassian.net/')
+        self.assertEqual(args.use_sandbox, 'true')
         self.assertEqual(args.link_type, 'relates to')  # default
 
         # Verify link_tickets was called with default link type
@@ -593,7 +534,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         '--ticket-description', 'This ticket has a detailed description',
         '--release-ticket-key', 'REL-789',
         '--target-jira-project', 'DESC',
-        '--jira-url', 'https://sonarsource.atlassian.net/',
+        '--use-sandbox', 'false',
         '--link-type', 'depends on'
     ])
     @patch('create_integration_ticket.get_jira_instance')
@@ -621,8 +562,8 @@ class TestCreateIntegrationTicket(unittest.TestCase):
 
         main()
 
-        # Verify get_jira_instance was called with correct URL
-        mock_get_jira.assert_called_once_with('https://sonarsource.atlassian.net/')
+        # Verify get_jira_instance was called with correct flag
+        mock_get_jira.assert_called_once_with('false')
 
         # Verify validate_release_ticket was called
         mock_validate_release_ticket.assert_called_once_with(mock_jira, 'REL-789')
@@ -636,7 +577,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         self.assertEqual(args.ticket_description, 'This ticket has a detailed description')
         self.assertEqual(args.release_ticket_key, 'REL-789')
         self.assertEqual(args.target_jira_project, 'DESC')
-        self.assertEqual(args.jira_url, 'https://sonarsource.atlassian.net/')
+        self.assertEqual(args.use_sandbox, 'false')
         self.assertEqual(args.link_type, 'depends on')
 
         # Verify link_tickets was called

@@ -91,7 +91,7 @@ class TestMain(unittest.TestCase):
     @patch('cleanup.get_jira_instance')
     @patch('sys.argv', [
         'cleanup.py',
-        '--jira-url', 'https://sandbox.atlassian.net/',
+        '--use-sandbox', 'true',
         '--version-id', '12345',
         '--issue-keys', 'SONARIAC-100,SONARIAC-101,SONARIAC-102'
     ])
@@ -106,7 +106,7 @@ class TestMain(unittest.TestCase):
 
         main()
 
-        mock_get_jira.assert_called_once_with('https://sandbox.atlassian.net/')
+        mock_get_jira.assert_called_once_with('true')
         # Should have fetched 3 issues and 1 version
         self.assertEqual(mock_jira.issue.call_count, 3)
         mock_jira.version.assert_called_once_with('12345')
@@ -134,7 +134,7 @@ class TestMain(unittest.TestCase):
         try:
             with patch('sys.argv', [
                 'cleanup.py',
-                '--jira-url', 'https://sandbox.atlassian.net/',
+                '--use-sandbox', 'true',
                 '--state-file', state_file
             ]):
                 main()
@@ -147,7 +147,7 @@ class TestMain(unittest.TestCase):
     @patch('cleanup.get_jira_instance')
     @patch('sys.argv', [
         'cleanup.py',
-        '--jira-url', 'https://sandbox.atlassian.net/',
+        '--use-sandbox', 'true',
         '--version-id', '12345',
         '--issue-keys', ''
     ])
@@ -166,7 +166,7 @@ class TestMain(unittest.TestCase):
     @patch('cleanup.get_jira_instance')
     @patch('sys.argv', [
         'cleanup.py',
-        '--jira-url', 'https://sandbox.atlassian.net/',
+        '--use-sandbox', 'true',
         '--version-id', '12345',
         '--issue-keys', 'SONARIAC-100'
     ])
@@ -184,7 +184,7 @@ class TestMain(unittest.TestCase):
     @patch('cleanup.get_jira_instance')
     @patch('sys.argv', [
         'cleanup.py',
-        '--jira-url', 'https://sandbox.atlassian.net/',
+        '--use-sandbox', 'true',
         '--state-file', '/nonexistent/path/state.json'
     ])
     def test_main_handles_missing_state_file(self, mock_get_jira):

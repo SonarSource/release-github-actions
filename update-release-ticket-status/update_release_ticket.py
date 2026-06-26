@@ -9,50 +9,11 @@ and optionally reassigning it.
 import argparse
 import os
 import sys
-from jira import JIRA
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'shared'))
+from jira_common import eprint, get_jira_instance
 from jira.exceptions import JIRAError
 
-
-def eprint(*args, **kwargs):
-    """
-    Prints messages to the standard error stream (stderr) for logging purposes.
-    This separates diagnostic output from the script's primary result.
-    """
-    print(*args, file=sys.stderr, **kwargs)
-
-
-# noinspection DuplicatedCode
-def get_jira_instance(jira_url):
-    """
-    Initializes and returns a JIRA client instance based on environment variables.
-
-    Args:
-        jira_url (str): The Jira server URL to connect to.
-
-    Returns:
-        JIRA: An authenticated JIRA client instance.
-    """
-    jira_user = os.environ.get('JIRA_USER')
-    jira_token = os.environ.get('JIRA_TOKEN')
-
-    if not jira_user or not jira_token:
-        eprint("Error: JIRA_USER and JIRA_TOKEN environment variables must be set.")
-        sys.exit(1)
-
-    eprint(f"Connecting to JIRA server at: {jira_url}")
-    eprint(f"Authenticating with user: {jira_user}")
-
-    try:
-        jira_client = JIRA(jira_url, basic_auth=(jira_user, jira_token), get_server_info=True)
-        eprint("JIRA authentication successful.")
-        return jira_client
-    except JIRAError as e:
-        eprint(f"Error: JIRA authentication failed. Status: {e.status_code}")
-        eprint(f"Response text: {e.text}")
-        sys.exit(1)
-    except Exception as e:
-        eprint(f"An unexpected error occurred during JIRA connection: {e}")
-        sys.exit(1)
 
 
 def update_ticket_status(jira_client, ticket_key, new_status, assignee_email):
@@ -119,12 +80,12 @@ def main():
                         help="The target status for the ticket.")
     parser.add_argument("--assignee", required=False, default=None,
                         help="The email of the user to assign the ticket to.")
-    parser.add_argument('--jira-url', required=True,
-                        help="The Jira server URL to connect to.")
+    parser.add_argument('--use-sandbox', default='false',
+                        help='Use Jira sandbox (true/false).')
 
     args = parser.parse_args()
 
-    jira = get_jira_instance(args.jira_url)
+    jira = get_jira_instance(args.use_sandbox)
     update_ticket_status(jira, args.ticket_key, args.status, args.assignee)
 
     eprint("\n" + "=" * 50)

@@ -15,7 +15,6 @@ from io import StringIO
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from get_jira_release_notes import (
-    get_jira_instance,
     get_project_name,
     get_version_id,
     get_issues_for_release,
@@ -36,38 +35,6 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
             'JIRA_USER': 'test_user',
             'JIRA_TOKEN': 'test_token'
         }
-
-    @patch.dict(os.environ, {})
-    def test_get_jira_instance_missing_credentials(self):
-        """Test that get_jira_instance exits when credentials are missing."""
-        with self.assertRaises(SystemExit) as cm:
-            get_jira_instance('https://test.jira.com')
-        self.assertEqual(cm.exception.code, 1)
-
-    # noinspection DuplicatedCode
-    @patch.dict(os.environ, {'JIRA_USER': 'test', 'JIRA_TOKEN': 'token'})
-    @patch('get_jira_release_notes.JIRA')
-    def test_get_jira_instance_success(self, mock_jira_class):
-        """Test successful JIRA instance creation."""
-        mock_jira = Mock()
-        mock_jira.server_info.return_value = {}
-        mock_jira_class.return_value = mock_jira
-
-        result = get_jira_instance('https://prod.com')
-
-        self.assertEqual(result, mock_jira)
-        mock_jira_class.assert_called_once_with('https://prod.com', basic_auth=('test', 'token'))
-        mock_jira.server_info.assert_called_once()
-
-    @patch.dict(os.environ, {'JIRA_USER': 'test', 'JIRA_TOKEN': 'token'})
-    @patch('get_jira_release_notes.JIRA')
-    def test_get_jira_instance_auth_failure(self, mock_jira_class):
-        """Test JIRA instance creation with authentication failure."""
-        mock_jira_class.side_effect = JIRAError(status_code=401, text="Unauthorized")
-
-        with self.assertRaises(SystemExit) as cm:
-            get_jira_instance('https://prod.com')
-        self.assertEqual(cm.exception.code, 1)
 
     def test_get_project_name_success(self):
         """Test successful project name retrieval."""
@@ -230,7 +197,7 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
         'get_jira_release_notes.py',
         '--project-key', 'TEST',
         '--version-name', '1.0.0',
-        '--jira-url', 'https://test.jira.com'
+        '--use-sandbox', 'false'
     ])
     @patch('get_jira_release_notes.get_jira_instance')
     @patch('get_jira_release_notes.get_version_id')
@@ -248,22 +215,23 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
         """Test successful main function execution."""
         # Setup mocks
         mock_jira = Mock()
+        mock_jira.server_url = 'https://sonarsource.atlassian.net/'
         mock_get_jira.return_value = mock_jira
         mock_get_version_id.return_value = "10001"
         mock_get_project_name.return_value = "Test Project"
         mock_get_issues.return_value = []
         mock_format_notes.return_value = "# Release notes - Test Project - 1.0.0\n\nNo issues found."
         mock_format_jira_markup.return_value = "h1. Release notes - Test Project - 1.0.0\n\nNo issues found."
-        mock_generate_url.return_value = "https://test.jira.com/projects/TEST/versions/10001/tab/release-report-all-issues"
-        mock_generate_filter_url.return_value = "https://test.jira.com/issues/?jql=fixVersion%3D10001"
+        mock_generate_url.return_value = "https://sonarsource.atlassian.net/projects/TEST/versions/10001/tab/release-report-all-issues"
+        mock_generate_filter_url.return_value = "https://sonarsource.atlassian.net/issues/?jql=fixVersion%3D10001"
 
         main()
 
         # Verify all functions were called correctly
-        mock_get_jira.assert_called_once_with('https://test.jira.com')
+        mock_get_jira.assert_called_once_with('false')
         mock_get_version_id.assert_called_once_with(mock_jira, 'TEST', '1.0.0')
-        mock_generate_url.assert_called_once_with('https://test.jira.com', 'TEST', '10001')
-        mock_generate_filter_url.assert_called_once_with('https://test.jira.com', '10001')
+        mock_generate_url.assert_called_once_with('https://sonarsource.atlassian.net/', 'TEST', '10001')
+        mock_generate_filter_url.assert_called_once_with('https://sonarsource.atlassian.net/', '10001')
         mock_get_project_name.assert_called_once_with(mock_jira, 'TEST')
         mock_get_issues.assert_called_once_with(mock_jira, 'TEST', '1.0.0')
 
@@ -275,8 +243,8 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
         print_calls = mock_print.call_args_list
         self.assertEqual(len(print_calls), 9)  # URL + filter URL + markdown start/content/end + jira start/content/end
         # Check the main outputs
-        self.assertEqual(print_calls[1][0][0], "jira-release-url=https://test.jira.com/projects/TEST/versions/10001/tab/release-report-all-issues")
-        self.assertEqual(print_calls[2][0][0], "jira-release-issue-filter-url=https://test.jira.com/issues/?jql=fixVersion%3D10001")
+        self.assertEqual(print_calls[1][0][0], "jira-release-url=https://sonarsource.atlassian.net/projects/TEST/versions/10001/tab/release-report-all-issues")
+        self.assertEqual(print_calls[2][0][0], "jira-release-issue-filter-url=https://sonarsource.atlassian.net/issues/?jql=fixVersion%3D10001")
         self.assertEqual(print_calls[3][0][0], "release-notes<<EOF")
         self.assertEqual(print_calls[4][0][0], "# Release notes - Test Project - 1.0.0\n\nNo issues found.")
         self.assertEqual(print_calls[5][0][0], "EOF")
@@ -289,7 +257,7 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
         '--project-key', 'TEST',
         '--version-name', '1.0.0',
         '--issue-types', 'Bug,Feature',
-        '--jira-url', 'https://test.jira.com'
+        '--use-sandbox', 'false'
     ])
     @patch('get_jira_release_notes.get_jira_instance')
     @patch('get_jira_release_notes.get_version_id')
@@ -324,7 +292,7 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
         'get_jira_release_notes.py',
         '--project-key', 'TEST',
         '--version-name', '1.0.0',
-        '--jira-url', 'https://test.jira.com'
+        '--use-sandbox', 'false'
     ])
     @patch('get_jira_release_notes.get_jira_instance')
     @patch('sys.stderr', new_callable=StringIO)
@@ -345,7 +313,7 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
         'get_jira_release_notes.py',
         '--project-key', 'TEST',
         '--version-name', '1.0.0',
-        '--jira-url', 'https://test.jira.com'
+        '--use-sandbox', 'false'
     ])
     @patch('get_jira_release_notes.get_jira_instance')
     def test_main_jira_connection_failure(self, mock_get_jira):
@@ -360,7 +328,7 @@ class TestGetJiraReleaseNotes(unittest.TestCase):
         'get_jira_release_notes.py',
         '--project-key', 'TEST',
         '--version-name', '1.0.0',
-        '--jira-url', 'https://test.jira.com'
+        '--use-sandbox', 'false'
     ])
     @patch('get_jira_release_notes.get_jira_instance')
     @patch('get_jira_release_notes.get_version_id')

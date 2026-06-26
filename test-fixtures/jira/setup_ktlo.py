@@ -8,7 +8,7 @@ Creates three scenarios:
   - no_match:        one in-progress epic WITHOUT "KTLO" in the summary
 
 Usage:
-    python setup_ktlo.py --project-key GHA --run-id 12345 --jira-url https://sandbox.atlassian.net/
+    python setup_ktlo.py --project-key GHA --run-id 12345 --use-sandbox true
 """
 
 import argparse
@@ -48,12 +48,12 @@ def main():
     parser = argparse.ArgumentParser(description="Set up KTLO epic test fixtures.")
     parser.add_argument("--project-key", required=True)
     parser.add_argument("--run-id", required=True)
-    parser.add_argument("--jira-url", required=True)
+    parser.add_argument("--use-sandbox", default="false")
     parser.add_argument("--state-file", default=STATE_FILE_DEFAULT)
     args = parser.parse_args()
     args.state_file = safe_path(args.state_file)
 
-    jira = get_jira_instance(args.jira_url)
+    jira = get_jira_instance(args.use_sandbox)
     run_id = args.run_id
     project = args.project_key
 

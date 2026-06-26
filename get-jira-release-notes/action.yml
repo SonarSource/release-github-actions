@@ -58,19 +58,19 @@ runs:
         JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
         ISSUE_TYPES: ${{ inputs.issue-types }}
-        JIRA_URL: "https://sonarsource${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && '-sandbox-608' || '' }}.atlassian.net/"
+        USE_SANDBOX: ${{ inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX }}
       run: |
         PROJECT_KEY="${{ inputs.jira-project-key || env.JIRA_PROJECT_KEY }}"
         VERSION_NAME="${{ inputs.jira-version-name || env.JIRA_VERSION_NAME }}"
-        
+
         if [[ -z "$PROJECT_KEY" || -z "$VERSION_NAME" ]]; then
           echo "::error::Both jira-project-key and jira-version-name must be provided"
           exit 1
         fi
-        
+
         python ${{ github.action_path }}/get_jira_release_notes.py \
           --project-key="$PROJECT_KEY" \
           --version-name="$VERSION_NAME" \
           --issue-types="$ISSUE_TYPES" \
-          --jira-url="$JIRA_URL" \
+          --use-sandbox="$USE_SANDBOX" \
           | tee -a $GITHUB_OUTPUT | sed 's/^jira-release-url=/JIRA_RELEASE_URL=/' | sed 's/^jira-release-issue-filter-url=/JIRA_RELEASE_ISSUE_FILTER_URL=/' | sed 's/^release-notes<</RELEASE_NOTES<</' | sed 's/^jira-release-notes<</JIRA_RELEASE_NOTES<</' >> $GITHUB_ENV

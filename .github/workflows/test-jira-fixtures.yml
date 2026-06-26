@@ -87,7 +87,7 @@ jobs:
           python test-fixtures/jira/setup.py \
             --project-key GHA \
             --run-id "${{ github.run_id }}" \
-            --jira-url "https://sonarsource-sandbox-608.atlassian.net/"
+            --use-sandbox "true"
           echo "Fixture state:"
           cat /tmp/jira-fixtures.json | jq .
 
@@ -128,7 +128,7 @@ jobs:
         run: |
           if [ -f /tmp/jira-fixtures.json ]; then
             python test-fixtures/jira/cleanup.py \
-              --jira-url "https://sonarsource-sandbox-608.atlassian.net/" \
+              --use-sandbox "true" \
               --state-file /tmp/jira-fixtures.json
           else
             echo "State file not found — setup failed before writing fixtures, nothing to clean up."

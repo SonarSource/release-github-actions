@@ -124,7 +124,7 @@ class TestMain(unittest.TestCase):
         'setup.py',
         '--project-key', 'SONARIAC',
         '--run-id', '42',
-        '--jira-url', 'https://sandbox.atlassian.net/'
+        '--use-sandbox', 'true'
     ])
     def test_main_outputs_json(self, mock_stdout, mock_get_jira, mock_write_state):
         """Main should print valid JSON with version_id, version_name, issue_keys."""
@@ -159,7 +159,7 @@ class TestMain(unittest.TestCase):
         'setup.py',
         '--project-key', 'SONARIAC',
         '--run-id', '42',
-        '--jira-url', 'https://sandbox.atlassian.net/'
+        '--use-sandbox', 'true'
     ])
     def test_main_writes_partial_state_before_issues(self, mock_stdout, mock_get_jira, mock_write_state):
         """Main should write state incrementally: once with empty keys, then after each issue."""
@@ -198,7 +198,7 @@ class TestMain(unittest.TestCase):
         'setup.py',
         '--project-key', 'TESTPROJ',
         '--run-id', '999',
-        '--jira-url', 'https://sandbox.atlassian.net/'
+        '--use-sandbox', 'true'
     ])
     def test_main_uses_provided_project_key(self, mock_stdout, mock_get_jira, mock_write_state):
         """Main should use the project key from arguments."""
@@ -241,7 +241,7 @@ class TestMain(unittest.TestCase):
             'setup.py',
             '--project-key', 'SONARIAC',
             '--run-id', '42',
-            '--jira-url', 'https://sandbox.atlassian.net/',
+            '--use-sandbox', 'true',
             '--state-file', custom_path,
         ]):
             main()

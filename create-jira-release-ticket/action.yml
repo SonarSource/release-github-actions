@@ -79,7 +79,7 @@ runs:
         RELEASE_VERSION: ${{ inputs.version || env.RELEASE_VERSION }}
         SHORT_DESCRIPTION: ${{ inputs.short-description }}
         DUE_DATE: ${{ inputs.due-date }}
-        JIRA_URL: ${{ ((inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX) == 'true') && 'https://sonarsource-sandbox-608.atlassian.net/' || 'https://sonarsource.atlassian.net/' }}
+        USE_SANDBOX: ${{ inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX }}
         DOCUMENTATION_STATUS: ${{ inputs.documentation-status }}
         RULE_PROPS_CHANGED: ${{ inputs.rule-props-changed }}
         JIRA_RELEASE_URL: ${{ inputs.jira-release-url || env.JIRA_RELEASE_URL }}
@@ -98,7 +98,7 @@ runs:
           --version="$RELEASE_VERSION" \
           --due-date="$DUE_DATE" \
           --short-description="$SHORT_DESCRIPTION" \
-          --jira-url="$JIRA_URL" \
+          --use-sandbox="$USE_SANDBOX" \
           --documentation-status="$DOCUMENTATION_STATUS" \
           --rule-props-changed="$RULE_PROPS_CHANGED" \
           --jira-release-url="$JIRA_RELEASE_URL" \

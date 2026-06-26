@@ -12,7 +12,7 @@ Creates a test version and sample issues in a Jira sandbox project.
 python setup.py \
   --project-key SONARIAC \
   --run-id "$GITHUB_RUN_ID" \
-  --jira-url "https://sonarsource-sandbox-608.atlassian.net/"
+  --use-sandbox "true"
 ```
 
 **Output** (JSON to stdout):
@@ -35,13 +35,13 @@ Deletes test fixtures. Idempotent — succeeds even if resources are already del
 ```bash
 # From inline arguments:
 python cleanup.py \
-  --jira-url "https://sonarsource-sandbox-608.atlassian.net/" \
+  --use-sandbox "true" \
   --version-id 12345 \
   --issue-keys "SONARIAC-100,SONARIAC-101,SONARIAC-102"
 
 # From a state file (output of setup.py):
 python cleanup.py \
-  --jira-url "https://sonarsource-sandbox-608.atlassian.net/" \
+  --use-sandbox "true" \
   --state-file /tmp/setup-state.json
 ```
 
@@ -73,7 +73,7 @@ python cleanup.py \
     python test-fixtures/jira/setup.py \
       --project-key SONARIAC \
       --run-id "${{ github.run_id }}" \
-      --jira-url "https://sonarsource-sandbox-608.atlassian.net/"
+      --use-sandbox "true"
     echo "version_name=$(jq -r .version_name /tmp/jira-fixtures.json)" >> "$GITHUB_OUTPUT"
 
 # ... run your integration tests here ...
@@ -86,7 +86,7 @@ python cleanup.py \
   run: |
     if [ -f /tmp/jira-fixtures.json ]; then
       python test-fixtures/jira/cleanup.py \
-        --jira-url "https://sonarsource-sandbox-608.atlassian.net/" \
+        --use-sandbox "true" \
         --state-file /tmp/jira-fixtures.json
     else
       echo "State file not found — setup failed before writing fixtures, nothing to clean up."

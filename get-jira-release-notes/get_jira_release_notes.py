@@ -10,39 +10,10 @@ import argparse
 import os
 import sys
 from collections import defaultdict
-from jira import JIRA
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'shared'))
+from jira_common import eprint, get_jira_instance
 from jira.exceptions import JIRAError
-
-
-# noinspection DuplicatedCode
-def eprint(*args, **kwargs):
-    """Prints messages to stderr to avoid polluting stdout, which is used for the script's output."""
-    print(*args, file=sys.stderr, **kwargs)
-
-
-def get_jira_instance(jira_url):
-    """Initializes and returns a JIRA client instance."""
-    jira_user = os.environ.get('JIRA_USER')
-    jira_token = os.environ.get('JIRA_TOKEN')
-
-    if not jira_user or not jira_token:
-        eprint("Error: JIRA_USER and JIRA_TOKEN environment variables must be set.")
-        sys.exit(1)
-
-    eprint(f"Connecting to JIRA server at: {jira_url}")
-
-    try:
-        jira_client = JIRA(jira_url, basic_auth=(jira_user, jira_token))
-        jira_client.server_info()
-        eprint("JIRA authentication successful.")
-        return jira_client
-    except JIRAError as e:
-        eprint(f"Error: JIRA authentication failed. Status: {e.status_code}")
-        eprint(f"Response text: {e.text}")
-        sys.exit(1)
-    except Exception as e:
-        eprint(f"An unexpected error occurred during JIRA connection: {e}")
-        sys.exit(1)
 
 
 def get_project_name(jira_client, project_key):
@@ -161,7 +132,7 @@ def main():
                         help="The name of the 'fixVersion' in Jira. This will also be used as the version in the title.")
     parser.add_argument("--issue-types", default="",
                         help="Optional comma-separated list of issue types to include, in order.")
-    parser.add_argument("--jira-url", required=True, help="The Jira server URL.")
+    parser.add_argument("--use-sandbox", default="false", help="Use Jira sandbox (true/false).")
     
     args = parser.parse_args()
 
@@ -179,20 +150,21 @@ def main():
         ]
         eprint(f"Using default issue type order: {category_order}")
 
-    jira = get_jira_instance(args.jira_url)
+    jira = get_jira_instance(args.use_sandbox)
+    jira_url = jira.server_url
 
     # Get version ID for URL generation
     version_id = get_version_id(jira, args.project_key, args.version_name)
 
     # Generate release notes URL and issue filter URL
-    release_notes_url = generate_release_notes_url(args.jira_url, args.project_key, version_id)
-    release_issue_filter_url = generate_release_issue_filter_url(args.jira_url, version_id)
+    release_notes_url = generate_release_notes_url(jira_url, args.project_key, version_id)
+    release_issue_filter_url = generate_release_issue_filter_url(jira_url, version_id)
 
     # Get project name and issues for both formats
     project_name = get_project_name(jira, args.project_key)
     issues = get_issues_for_release(jira, args.project_key, args.version_name)
-    markdown_notes = format_notes_as_markdown(issues, args.jira_url, project_name, args.version_name, category_order)
-    jira_markup_notes = format_notes_as_jira_markup(issues, args.jira_url, project_name, args.version_name, category_order)
+    markdown_notes = format_notes_as_markdown(issues, jira_url, project_name, args.version_name, category_order)
+    jira_markup_notes = format_notes_as_jira_markup(issues, jira_url, project_name, args.version_name, category_order)
 
     # Output results for GitHub Actions
     # Using multiline string format for the release notes

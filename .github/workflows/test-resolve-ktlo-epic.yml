@@ -91,7 +91,7 @@ jobs:
           python test-fixtures/jira/setup_ktlo.py \
             --project-key GHA \
             --run-id "${{ github.run_id }}" \
-            --jira-url "https://sonarsource-sandbox-608.atlassian.net/" \
+            --use-sandbox "true" \
             --state-file "$STATE_FILE"
           STATE=$(cat "$STATE_FILE")
           echo "one_match_key=$(echo "$STATE" | jq -r .one_match_key)" >> "$GITHUB_OUTPUT"
@@ -147,7 +147,7 @@ jobs:
           STDERR_OUTPUT=$(python resolve-ktlo-epic/resolve_ktlo_epic.py \
             --jira-project GHA \
             --epic-name-pattern "$PATTERN" \
-            --jira-url "https://sonarsource-sandbox-608.atlassian.net/" 2>&1 >/dev/null)
+            --use-sandbox "true" 2>&1 >/dev/null)
           if ! echo "$STDERR_OUTPUT" | grep -q "::warning::"; then
             echo "❌ Expected ::warning:: annotation in stderr for multi-match case"
             echo "Got: $STDERR_OUTPUT"
@@ -183,7 +183,7 @@ jobs:
         run: |
           if [ -f "$STATE_FILE" ]; then
             python test-fixtures/jira/cleanup_ktlo.py \
-              --jira-url "https://sonarsource-sandbox-608.atlassian.net/" \
+              --use-sandbox "true" \
               --state-file "$STATE_FILE"
           else
             echo "State file not found — setup failed before writing fixtures, nothing to clean up."
