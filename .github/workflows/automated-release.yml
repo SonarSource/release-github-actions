@@ -289,9 +289,9 @@ jobs:
     if: ${{ inputs.bump-version }}
     runs-on: ${{ inputs.runner-environment }}
     steps:
-      - name: No-op
+      - name: Skipped
         shell: bash
-        run: echo "release-lock sweep disabled pending statuses:write on the lock token"
+        run: echo "Skipped — release-lock status sweep requires statuses:write on the lock token (pending re-terraform-aws-vault update)"
 
   # This job freezes the specified branch to prevent changes during the release process.
   freeze-branch:
@@ -721,9 +721,9 @@ jobs:
     if: ${{ always() && inputs.bump-version && needs.bump-version.result != 'success' }}
     runs-on: ${{ inputs.runner-environment }}
     steps:
-      - name: No-op
+      - name: Skipped
         shell: bash
-        run: echo "release-lock reset disabled pending statuses:write on the lock token"
+        run: echo "Skipped — release-lock status reset requires statuses:write on the lock token (pending re-terraform-aws-vault update)"
 
   # This step creates integration tickets in various Jira projects based on the inputs provided.
   # It creates tickets for SLVS, SLVSCODE, SLE, SLI, SQC, and SQS as specified.
