@@ -10,7 +10,6 @@ on:
   push:
     branches:
       - master
-      - v*
     paths:
       - 'update-analysis-as-a-service/**'
       - '.github/workflows/automated-release.yml'
