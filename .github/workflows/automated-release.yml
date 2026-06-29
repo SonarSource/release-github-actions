@@ -289,14 +289,19 @@ jobs:
     if: ${{ inputs.bump-version }}
     runs-on: ${{ inputs.runner-environment }}
     permissions:
-      statuses: write
+      id-token: write
       pull-requests: read
     steps:
+      - name: Get Secrets from Vault
+        id: secrets
+        uses: SonarSource/vault-action-wrapper@v3
+        with:
+          secrets: |
+            development/github/token/{REPO_OWNER_NAME_DASH}-lock token | GITHUB_LOCK_TOKEN;
       - name: Post release-lock failure to all open PRs
         shell: bash
         env:
-          GH_REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.secrets.outputs.GITHUB_LOCK_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
           prs=$(gh pr list --state open --json number,headRefOid --limit 1000 --jq '.[]')
@@ -743,13 +748,19 @@ jobs:
     if: ${{ always() && inputs.bump-version && needs.bump-version.result != 'success' }}
     runs-on: ${{ inputs.runner-environment }}
     permissions:
-      statuses: write
+      id-token: write
       pull-requests: read
     steps:
+      - name: Get Secrets from Vault
+        id: secrets
+        uses: SonarSource/vault-action-wrapper@v3
+        with:
+          secrets: |
+            development/github/token/{REPO_OWNER_NAME_DASH}-lock token | GITHUB_LOCK_TOKEN;
       - name: Reset release-lock to success on all open PRs
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.secrets.outputs.GITHUB_LOCK_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
           prs=$(gh pr list --state open --json number,headRefOid --limit 1000 --jq '.[]')
