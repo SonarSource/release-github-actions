@@ -33,7 +33,7 @@ runs:
       shell: bash
       run: pip install -r ${{ github.action_path }}/requirements.txt
 
-    - uses: SonarSource/release-github-actions/get-jira-version@master
+    - uses: SonarSource/release-github-actions/get-jira-version@ee9b885a1660aa7bfb409bd67c8e800cb747ce77
       id: get-jira-version
       if: ${{ !inputs.jira-version-name && !env.JIRA_VERSION_NAME }}
 

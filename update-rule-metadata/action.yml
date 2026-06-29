@@ -227,7 +227,7 @@ runs:
     - name: Create PR
       if: ${{ steps.check-changes.outputs.has-changes == 'true' }}
       id: create-pr
-      uses: SonarSource/release-github-actions/create-pull-request@master
+      uses: SonarSource/release-github-actions/create-pull-request@ee9b885a1660aa7bfb409bd67c8e800cb747ce77
       with:
         commit-message: Update rule metadata
         title: Update rule metadata
@@ -243,7 +243,7 @@ runs:
 
     - name: Notify Slack
       if: ${{ inputs.slack-channel != '' && (steps.create-pr.outputs.pull-request-operation == 'created' || steps.create-pr.outputs.pull-request-operation == 'updated') }}
-      uses: SonarSource/release-github-actions/notify-slack@master
+      uses: SonarSource/release-github-actions/notify-slack@ee9b885a1660aa7bfb409bd67c8e800cb747ce77
       with:
         project-name: ${{ github.repository }}
         slack-channel: ${{ inputs.slack-channel }}
