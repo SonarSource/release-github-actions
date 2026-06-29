@@ -10,6 +10,7 @@ on:
   push:
     branches:
       - master
+      - v*
     paths:
       - 'update-analysis-as-a-service/**'
       - '.github/workflows/automated-release.yml'
@@ -49,5 +50,5 @@ jobs:
 
       - name: Verify action creates a pull request
         run: |
-          grep -q "SonarSource/release-github-actions/create-pull-request@master" update-analysis-as-a-service/action.yml
+          grep -qE "SonarSource/release-github-actions/create-pull-request@(master|[0-9a-f]{40})" update-analysis-as-a-service/action.yml
           grep -q "SonarSource/sonar-analysis-as-a-service" update-analysis-as-a-service/action.yml
