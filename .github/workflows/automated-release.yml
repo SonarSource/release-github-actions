@@ -288,10 +288,37 @@ jobs:
     name: Set release-lock on open PRs
     if: ${{ inputs.bump-version }}
     runs-on: ${{ inputs.runner-environment }}
+    permissions:
+      id-token: write
+      pull-requests: read
     steps:
-      - name: Skipped
+      - name: Get Secrets from Vault
+        id: secrets
+        uses: SonarSource/vault-action-wrapper@v3
+        with:
+          secrets: |
+            development/github/token/{REPO_OWNER_NAME_DASH}-lock token | GITHUB_LOCK_TOKEN;
+      - name: Post release-lock failure to all open PRs
         shell: bash
-        run: echo "Skipped — release-lock status sweep requires statuses:write on the lock token (pending re-terraform-aws-vault update)"
+        env:
+          GH_TOKEN: ${{ steps.secrets.outputs.GITHUB_LOCK_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          prs=$(gh pr list --state open --json number,headRefOid --limit 1000 --jq '.[]')
+          if [ -z "$prs" ]; then
+            echo "No open PRs found."
+            exit 0
+          fi
+          echo "$prs" | while IFS= read -r pr_json; do
+            pr_number=$(echo "$pr_json" | jq -r '.number')
+            sha=$(echo "$pr_json" | jq -r '.headRefOid')
+            echo "Setting release-lock=failure on PR #$pr_number ($sha)"
+            gh api --method POST "repos/$REPO/statuses/$sha" \
+              -f state=failure \
+              -f context=release-lock \
+              -f description="Release in progress — merge the version-bump PR first"
+          done
+          echo "Release-lock sweep complete."
 
   # This job freezes the specified branch to prevent changes during the release process.
   freeze-branch:
@@ -720,10 +747,37 @@ jobs:
     needs: [ bump-version ]
     if: ${{ always() && inputs.bump-version && needs.bump-version.result != 'success' }}
     runs-on: ${{ inputs.runner-environment }}
+    permissions:
+      id-token: write
+      pull-requests: read
     steps:
-      - name: Skipped
+      - name: Get Secrets from Vault
+        id: secrets
+        uses: SonarSource/vault-action-wrapper@v3
+        with:
+          secrets: |
+            development/github/token/{REPO_OWNER_NAME_DASH}-lock token | GITHUB_LOCK_TOKEN;
+      - name: Reset release-lock to success on all open PRs
         shell: bash
-        run: echo "Skipped — release-lock status reset requires statuses:write on the lock token (pending re-terraform-aws-vault update)"
+        env:
+          GH_TOKEN: ${{ steps.secrets.outputs.GITHUB_LOCK_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          prs=$(gh pr list --state open --json number,headRefOid --limit 1000 --jq '.[]')
+          if [ -z "$prs" ]; then
+            echo "No open PRs found."
+            exit 0
+          fi
+          echo "$prs" | while IFS= read -r pr_json; do
+            pr_number=$(echo "$pr_json" | jq -r '.number')
+            sha=$(echo "$pr_json" | jq -r '.headRefOid')
+            echo "Resetting release-lock on PR #$pr_number ($sha)"
+            gh api --method POST "repos/$REPO/statuses/$sha" \
+              -f state=success \
+              -f context=release-lock \
+              -f description="No release in progress"
+          done
+          echo "Release-lock reset complete."
 
   # This step creates integration tickets in various Jira projects based on the inputs provided.
   # It creates tickets for SLVS, SLVSCODE, SLE, SLI, SQC, and SQS as specified.
