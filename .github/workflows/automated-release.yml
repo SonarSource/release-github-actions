@@ -275,7 +275,7 @@ jobs:
           fi
           for pr in $pr_numbers; do
             echo "Disabling auto-merge on PR #$pr"
-            gh pr merge "$pr" --disable-auto-merge
+            gh pr merge "$pr" --disable-auto
           done
           echo "Auto-merge sweep complete."
 
