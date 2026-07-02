@@ -307,7 +307,7 @@ jobs:
                  "Add 'statuses: write' to the caller job's permissions to enable the release lock."
             exit 0
           fi
-          prs=$(gh pr list --state open --json number,headRefOid --limit 1000 --jq '.[]')
+          prs=$(gh pr list --repo "$REPO" --state open --json number,headRefOid --limit 1000 --jq '.[]')
           if [ -z "$prs" ]; then
             echo "No open PRs found."
             exit 0
@@ -759,7 +759,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
         run: |
-          prs=$(gh pr list --state open --json number,headRefOid --limit 1000 --jq '.[]')
+          prs=$(gh pr list --repo "$REPO" --state open --json number,headRefOid --limit 1000 --jq '.[]')
           if [ -z "$prs" ]; then
             echo "No open PRs found."
             exit 0
