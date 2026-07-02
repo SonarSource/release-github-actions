@@ -291,7 +291,7 @@ jobs:
     steps:
       - name: Skipped
         shell: bash
-        run: echo "Skipped — release-lock status sweep requires statuses:write on the lock token (pending re-terraform-aws-vault update)"
+        run: echo "Skipped — release-lock status sweep requires statuses:write on the lock token"
 
   # This job freezes the specified branch to prevent changes during the release process.
   freeze-branch:
@@ -723,7 +723,7 @@ jobs:
     steps:
       - name: Skipped
         shell: bash
-        run: echo "Skipped — release-lock status reset requires statuses:write on the lock token (pending re-terraform-aws-vault update)"
+        run: echo "Skipped — release-lock status reset requires statuses:write on the lock token"
 
   # This step creates integration tickets in various Jira projects based on the inputs provided.
   # It creates tickets for SLVS, SLVSCODE, SLE, SLI, SQC, and SQS as specified.
