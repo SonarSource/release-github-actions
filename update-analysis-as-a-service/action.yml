@@ -66,19 +66,28 @@ runs:
       with:
         repository: SonarSource/sonar-analysis-as-a-service
         ref: ${{ inputs.base-branch }}
-        sparse-checkout: gradle/libs.versions.toml
+        sparse-checkout: gradle/sonar-plugins.versions.toml
         sparse-checkout-cone-mode: false
         fetch-depth: 0
         token: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
 
+    - name: Set up Python
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      with:
+        python-version: '3.10'
+
+    - name: Install Dependencies
+      shell: bash
+      run: pip install -r ${{ github.action_path }}/requirements.txt
+
     - name: Update analyzer version in Gradle version catalog
       shell: bash
       env:
-        LIBS_VERSIONS_TOML: gradle/libs.versions.toml
+        SONAR_PLUGINS_VERSIONS_TOML: gradle/sonar-plugins.versions.toml
         PLUGIN_ARTIFACTS: ${{ inputs.plugin-artifacts }}
         PLUGIN_NAME: ${{ inputs.plugin-name }}
         RELEASE_VERSION: ${{ inputs.release-version }}
-      run: bash ${{ github.action_path }}/update_libs_versions_toml.sh
+      run: python ${{ github.action_path }}/update_sonar_plugins_versions_toml.py
 
     - name: Create Pull Request
       id: create_pr

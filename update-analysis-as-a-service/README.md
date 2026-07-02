@@ -4,11 +4,13 @@ This GitHub Action updates analyzer versions in `SonarSource/sonar-analysis-as-a
 
 ## Description
 
-The action updates `gradle/libs.versions.toml` in Analysis as a Service by:
+The action updates `gradle/sonar-plugins.versions.toml` in Analysis as a Service by:
 1. Checking out `SonarSource/sonar-analysis-as-a-service`
 2. Resolving version keys from `plugin-name` or `plugin-artifacts`
 3. Updating matching `[versions]` entries
 4. Creating a pull request with the changes using the specified GitHub token from Vault
+
+`gradle/sonar-plugins.versions.toml` is a separate Gradle version catalog (exposed as `sonarAnalyzers`, distinct from the default `libs` catalog) and is left ownerless in Analysis as a Service's CODEOWNERS, so analyzer squads can self-merge their own version bumps.
 
 ## Prerequisites
 
@@ -39,7 +41,7 @@ The `secret-name` provided to the action must have the following permissions on 
 
 ## Unonboarded Analyzers
 
-If no matching version key is found for an artifact in `gradle/libs.versions.toml`, the artifact is **skipped with a warning** — the action does not fail. When all artifacts are skipped (none found), the action exits cleanly with no PR created. This allows the SQAA integration to be enabled by default for all analyzers without breaking ones not yet onboarded to `sonar-analysis-as-a-service`.
+If no matching version key is found for an artifact in `gradle/sonar-plugins.versions.toml`, the artifact is **skipped with a warning** — the action does not fail. When all artifacts are skipped (none found), the action exits cleanly with no PR created. This allows the SQAA integration to be enabled by default for all analyzers without breaking ones not yet onboarded to `sonar-analysis-as-a-service`.
 
 ## Version Key Resolution
 
@@ -53,8 +55,8 @@ For each artifact, the action strips a `-enterprise` suffix and then resolves ve
 For example:
 
 * `dre` updates `sonar-dre`
-* `java` updates `sonar-java-plugin`
-* `java-symbolic-execution` updates `sonar-java-symbolic-execution-plugin`
+* `java` updates `sonar-java`
+* `java-symbolic-execution` updates `sonar-java-symbolic-execution`
 * `go-enterprise` updates `sonar-go`
 
 ## Usage
