@@ -288,10 +288,30 @@ jobs:
     name: Set release-lock on open PRs
     if: ${{ inputs.bump-version }}
     runs-on: ${{ inputs.runner-environment }}
+    permissions:
+      pull-requests: read
     steps:
-      - name: Skipped
+      - name: Post release-lock failure to all open PRs
         shell: bash
-        run: echo "Skipped — release-lock status sweep requires statuses:write on the lock token"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          prs=$(gh pr list --repo "$REPO" --state open --json number,headRefOid --limit 1000 --jq '.[]')
+          if [ -z "$prs" ]; then
+            echo "No open PRs found."
+            exit 0
+          fi
+          echo "$prs" | while IFS= read -r pr_json; do
+            pr_number=$(echo "$pr_json" | jq -r '.number')
+            sha=$(echo "$pr_json" | jq -r '.headRefOid')
+            echo "Setting release-lock=failure on PR #$pr_number ($sha)"
+            gh api --method POST "repos/$REPO/statuses/$sha" \
+              -f state=failure \
+              -f context=release-lock \
+              -f description="Release in progress — merge the version-bump PR first"
+          done
+          echo "Release-lock sweep complete."
 
   # This job freezes the specified branch to prevent changes during the release process.
   freeze-branch:
@@ -720,10 +740,32 @@ jobs:
     needs: [ bump-version ]
     if: ${{ always() && inputs.bump-version && needs.bump-version.result != 'success' }}
     runs-on: ${{ inputs.runner-environment }}
+    permissions:
+      pull-requests: read
     steps:
-      - name: Skipped
+      - name: Reset release-lock to success on all open PRs
         shell: bash
-        run: echo "Skipped — release-lock status reset requires statuses:write on the lock token"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          prs=$(gh pr list --repo "$REPO" --state open --json number,headRefOid --limit 1000 --jq '.[]')
+          if [ -z "$prs" ]; then
+            echo "No open PRs found."
+            exit 0
+          fi
+          echo "$prs" | while IFS= read -r pr_json; do
+            pr_number=$(echo "$pr_json" | jq -r '.number')
+            sha=$(echo "$pr_json" | jq -r '.headRefOid')
+            echo "Resetting release-lock on PR #$pr_number ($sha)"
+            if ! gh api --method POST "repos/$REPO/statuses/$sha" \
+                  -f state=success \
+                  -f context=release-lock \
+                  -f description="No release in progress" >/dev/null 2>&1; then
+              echo "::warning::Could not reset release-lock on PR #$pr_number ($sha) — token may lack statuses:write. Skipping."
+            fi
+          done
+          echo "Release-lock reset complete."
 
   # This step creates integration tickets in various Jira projects based on the inputs provided.
   # It creates tickets for SLVS, SLVSCODE, SLE, SLI, SQC, and SQS as specified.
