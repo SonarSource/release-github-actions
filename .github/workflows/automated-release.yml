@@ -289,6 +289,7 @@ jobs:
     if: ${{ inputs.bump-version }}
     runs-on: ${{ inputs.runner-environment }}
     permissions:
+      statuses: write
       pull-requests: read
     steps:
       - name: Post release-lock failure to all open PRs
@@ -741,6 +742,7 @@ jobs:
     if: ${{ always() && inputs.bump-version && needs.bump-version.result != 'success' }}
     runs-on: ${{ inputs.runner-environment }}
     permissions:
+      statuses: write
       pull-requests: read
     steps:
       - name: Reset release-lock to success on all open PRs
