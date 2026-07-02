@@ -73,6 +73,9 @@ def main():
     with open(toml_path, 'r', encoding='utf-8') as f:
         original_text = f.read()
     doc = tomlkit.parse(original_text)
+    if 'versions' not in doc:
+        eprint(f'::error::No [versions] table found in {toml_path}.')
+        sys.exit(1)
     versions_table = doc['versions']
 
     updated_keys = []
