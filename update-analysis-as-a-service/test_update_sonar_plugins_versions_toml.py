@@ -97,75 +97,86 @@ class TestUpdateSonarPluginsVersionsToml(unittest.TestCase):
             'SONAR_PLUGINS_VERSIONS_TOML': self.toml_path,
         }
 
-    def run_main(self, **env_overrides):
+    def _with_env(self, env_overrides):
         env = dict(self.env, **env_overrides)
         old_environ = dict(os.environ)
-        old_argv = sys.argv
         os.environ.clear()
         os.environ.update(env)
+        return old_environ
+
+    def run_main(self, **env_overrides):
+        """Run main() for the success path, where it returns normally."""
+        old_environ = self._with_env(env_overrides)
         try:
             main()
-        except SystemExit as exc:
-            return exc.code
         finally:
             os.environ.clear()
             os.environ.update(old_environ)
-            sys.argv = old_argv
-        return None
+
+    def run_main_exit_code(self, **env_overrides):
+        """Run main() for a path that calls sys.exit(), returning its code."""
+        old_environ = self._with_env(env_overrides)
+        try:
+            with self.assertRaises(SystemExit) as cm:
+                main()
+            return cm.exception.code
+        finally:
+            os.environ.clear()
+            os.environ.update(old_environ)
 
     def read_toml(self):
         with open(self.toml_path, 'r', encoding='utf-8') as f:
             return tomlkit.parse(f.read())
 
     def test_normal_update(self):
-        self.run_main(PLUGIN_NAME='dre', RELEASE_VERSION='2.7.0.1')
+        self.run_main(PLUGIN_NAME='dre', RELEASE_VERSION='2.7.0.10001')
         doc = self.read_toml()
-        self.assertEqual(doc['versions']['sonar-dre'], '2.7.0.1')
+        self.assertEqual(doc['versions']['sonar-dre'], '2.7.0.10001')
         self.assertEqual(doc['libraries']['sonar-dre-plugin']['version']['ref'], 'sonar-dre')
 
     def test_family_key_non_collision(self):
-        self.run_main(PLUGIN_NAME='java', RELEASE_VERSION='9.0.0.2')
+        self.run_main(PLUGIN_NAME='java', RELEASE_VERSION='9.0.0.20002')
         doc = self.read_toml()
-        self.assertEqual(doc['versions']['sonar-java'], '9.0.0.2')
+        self.assertEqual(doc['versions']['sonar-java'], '9.0.0.20002')
         self.assertEqual(doc['versions']['sonar-java-symbolic-execution'], '8.18.0.242')
 
     def test_enterprise_suffix_stripping(self):
-        self.run_main(PLUGIN_NAME='go', PLUGIN_ARTIFACTS='go-enterprise', RELEASE_VERSION='1.41.0.1')
+        self.run_main(PLUGIN_NAME='go', PLUGIN_ARTIFACTS='go-enterprise', RELEASE_VERSION='1.41.0.30003')
         doc = self.read_toml()
-        self.assertEqual(doc['versions']['sonar-go'], '1.41.0.1')
+        self.assertEqual(doc['versions']['sonar-go'], '1.41.0.30003')
 
     def test_multi_artifact_update(self):
-        self.run_main(PLUGIN_NAME='java', PLUGIN_ARTIFACTS='java,java-symbolic-execution', RELEASE_VERSION='9.1.0.3')
+        self.run_main(PLUGIN_NAME='java', PLUGIN_ARTIFACTS='java,java-symbolic-execution', RELEASE_VERSION='9.1.0.40004')
         doc = self.read_toml()
-        self.assertEqual(doc['versions']['sonar-java'], '9.1.0.3')
-        self.assertEqual(doc['versions']['sonar-java-symbolic-execution'], '9.1.0.3')
+        self.assertEqual(doc['versions']['sonar-java'], '9.1.0.40004')
+        self.assertEqual(doc['versions']['sonar-java-symbolic-execution'], '9.1.0.40004')
 
     def test_blank_artifacts_falls_back_to_plugin_name(self):
-        self.run_main(PLUGIN_NAME='python', PLUGIN_ARTIFACTS=' , ', RELEASE_VERSION='5.24.0.5')
+        self.run_main(PLUGIN_NAME='python', PLUGIN_ARTIFACTS=' , ', RELEASE_VERSION='5.24.0.50005')
         doc = self.read_toml()
-        self.assertEqual(doc['versions']['sonar-python'], '5.24.0.5')
+        self.assertEqual(doc['versions']['sonar-python'], '5.24.0.50005')
 
     def test_unknown_plugin_skipped_without_failing(self):
-        exit_code = self.run_main(PLUGIN_NAME='nonexistent-plugin-xyz', RELEASE_VERSION='1.0.0.1')
+        exit_code = self.run_main_exit_code(PLUGIN_NAME='nonexistent-plugin-xyz', RELEASE_VERSION='1.0.0.60006')
         self.assertEqual(exit_code, 0)
         doc = self.read_toml()
         self.assertEqual(doc['versions']['sonar-python'], '5.23.0.33560')
 
     def test_mixed_known_and_unknown_artifacts(self):
-        self.run_main(PLUGIN_NAME='python', PLUGIN_ARTIFACTS='python,nonexistent-plugin-xyz', RELEASE_VERSION='5.24.0.6')
+        self.run_main(PLUGIN_NAME='python', PLUGIN_ARTIFACTS='python,nonexistent-plugin-xyz', RELEASE_VERSION='5.24.0.70007')
         doc = self.read_toml()
-        self.assertEqual(doc['versions']['sonar-python'], '5.24.0.6')
+        self.assertEqual(doc['versions']['sonar-python'], '5.24.0.70007')
 
     def test_libraries_table_never_mutated(self):
         before = self.read_toml()['libraries']
-        self.run_main(PLUGIN_NAME='java', RELEASE_VERSION='9.0.0.2')
+        self.run_main(PLUGIN_NAME='java', RELEASE_VERSION='9.0.0.20002')
         after = self.read_toml()['libraries']
         self.assertEqual(tomlkit.dumps(before), tomlkit.dumps(after))
 
     def test_round_trip_preserves_header_and_structure(self):
         with open(self.toml_path, 'r', encoding='utf-8') as f:
             original_text = f.read()
-        self.run_main(PLUGIN_NAME='dre', RELEASE_VERSION='2.7.0.1')
+        self.run_main(PLUGIN_NAME='dre', RELEASE_VERSION='2.7.0.10001')
         with open(self.toml_path, 'r', encoding='utf-8') as f:
             updated_text = f.read()
 
@@ -181,7 +192,7 @@ class TestUpdateSonarPluginsVersionsToml(unittest.TestCase):
             (a, b) for a, b in zip(original_lines, updated_lines) if a != b
         ]
         self.assertEqual(len(changed), 1)
-        self.assertEqual(changed[0], ('sonar-dre = "2.6.0.14497"', 'sonar-dre = "2.7.0.1"'))
+        self.assertEqual(changed[0], ('sonar-dre = "2.6.0.14497"', 'sonar-dre = "2.7.0.10001"'))
 
 
 if __name__ == '__main__':
