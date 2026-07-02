@@ -289,21 +289,25 @@ jobs:
     if: ${{ inputs.bump-version }}
     runs-on: ${{ inputs.runner-environment }}
     permissions:
-      id-token: write
+      statuses: write
       pull-requests: read
     steps:
-      - name: Get Secrets from Vault
-        id: secrets
-        uses: SonarSource/vault-action-wrapper@v3
-        with:
-          secrets: |
-            development/github/token/{REPO_OWNER_NAME_DASH}-lock token | GITHUB_LOCK_TOKEN;
       - name: Post release-lock failure to all open PRs
         shell: bash
         env:
-          GH_TOKEN: ${{ steps.secrets.outputs.GITHUB_LOCK_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
         run: |
+          # Preflight: confirm the token has statuses:write. Consumers that have not
+          # yet granted this permission get a warning but the release proceeds normally.
+          # Self-heals once the caller job adds `statuses: write` to its permissions.
+          if ! gh api --method POST "repos/$REPO/statuses/$GITHUB_SHA" \
+                -f state=success -f context=release-lock \
+                -f description="Release in progress" >/dev/null 2>&1; then
+            echo "::warning::Token lacks statuses:write on $REPO — skipping release-lock sweep." \
+                 "Add 'statuses: write' to the caller job's permissions to enable the release lock."
+            exit 0
+          fi
           prs=$(gh pr list --state open --json number,headRefOid --limit 1000 --jq '.[]')
           if [ -z "$prs" ]; then
             echo "No open PRs found."
@@ -748,19 +752,13 @@ jobs:
     if: ${{ always() && inputs.bump-version && needs.bump-version.result != 'success' }}
     runs-on: ${{ inputs.runner-environment }}
     permissions:
-      id-token: write
+      statuses: write
       pull-requests: read
     steps:
-      - name: Get Secrets from Vault
-        id: secrets
-        uses: SonarSource/vault-action-wrapper@v3
-        with:
-          secrets: |
-            development/github/token/{REPO_OWNER_NAME_DASH}-lock token | GITHUB_LOCK_TOKEN;
       - name: Reset release-lock to success on all open PRs
         shell: bash
         env:
-          GH_TOKEN: ${{ steps.secrets.outputs.GITHUB_LOCK_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
         run: |
           prs=$(gh pr list --state open --json number,headRefOid --limit 1000 --jq '.[]')
@@ -772,10 +770,14 @@ jobs:
             pr_number=$(echo "$pr_json" | jq -r '.number')
             sha=$(echo "$pr_json" | jq -r '.headRefOid')
             echo "Resetting release-lock on PR #$pr_number ($sha)"
-            gh api --method POST "repos/$REPO/statuses/$sha" \
-              -f state=success \
-              -f context=release-lock \
-              -f description="No release in progress"
+            # A 403 here means the caller never granted statuses:write; no lock was
+            # ever set, so there is nothing to clear — warn and continue.
+            if ! gh api --method POST "repos/$REPO/statuses/$sha" \
+                  -f state=success \
+                  -f context=release-lock \
+                  -f description="No release in progress" >/dev/null 2>&1; then
+              echo "::warning::Could not reset release-lock on PR #$pr_number ($sha) — token may lack statuses:write. Skipping."
+            fi
           done
           echo "Release-lock reset complete."
 
