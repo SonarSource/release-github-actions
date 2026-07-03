@@ -206,7 +206,7 @@ _ERROR_PATTERNS = [
     re.compile(r"\bBUILD FAILURE\b"),                         # Maven BUILD FAILURE
     re.compile(r"\bFAILED\b"),                                # General FAILED marker
     re.compile(r"AssertionError"),                            # Test assertion failures
-    re.compile(r"^\s*at .+\(.+:\d+\)$"),                     # Stack trace lines
+    re.compile(r"^\s*at [^(]+\([^)]+:\d+\)$"),                 # Stack trace lines
 ]
 
 # Patterns to skip (noisy lines that aren't useful root cause info)
