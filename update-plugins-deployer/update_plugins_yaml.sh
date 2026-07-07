@@ -12,9 +12,11 @@ compute_anchor_key() {
   local artifact="$1"
   # Strip -enterprise suffix
   local base="${artifact%-enterprise}"
-  # dotnet special case: csharp and vbnet both map to sonar-dotnet
   case "$base" in
+    # dotnet special case: csharp and vbnet both map to sonar-dotnet
     csharp|vbnet) base="dotnet" ;;
+    # java-a3s-context-collector exception: the plugin's anchor is not prefixed with sonar-
+    java-a3s-context-collector) echo "$base"; return ;;
     *) ;;
   esac
   echo "sonar-${base}"

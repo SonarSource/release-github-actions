@@ -52,8 +52,11 @@ The `secret-name` provided must have `contents: write` and `pull-requests: write
 | `python-enterprise` | `sonar-python` |
 | `dotnet-enterprise` | `sonar-dotnet` |
 | `php`, `kotlin`, etc. | `sonar-{plugin-name}` |
+| `java-a3s-context-collector` | `java-a3s-context-collector` |
 
-General rule: strip `-enterprise` suffix, prepend `sonar-`. Exception: `dotnet-enterprise` maps to `sonar-dotnet` (covers both `csharp-enterprise` and `vbnet-enterprise` via aliases).
+General rule: strip `-enterprise` suffix, prepend `sonar-`. Exceptions:
+- `dotnet-enterprise` maps to `sonar-dotnet` (covers both `csharp-enterprise` and `vbnet-enterprise` via aliases).
+- `java-a3s-context-collector` keeps its name as-is — its anchor is **not** prefixed with `sonar-`.
 
 ## Usage
 

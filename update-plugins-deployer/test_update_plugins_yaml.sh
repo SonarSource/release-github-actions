@@ -69,6 +69,7 @@ versions:
   sonar-text: &version-sonar-text 2.43.0.11106
   sonar-python: &version-sonar-python 5.21.0.32726
   sonar-php: &version-sonar-php 3.56.0.15870
+  java-a3s-context-collector: &version-java-a3s-context-collector 1.0.0.100
 
 plugins:
   - key: sonar-java
@@ -100,6 +101,9 @@ plugins:
 
   - key: sonar-php
     version: *version-sonar-php
+
+  - key: java-a3s-context-collector
+    version: *version-java-a3s-context-collector
 EOF
 }
 
@@ -156,6 +160,20 @@ if [[ "$actual_sec" -eq 0 ]]; then
 else
   echo "❌ security update failed (exit $actual_sec)"
   FAIL=$((FAIL+1))
+fi
+rm -rf "$T"
+
+# Test: java-a3s-context-collector → anchor not prefixed with sonar-
+T=$(mktemp -d)
+make_plugins_yaml "$T"
+PLUGINS_YAML="$T/plugins.yaml" PLUGIN_ARTIFACTS="" PLUGIN_NAME="java-a3s-context-collector" RELEASE_VERSION="2.0.0.200" \
+  bash "$SCRIPT" >/dev/null 2>&1 && actual_a3s=0 || actual_a3s=$?
+if [[ "$actual_a3s" -eq 0 ]]; then
+  assert_contains "java-a3s-context-collector anchor updated" "$T/plugins.yaml" "java-a3s-context-collector: &version-java-a3s-context-collector 2.0.0.200"
+  assert_not_contains "java-a3s-context-collector anchor not sonar-prefixed" "$T/plugins.yaml" "sonar-java-a3s-context-collector"
+else
+  echo "❌ java-a3s-context-collector update failed (exit $actual_a3s)"
+  FAIL=$((FAIL+2))
 fi
 rm -rf "$T"
 
