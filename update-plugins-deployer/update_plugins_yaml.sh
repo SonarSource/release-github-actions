@@ -7,8 +7,8 @@
 #   RELEASE_VERSION - new version string (e.g. 1.2.3.45678)
 #
 # Environment variables (optional):
-#   SONAR_PREFIX    - "true" (default) prefixes the anchor key with "sonar-";
-#                     any other value leaves the key unprefixed
+#   SONAR_PREFIX    - boolean; true (default) prefixes the anchor key with "sonar-",
+#                     false leaves the key unprefixed
 
 set -euo pipefail
 

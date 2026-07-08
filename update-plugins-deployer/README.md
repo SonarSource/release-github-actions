@@ -57,7 +57,7 @@ The `secret-name` provided must have `contents: write` and `pull-requests: write
 
 General rule: strip `-enterprise` suffix, then prepend `sonar-` when `sonar-prefix` is `true` (the default). Exceptions:
 - `dotnet-enterprise` maps to `sonar-dotnet` (covers both `csharp-enterprise` and `vbnet-enterprise` via aliases).
-- Plugins whose anchor is **not** prefixed with `sonar-` (e.g. `java-a3s-context-collector`) must be updated by passing `sonar-prefix: 'false'`.
+- Plugins whose anchor is **not** prefixed with `sonar-` (e.g. `java-a3s-context-collector`) must be updated by passing `sonar-prefix: false`.
 
 ## Usage
 

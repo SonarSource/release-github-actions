@@ -15,7 +15,7 @@ inputs:
   sonar-prefix:
     description: 'A boolean value indicating if the plugin name should be prefixed with sonar- in the update.'
     required: false
-    default: 'true'
+    default: true
   secret-name:
     description: 'Name of the secret to fetch from the vault that has write access to sonar-plugins-deployer.'
     required: true
