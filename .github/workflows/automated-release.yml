@@ -899,7 +899,7 @@ jobs:
       - name: Update analyzer in sonar-plugins-deployer
         id: update-plugins-deployer
         if: ${{ inputs.sqc-integration }}
-        uses: SonarSource/release-github-actions/update-plugins-deployer@v1
+        uses: SonarSource/release-github-actions/update-plugins-deployer@ac/CLP-127
         with:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           ticket-key: ${{ needs.create-integration-tickets.outputs.sqc-ticket-key }}
