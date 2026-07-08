@@ -5,6 +5,10 @@
 #   PLUGINS_YAML    - path to plugins.yaml
 #   PLUGIN_NAME     - plugin name used to compute the anchor key
 #   RELEASE_VERSION - new version string (e.g. 1.2.3.45678)
+#
+# Environment variables (optional):
+#   SONAR_PREFIX    - "true" (default) prefixes the anchor key with "sonar-";
+#                     any other value leaves the key unprefixed
 
 set -euo pipefail
 
@@ -15,11 +19,15 @@ compute_anchor_key() {
   case "$base" in
     # dotnet special case: csharp and vbnet both map to sonar-dotnet
     csharp|vbnet) base="dotnet" ;;
-    # java-a3s-context-collector exception: the plugin's anchor is not prefixed with sonar-
-    java-a3s-context-collector) echo "$base"; return ;;
     *) ;;
   esac
-  echo "sonar-${base}"
+  # SONAR_PREFIX controls whether the anchor key is prefixed with "sonar-".
+  # Some plugins (e.g. java-a3s-context-collector) use an unprefixed anchor.
+  if [[ "$SONAR_PREFIX" == "true" ]]; then
+    echo "sonar-${base}"
+  else
+    echo "$base"
+  fi
 }
 
 update_anchor() {
@@ -45,6 +53,7 @@ update_anchor() {
 PLUGINS_YAML="${PLUGINS_YAML:-plugins.yaml}"
 RELEASE_VERSION="${RELEASE_VERSION:?RELEASE_VERSION is required}"
 PLUGIN_NAME="${PLUGIN_NAME:?PLUGIN_NAME is required}"
+SONAR_PREFIX="${SONAR_PREFIX:-true}"
 
 # The anchor key is always derived from PLUGIN_NAME — one anchor per plugin family
 # (e.g. sonar-security covers all security frontends via aliases).

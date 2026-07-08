@@ -28,6 +28,7 @@ The `secret-name` provided must have `contents: write` and `pull-requests: write
 | `release-version` | The new version to set (e.g. `1.12.0.12345`) | Yes | |
 | `ticket-key` | Jira ticket number. Must start with `SC-`. | Yes | |
 | `plugin-name` | Plugin language key, used for the anchor lookup, PR title, commit and branch name | Yes | |
+| `sonar-prefix` | Whether the anchor key is prefixed with `sonar-` (`true`/`false`) | No | `true` |
 | `secret-name` | Vault secret name granting write access to `sonar-plugins-deployer` | Yes | |
 | `base-branch` | Base branch for the PR | No | `master` |
 | `draft` | Create PR as draft (`true`/`false`) | No | `false` |
@@ -54,9 +55,9 @@ The `secret-name` provided must have `contents: write` and `pull-requests: write
 | `php`, `kotlin`, etc. | `sonar-{plugin-name}` |
 | `java-a3s-context-collector` | `java-a3s-context-collector` |
 
-General rule: strip `-enterprise` suffix, prepend `sonar-`. Exceptions:
+General rule: strip `-enterprise` suffix, then prepend `sonar-` when `sonar-prefix` is `true` (the default). Exceptions:
 - `dotnet-enterprise` maps to `sonar-dotnet` (covers both `csharp-enterprise` and `vbnet-enterprise` via aliases).
-- `java-a3s-context-collector` keeps its name as-is — its anchor is **not** prefixed with `sonar-`.
+- Plugins whose anchor is **not** prefixed with `sonar-` (e.g. `java-a3s-context-collector`) must be updated by passing `sonar-prefix: 'false'`.
 
 ## Usage
 

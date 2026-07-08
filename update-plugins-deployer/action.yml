@@ -12,6 +12,10 @@ inputs:
   plugin-name:
     description: 'The language key of the plugin to update (e.g., java, security). Used for PR title, commit message, and branch name.'
     required: true
+  sonar-prefix:
+    description: 'A boolean value indicating if the plugin name should be prefixed with sonar- in the update.'
+    required: false
+    default: 'true'
   secret-name:
     description: 'Name of the secret to fetch from the vault that has write access to sonar-plugins-deployer.'
     required: true
@@ -78,6 +82,7 @@ runs:
       env:
         PLUGINS_YAML: plugins.yaml
         PLUGIN_NAME: ${{ inputs.plugin-name }}
+        SONAR_PREFIX: ${{ inputs.sonar-prefix }}
         RELEASE_VERSION: ${{ inputs.release-version }}
       run: bash ${{ github.action_path }}/update_plugins_yaml.sh
 

@@ -163,10 +163,10 @@ else
 fi
 rm -rf "$T"
 
-# Test: java-a3s-context-collector → anchor not prefixed with sonar-
+# Test: SONAR_PREFIX="false" → anchor not prefixed with sonar-
 T=$(mktemp -d)
 make_plugins_yaml "$T"
-PLUGINS_YAML="$T/plugins.yaml" PLUGIN_ARTIFACTS="" PLUGIN_NAME="java-a3s-context-collector" RELEASE_VERSION="2.0.0.200" \
+PLUGINS_YAML="$T/plugins.yaml" PLUGIN_ARTIFACTS="" PLUGIN_NAME="java-a3s-context-collector" SONAR_PREFIX="false" RELEASE_VERSION="2.0.0.200" \
   bash "$SCRIPT" >/dev/null 2>&1 && actual_a3s=0 || actual_a3s=$?
 if [[ "$actual_a3s" -eq 0 ]]; then
   assert_contains "java-a3s-context-collector anchor updated" "$T/plugins.yaml" "java-a3s-context-collector: &version-java-a3s-context-collector 2.0.0.200"
@@ -174,6 +174,19 @@ if [[ "$actual_a3s" -eq 0 ]]; then
 else
   echo "❌ java-a3s-context-collector update failed (exit $actual_a3s)"
   FAIL=$((FAIL+2))
+fi
+rm -rf "$T"
+
+# Test: SONAR_PREFIX="true" → anchor is prefixed with sonar-
+T=$(mktemp -d)
+make_plugins_yaml "$T"
+PLUGINS_YAML="$T/plugins.yaml" PLUGIN_ARTIFACTS="" PLUGIN_NAME="java" SONAR_PREFIX="true" RELEASE_VERSION="9.1.0.12345" \
+  bash "$SCRIPT" >/dev/null 2>&1 && actual_prefix=0 || actual_prefix=$?
+if [[ "$actual_prefix" -eq 0 ]]; then
+  assert_contains "SONAR_PREFIX=true prefixes anchor" "$T/plugins.yaml" "sonar-java: &version-sonar-java 9.1.0.12345"
+else
+  echo "❌ SONAR_PREFIX=true update failed (exit $actual_prefix)"
+  FAIL=$((FAIL+1))
 fi
 rm -rf "$T"
 
