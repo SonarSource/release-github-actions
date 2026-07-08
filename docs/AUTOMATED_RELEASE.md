@@ -42,6 +42,7 @@ This workflow composes several actions from this repository:
 | `jira-project-key`           | Jira project key                                                                                                | Yes      | -            |
 | `project-name`               | Display name of the project                                                                                     | Yes      | -            |
 | `plugin-name`                | Plugin name                                                                                                     | Yes      | -            |
+| `set-sonar-prefix`           | Whether the plugin anchor key in `sonar-plugins-deployer` is prefixed with `sonar-`                             | No       | `true`       |
 | `plugin-artifacts-sqs`       | Artifact identifier(s) for SQS; falls back to `plugin-name`                                                     | No       | -            |
 | `plugin-artifacts-sqc`       | Artifact identifier(s) for SQC; falls back to `plugin-name`                                                     | No       | -            |
 | `plugin-artifacts-sqaa`      | Artifact identifier(s) for SQAA; falls back to `plugin-name`                                                    | No       | -            |
