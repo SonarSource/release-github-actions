@@ -46,7 +46,7 @@ on:
         type: string
         default: "master"
       sqaa-reviewers:
-        description: "Comma-separated list of GitHub usernames to request a review on the SQAA pull request"
+        description: "Comma-separated list of GitHub usernames to request a review on the SQAA pull request. Defaults to the release actor."
         required: false
         type: string
       use-jira-sandbox:
@@ -963,7 +963,7 @@ jobs:
           plugin-artifacts: ${{ inputs.plugin-artifacts-sqaa }}
           base-branch: ${{ inputs.sqaa-base-branch }}
           draft: ${{ inputs.is-draft-release }}
-          reviewers: ${{ inputs.sqaa-reviewers }}
+          reviewers: ${{ inputs.sqaa-reviewers != '' && inputs.sqaa-reviewers || github.actor }}
 
       - name: Summary
         if: ${{ inputs.verbose }}

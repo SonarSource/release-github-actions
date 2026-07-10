@@ -47,7 +47,7 @@ This workflow composes several actions from this repository:
 | `plugin-artifacts-sqc`       | Artifact identifier(s) for SQC; falls back to `plugin-name`                                                     | No       | -            |
 | `plugin-artifacts-sqaa`      | Artifact identifier(s) for SQAA; falls back to `plugin-name`                                                    | No       | -            |
 | `sqaa-base-branch`           | Base branch for the SQAA pull request                                                                           | No       | `master`     |
-| `sqaa-reviewers`             | Comma-separated list of GitHub usernames to request a review on the SQAA pull request                           | No       | -            |
+| `sqaa-reviewers`             | Comma-separated list of GitHub usernames to request a review on the SQAA pull request. Defaults to the release actor (`github.actor`). | No       | `github.actor` |
 | `use-jira-sandbox`           | Use Jira sandbox                                                                                                | No       | `true`       |
 | `is-draft-release`           | Create the GitHub release as a draft                                                                            | No       | `true`       |
 | `pm-email`                   | Product manager email to assign the release ticket after technical release                                      | Yes      | -            |
