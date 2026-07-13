@@ -92,7 +92,7 @@ jobs:
           secret-name: "test-secret"
         continue-on-error: true
 
-      - name: Test Valid SC Ticket
+      - name: Test SC Ticket Now Rejected
         id: test-sc-ticket
         uses: ./update-analyzer
         with:
@@ -101,6 +101,17 @@ jobs:
           plugin-name: "test"
           secret-name: "test-secret"
         continue-on-error: true
+
+      - name: Verify SC Ticket Rejected
+        if: steps.test-sc-ticket.outcome == 'success'
+        run: |
+          echo "✗ Action should have failed for SC- ticket (SQC support removed)"
+          exit 1
+
+      - name: Confirm SC Ticket Rejected
+        if: steps.test-sc-ticket.outcome == 'failure'
+        run: |
+          echo "✓ Action correctly rejected SC- ticket"
 
       - name: Test Plugin Artifacts Parameter
         id: test-plugin-artifacts

@@ -1,5 +1,5 @@
 name: 'Update Analyzer'
-description: 'Updates the version of a specified analyzer in SonarQube or SonarCloud and creates a pull request.'
+description: 'Updates the version of a specified analyzer in SonarQube and creates a pull request.'
 author: 'SonarSource'
 
 inputs:
@@ -7,7 +7,7 @@ inputs:
     description: 'The new version to set for the analyzer (e.g., 1.12.0.12345).'
     required: true
   ticket-key:
-    description: 'The Jira ticket number (e.g., SONAR-12345 or SC-12345). This determines the target product.'
+    description: 'The Jira ticket number (e.g., SONAR-12345).'
     required: true
   plugin-name:
     description: 'The language key of the plugin to update (e.g., architecture, java, csharp).'
@@ -58,11 +58,8 @@ runs:
         if [[ "$TICKET_KEY" == SONAR-* ]]; then
           echo "PRODUCT_REPOSITORY=sonar-enterprise" >> $GITHUB_ENV
           echo "BUILD_GRADLE_FILE=build.gradle" >> $GITHUB_ENV
-        elif [[ "$TICKET_KEY" == SC-* ]]; then
-          echo "PRODUCT_REPOSITORY=sonarcloud-core" >> $GITHUB_ENV
-          echo "BUILD_GRADLE_FILE=private/edition-sonarcloud/build.gradle" >> $GITHUB_ENV
         else
-          echo "::error::Invalid ticket format. Must start with SONAR- or SC-."
+          echo "::error::Invalid ticket format. Must start with SONAR-."
           exit 1
         fi
 

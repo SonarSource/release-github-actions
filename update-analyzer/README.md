@@ -1,14 +1,13 @@
 # Update Analyzer Action
 
-This GitHub Action automates the process of updating an analyzer's version within SonarQube or SonarCloud. It checks out the respective product repository, modifies the `build.gradle` file with the new version, and creates a pull request with the changes.
+This GitHub Action automates the process of updating an analyzer's version within SonarQube. It checks out the `sonar-enterprise` repository, modifies the `build.gradle` file with the new version, and creates a pull request with the changes.
 
 ## Description
 
 The action updates analyzer versions by:
-1. Determining the target repository based on the ticket prefix (`SONAR-` for SonarQube or `SC-` for SonarCloud)
-2. Checking out the appropriate product repository (`sonar-enterprise` or `sonarcloud-core`)
-3. Updating the analyzer version in the build.gradle file using sed commands
-4. Creating a pull request with the changes using the specified GitHub token from Vault
+1. Checking out the `sonar-enterprise` repository
+2. Updating the analyzer version in the build.gradle file using sed commands
+3. Creating a pull request with the changes using the specified GitHub token from Vault
 
 ## Prerequisites
 
@@ -31,7 +30,7 @@ This action depends on:
 | Input               | Description                                                                                                                                                                                                                                                           | Required | Default  |
 |---------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|----------|
 | `release-version`   | The new version to set for the analyzer (e.g., `1.12.0.12345`).                                                                                                                                                                                                       | `true`   |          |
-| `ticket-key`        | The Jira ticket number. Must start with `SONAR-` (for SonarQube) or `SC-` (for SonarCloud).                                                                                                                                                                           | `true`   |          |
+| `ticket-key`        | The Jira ticket number. Must start with `SONAR-`.                                                                                                                                                                                                                     | `true`   |          |
 | `plugin-name`       | The language key of the plugin to update. It will always be used as a part of the PR title and commit message. It can be used to match the artifact in the build script (i.e. it should be the `X` in `sonar-X-plugin`), unless `plugin-artifacts` input is provided. | `true`   |          |
 | `secret-name`       | Name of the secret for GitHub token to fetch from the vault that has permissions to create pull requests in the target Github repository.                                                                                                                             | `true`   |          |
 | `plugin-artifacts`  | Comma-separated list of plugin artifact names (any `X` in `sonar-X-plugin`) that will be used instead of `plugin-name` when provided.                                                                                                                                 | `false`  |          |
@@ -80,7 +79,7 @@ This action depends on:
   uses: SonarSource/release-github-actions/update-analyzer@v1
   with:
     release-version: '1.12.0.12345'
-    ticket-key: 'SC-67890'
+    ticket-key: 'SONAR-67890'
     plugin-name: 'java'
     secret-name: 'sonar-java-release-automation'
     base-branch: 'develop'
@@ -105,7 +104,7 @@ This action depends on:
 
 The action uses a composite action that:
 - Uses the SonarSource Vault action wrapper to securely retrieve GitHub tokens
-- Determines the target repository based on ticket prefix validation
+- Validates the ticket prefix
 - Uses sparse checkout for efficient repository cloning (only the build.gradle file)
 - Updates analyzer versions using sed pattern matching for `sonar-X-plugin` artifacts
 - Creates pull requests with standardized naming conventions and commit messages
@@ -114,7 +113,7 @@ The action uses a composite action that:
 ## Error Handling
 
 The action will fail with a non-zero exit code if:
-- The ticket format is invalid (doesn't start with `SONAR-` or `SC-`)
+- The ticket format is invalid (doesn't start with `SONAR-`)
 - The Vault token retrieval fails
 - The target repository checkout fails
 - The build.gradle file modification fails
@@ -122,7 +121,7 @@ The action will fail with a non-zero exit code if:
 
 ## Notes
 
-- This action specifically targets SonarSource product repositories (`sonar-enterprise` and `sonarcloud-core`)
+- This action specifically targets the `sonar-enterprise` repository
 - The action uses sparse checkout to minimize data transfer and processing time
 - Branch naming follows the pattern: `{plugin-name}/update-analyzer-{release-version}`
 - Commit messages and PR titles follow standardized formats for consistency
