@@ -6,6 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a collection of reusable GitHub Actions for automating SonarSource analyzer releases. Actions handle Jira integration (tickets, versions, release notes), GitHub releases, cross-repository updates, and Slack notifications.
 
+## Knowledge Bundle (.okf)
+
+This repository has an [OKF](https://github.com/GoogleCloudPlatform/knowledge-catalog) knowledge
+bundle at `.okf/` — concept-per-file notes on every action, workflow, shared module, and
+architectural decision, plus a `risks/` directory capturing known reliability/testability gaps
+from the 2026-07-14 architecture review. Consult `.okf/index.md` before non-trivial work in this
+repo, and keep it in sync: when adding/removing/renaming an action or workflow, or making a
+decision worth remembering, update or add the corresponding concept file (see the `okf` skill).
+
 ## Jira Project
 
 Related Jira tickets for this project are tracked in the **GHA** (GitHub Automation) project. When available, use the Jira MCP to access ticket details (e.g., `GHA-123`).
