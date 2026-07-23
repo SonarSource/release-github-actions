@@ -59,7 +59,7 @@ runs:
         python -m pip install --upgrade pip
         pip install -r ${{ github.action_path }}/requirements.txt
 
-    - uses: SonarSource/release-github-actions/get-release-version@master
+    - uses: SonarSource/release-github-actions/get-release-version@11f4c942972ecde9c1e145ad490a42c889ac2693
       if: ${{ !inputs.ticket-summary && !inputs.release-version && !env.RELEASE_VERSION }}
 
     - name: Validate inputs and generate ticket summary

@@ -59,12 +59,12 @@ runs:
       shell: bash
       run: pip install -r ${{ github.action_path }}/requirements.txt
 
-    - uses: SonarSource/release-github-actions/get-release-version@master
+    - uses: SonarSource/release-github-actions/get-release-version@11f4c942972ecde9c1e145ad490a42c889ac2693
       if: ${{ !inputs.version }}
 
     - name: Get Jira Release Notes URL
       if: ${{ !inputs.jira-release-url && !env.JIRA_RELEASE_URL }}
-      uses: SonarSource/release-github-actions/get-jira-release-notes@master
+      uses: SonarSource/release-github-actions/get-jira-release-notes@11f4c942972ecde9c1e145ad490a42c889ac2693
       with:
         jira-project-key: ${{ inputs.jira-project-key }}
         use-jira-sandbox: ${{ inputs.use-jira-sandbox }}
@@ -106,7 +106,7 @@ runs:
 
     - name: Start Progress on Release Ticket
       if: ${{ inputs.start-progress == 'true' }}
-      uses: SonarSource/release-github-actions/update-release-ticket-status@master
+      uses: SonarSource/release-github-actions/update-release-ticket-status@11f4c942972ecde9c1e145ad490a42c889ac2693
       with:
         release-ticket-key: ${{ steps.run_python_script.outputs.ticket_key }}
         status: "Start Progress"
