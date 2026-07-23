@@ -73,7 +73,7 @@ Key inputs (selected — full list in the action README): `jira-project-key`, `p
 also true; silently skipped if not onboarded), `create-slvs-ticket` / `create-slvscode-ticket` /
 `create-sle-ticket` / `create-sli-ticket` / `create-cli-ticket` (default `false`), `verbose`
 (default `false`), `code-quality-leads-slack-notification` (default `true`; opt out of the
-final summary sent to the Code Quality PM/EM leads Slack channel).
+release announcement sent to the Code Quality PM/EM leads Slack channel).
 
 Outputs: `new-version` (Jira version name), `sqaa-pull-request-url`.
 
@@ -86,10 +86,11 @@ Outputs: `new-version` (Jira version name), `sqaa-pull-request-url`.
 - **Freeze window ends early**: the branch unfreezes right after
   [publish-github-release](/actions/publish-github-release.md), *before* the version-bump PR is
   created — see [release-lock](/workflows/release-lock.md) for how that gap is closed.
-- **Default release visibility**: the final success/failure summary is always sent to the
-  private Code Quality PM/EM leads Slack channel unless the caller sets
+- **Default release visibility**: after the GitHub release is created, a short announcement
+  containing the project, released version, and GitHub release-notes link is sent to the private
+  Code Quality PM/EM leads Slack channel unless the caller sets
   `code-quality-leads-slack-notification: false`. The destination is fixed in the orchestrator;
-  the existing caller-provided `slack-channel` notification remains independent.
+  the existing caller-provided full-summary `slack-channel` notification remains independent.
 - This workflow has been the subject of an [architecture review](/decisions/architecture-review-2026-07.md)
   identifying reliability, testability, and observability gaps — see the
   [risks](/risks/index.md) directory.

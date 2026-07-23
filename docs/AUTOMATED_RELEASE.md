@@ -77,7 +77,7 @@ This workflow composes several actions from this repository:
 | `freeze-branch-slack-notification` | When `false`, suppresses Slack notifications for the freeze and unfreeze steps                           | No       | `true`       |
 | `check-releasability`        | When `true`, verifies the releasability status on the branch before proceeding                                  | No       | `true`       |
 | `slack-channel`              | Slack channel to notify when locking/unlocking the branch                                                       | No       | -            |
-| `code-quality-leads-slack-notification` | When `false`, suppresses the final release summary sent to `#team-code-quality-pm-em-lead`              | No       | `true`       |
+| `code-quality-leads-slack-notification` | When `false`, suppresses the release announcement sent to `#team-code-quality-pm-em-lead`                | No       | `true`       |
 | `release-artifacts-public`   | Newline-separated Repox paths from public repositories to attach to the GitHub release                          | No       | -            |
 | `release-artifacts-private`  | Newline-separated Repox paths from private repositories to attach to the GitHub release                         | No       | -            |
 
@@ -162,7 +162,7 @@ jobs:
 - Integration tickets and analyzer update PRs are created only if their respective flags are enabled and prerequisites are met.
 - Summaries:
   - Each job includes a "Summary" step that writes to `$GITHUB_STEP_SUMMARY` only when `verbose: true`.
-  - The final release summary is sent to `#team-code-quality-pm-em-lead` by default. Set `code-quality-leads-slack-notification: false` to opt out.
+  - A short release announcement containing the project, released version, and GitHub release-notes link is sent to `#team-code-quality-pm-em-lead` by default after the GitHub release is created. Set `code-quality-leads-slack-notification: false` to opt out.
 - Permissions and environments are scoped per job to minimize required privileges.
 
 ## Release lock gate
