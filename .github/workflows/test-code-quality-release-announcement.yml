@@ -44,5 +44,5 @@ jobs:
         with:
           channel: "C0BJUJ2TL3H"
           message-markdown: >-
-            🎉 **${{ inputs.project-name || 'SonarJS' }} ${{ inputs.release-version || '13.3.0.43633' }} has been released** —
-            [View release notes](${{ inputs.release-url || 'https://github.com/SonarSource/SonarJS/releases/tag/13.3.0.43633' }})
+            **${{ inputs.project-name || 'SonarJS' }}** ${{ inputs.release-version || '13.3.0.43633' }} has been **released** —
+            [Release notes](${{ inputs.release-url || 'https://github.com/SonarSource/SonarJS/releases/tag/13.3.0.43633' }})
