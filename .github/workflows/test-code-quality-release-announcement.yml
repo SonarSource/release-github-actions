@@ -1,0 +1,48 @@
+name: Test Code Quality Release Announcement
+
+on:
+  workflow_dispatch:
+    inputs:
+      project-name:
+        description: "Project name shown in the Slack announcement"
+        required: true
+        type: string
+        default: "SonarJS"
+      release-version:
+        description: "Released version shown in the Slack announcement"
+        required: true
+        type: string
+        default: "13.3.0.43633"
+      release-url:
+        description: "GitHub release URL used for the release-notes link"
+        required: true
+        type: string
+        default: "https://github.com/SonarSource/SonarJS/releases/tag/13.3.0.43633"
+  # workflow_dispatch is unavailable until a new workflow exists on the default branch.
+  # Labeling a same-repository PR allows the workflow to be tested before merge.
+  pull_request:
+    types: [labeled]
+
+jobs:
+  send-release-announcement:
+    name: Send Test Release Announcement
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+      github.event.label.name == 'run-release-announcement-test' &&
+      github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Send Release Announcement
+        uses: ./slack-message
+        with:
+          channel: "C0BJUJ2TL3H"
+          message-markdown: >-
+            🎉 **${{ inputs.project-name || 'SonarJS' }} ${{ inputs.release-version || '13.3.0.43633' }} has been released** —
+            [View release notes](${{ inputs.release-url || 'https://github.com/SonarSource/SonarJS/releases/tag/13.3.0.43633' }})
