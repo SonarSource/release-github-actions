@@ -1106,7 +1106,7 @@ jobs:
         if: ${{ always() && inputs.code-quality-leads-slack-notification && needs.publish-github-release.result == 'success' && needs.publish-github-release.outputs.github-release-url != '' }}
         uses: SonarSource/release-github-actions/slack-message@master
         with:
-          channel: "C0ANR83KA2W"
+          channel: "C0ANR83KA2W"  #team-code-quality-pm-em-lead
           message-markdown: >-
             :tada: **${{ inputs.project-name }}** ${{ needs.prepare-release.outputs.release-version }} has been **released** —
             [Release notes](${{ needs.publish-github-release.outputs.github-release-url }})
