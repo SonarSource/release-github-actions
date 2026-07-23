@@ -1108,5 +1108,5 @@ jobs:
         with:
           channel: "C0ANR83KA2W"
           message-markdown: >-
-            **${{ inputs.project-name }}** ${{ needs.prepare-release.outputs.release-version }} has been **released** —
+            :tada: **${{ inputs.project-name }}** ${{ needs.prepare-release.outputs.release-version }} has been **released** —
             [Release notes](${{ needs.publish-github-release.outputs.github-release-url }})
