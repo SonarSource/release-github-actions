@@ -180,6 +180,11 @@ on:
         description: "Slack channel for notifications"
         required: false
         type: string
+      code-quality-leads-slack-notification:
+        description: "Send a release announcement to the Code Quality PM/EM leads Slack channel"
+        required: false
+        type: boolean
+        default: true
       issue-categories:
         description: "Jira issue categories to include in the release notes"
         required: false
@@ -1096,3 +1101,12 @@ jobs:
         with:
           channel: ${{ inputs.slack-channel }}
           message-markdown: ${{ steps.create-message.outputs.message }}
+
+      - name: Post Release Announcement to Code Quality Leads Slack
+        if: ${{ always() && inputs.code-quality-leads-slack-notification && needs.publish-github-release.result == 'success' && needs.publish-github-release.outputs.github-release-url != '' }}
+        uses: SonarSource/release-github-actions/slack-message@master
+        with:
+          channel: "C0ANR83KA2W"  #team-code-quality-pm-em-lead
+          message-markdown: >-
+            :tada: **${{ inputs.project-name }}** ${{ needs.prepare-release.outputs.release-version }} has been **released** —
+            [Release notes](${{ needs.publish-github-release.outputs.github-release-url }})

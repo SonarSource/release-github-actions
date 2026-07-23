@@ -3,8 +3,8 @@ type: Reusable Workflow
 title: Automated Release (analyzer path)
 description: Orchestrates the full end-to-end analyzer release across Jira, GitHub, and downstream integration repos.
 resource: https://github.com/SonarSource/release-github-actions/blob/master/.github/workflows/automated-release.yml
-tags: [workflow, release, orchestrator, jira, github-release]
-timestamp: 2026-07-15T00:00:00Z
+tags: [workflow, release, orchestrator, jira, github-release, slack]
+timestamp: 2026-07-23T00:00:00Z
 ---
 
 # Overview
@@ -72,7 +72,8 @@ Key inputs (selected — full list in the action README): `jira-project-key`, `p
 `sqc-integration` (default `true`), `sqaa-integration` (runs only when `sqc-integration` is
 also true; silently skipped if not onboarded), `create-slvs-ticket` / `create-slvscode-ticket` /
 `create-sle-ticket` / `create-sli-ticket` / `create-cli-ticket` (default `false`), `verbose`
-(default `false`).
+(default `false`), `code-quality-leads-slack-notification` (default `true`; opt out of the
+release announcement sent to the Code Quality PM/EM leads Slack channel).
 
 Outputs: `new-version` (Jira version name), `sqaa-pull-request-url`.
 
@@ -85,6 +86,11 @@ Outputs: `new-version` (Jira version name), `sqaa-pull-request-url`.
 - **Freeze window ends early**: the branch unfreezes right after
   [publish-github-release](/actions/publish-github-release.md), *before* the version-bump PR is
   created — see [release-lock](/workflows/release-lock.md) for how that gap is closed.
+- **Default release visibility**: after the GitHub release is created, a short announcement
+  containing the project, released version, and GitHub release-notes link is sent to the private
+  Code Quality PM/EM leads Slack channel unless the caller sets
+  `code-quality-leads-slack-notification: false`. The destination is fixed in the orchestrator;
+  the existing caller-provided full-summary `slack-channel` notification remains independent.
 - This workflow has been the subject of an [architecture review](/decisions/architecture-review-2026-07.md)
   identifying reliability, testability, and observability gaps — see the
   [risks](/risks/index.md) directory.
