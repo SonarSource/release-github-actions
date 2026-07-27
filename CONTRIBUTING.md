@@ -104,7 +104,7 @@ releasing an analyzer — see [docs/AUTOMATED_RELEASE.md](docs/AUTOMATED_RELEASE
 
 - [docs/AUTOMATED_RELEASE.md](docs/AUTOMATED_RELEASE.md) — reference for the analyzer release
   workflow this repo provides.
-- [docs/ARCHITECTURE_REVIEW.md](docs/ARCHITECTURE_REVIEW.md) — known architecture and testing
-  gaps, for anyone doing deeper work on the orchestrator.
+- [.okf/decisions/architecture-review-2026-07.md](.okf/decisions/architecture-review-2026-07.md) —
+  known architecture and testing gaps, for anyone doing deeper work on the orchestrator.
 - [.okf/index.md](.okf/index.md) — concept-per-file knowledge bundle covering every action,
   workflow, and architectural decision in this repo.
