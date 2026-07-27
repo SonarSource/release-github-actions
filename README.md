@@ -204,6 +204,5 @@ Detailed instructions for Claude Code to follow...
 
 ## Development
 
-### Update Action Versions Workflow
-
-The repository includes an `update-action-versions` workflow that creates a pull request to update all internal action references to use a specific commit or the latest version from the master branch. This workflow scans all `action.yml` files in the repository and updates any references to `SonarSource/release-github-actions` actions to point to the specified reference, ensuring consistency across all actions when updates are made to shared components.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to branch, test, and release changes in this
+repository.
