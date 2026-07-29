@@ -19,6 +19,12 @@ walk away instead of babysitting three PRs across three repos.
 This skill assumes the target repo already has `automated-release.yml` set up (see the
 `automated-release-setup` skill if it doesn't).
 
+**Always link, don't just name.** Whenever you mention a Jira ticket, a GitHub workflow run, or
+a pull request anywhere in this skill's output, include its actual URL
+(`https://sonarsource.atlassian.net/browse/<KEY>` for Jira, or whatever `gh`/the Atlassian MCP
+returns) — not just the key/number. The user should be able to click straight through without
+having to construct the link themselves.
+
 ## Step 1 — Identify the repo and read its release config
 
 The user names the repo directly, e.g. "Release sonar-pli" or "Release SonarSource/sonar-pli" —
@@ -64,12 +70,73 @@ gh api "/repos/<owner>/<repo>/commits/<branch>/check-runs" \
   --jq '.check_runs[] | select(.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral")'
 ```
 
-- If either check fails, stop and report exactly which check(s) failed and why. Do not proceed
-  to Step 3.
+- If either check fails, stop — but don't just report the failure and give up. Diagnose it and
+  help the user fix it (see "Diagnosing and fixing releasability problems" below). Do not
+  proceed to Step 3 until releasability passes.
 - Tell the user this is a **pre-flight convenience check**, not the authoritative one — the
   workflow's own `check-releasability` job re-checks the exact commit SHA via
   `SonarSource/gh-action_releasability@v3` when it actually runs, so this step is about failing
   fast and cheaply, not replacing that gate.
+
+### Diagnosing and fixing releasability problems
+
+Don't stop at "releasability failed" — read the `description` field closely, since it usually
+names the specific sub-check that failed (e.g. `"failed optional checks -> Jira"`,
+`"failed optional checks -> Peachee Languages Statistics"`) and diagnose each failure to a
+concrete, actionable cause before presenting it to the user:
+
+- **`-> Jira`**: the releasability check requires no unresolved tickets against the project's
+  unreleased Jira version. Query for the blockers directly instead of asking the user to go
+  look. Resolve the Jira `cloudId` (site host, e.g. `sonarsource.atlassian.net`) via
+  `mcp__atlassian__getAccessibleAtlassianResources` if not already known, then use the
+  Atlassian MCP (`mcp__atlassian__searchJiraIssuesUsingJql`) with something like:
+  `project = <JIRA_PROJECT_KEY> AND fixVersion in unreleasedVersions() AND status not in (Done, Closed, Resolved, Canceled)`
+  — adjust the "done-like" status list per project if that query returns nothing, since
+  workflow status names vary per project. List every matching ticket with its **clickable Jira
+  link** (`https://<site>/browse/<KEY>`), summary, status, and assignee so the user can see
+  exactly what's outstanding without having to go look it up themselves, and check
+  `mcp__atlassian__getTransitionsForJiraIssue` for each to see whether a direct
+  "Close as Done" / "Cancel Issue" / similar terminal transition exists.
+- **`-> Quality Gate`**: a SonarQube quality gate is failing on the release branch — link the
+  user directly to the project's SonarQube quality gate page rather than guessing at a fix;
+  this isn't something to auto-resolve.
+- **`-> Dependencies` / `-> Licenses` / `-> Manifest Values` / `-> Parent POM` / `-> GitHub`**:
+  these indicate a code/config problem (outdated parent POM, license mismatch, manifest
+  metadata) that needs a real code change — report which one failed, with a link to the
+  releasability check run (`target_url` on the status) so the user can see the detail, and
+  stop; don't attempt an automated fix for these.
+- **Other failing check-runs** (from the check-runs API call above, not the Releasability
+  status itself): report the check name with a link to its GitHub Actions run/job (`.html_url`
+  on the check-run) so the user can look at the logs directly; these are usually CI/build
+  failures needing a real fix, not a quick toggle.
+
+For each fixable issue (mainly the Jira case), **suggest the concrete fix, with a link to the
+ticket, and ask for confirmation before acting** — e.g. "[SONARPLI-390](<jira-link>) is 'In
+Validation' and blocking release; transition it to Done?" — since transitioning a ticket or
+touching shared state is visible to others and should not happen silently. Use
+`mcp__atlassian__transitionJiraIssue` once confirmed, and share the ticket's link again in the
+confirmation of what was done.
+
+**After every fix is applied, don't assume it's reflected immediately** — the `Releasability`
+commit status is stale until it's recomputed. Find the job that posted it and re-run just that
+job, then re-poll the status before declaring victory:
+
+```bash
+# The status's target_url points at the workflow run that posted it. Find the specific
+# job named "Releasability Check" (or similar) inside that run:
+gh run view <run-id-from-target_url> --repo <owner>/<repo> --json jobs \
+  --jq '.jobs[] | select(.name | test("Releasability"; "i"))'
+
+# Re-run just that job (not the whole pipeline):
+gh run rerun <run-id> --repo <owner>/<repo> --job <job-id>
+
+# Poll until it completes, then re-fetch the Releasability status (same command as above)
+# and confirm the description no longer mentions the fixed issue.
+```
+
+Repeat the diagnose → fix → confirm → re-run → re-check loop until releasability actually
+passes (description like `"passed releasability checks"`, not just `state == "success"` with a
+lingering "failed optional checks" description). Only then proceed to Step 3.
 
 ## Step 3 — Interview
 
@@ -90,8 +157,14 @@ they appear in the YAML:
 ## Step 4 — Summary and confirmation
 
 Show a concrete table of input → value (including defaults accepted silently) and the exact
-`gh workflow run` command that will be executed. Ask the user to confirm in plain language
-before proceeding — triggering a release is a cross-repo, hard-to-reverse action.
+`gh workflow run` command that will be executed. Also state plainly what happens *after*
+triggering: this skill will monitor the workflow to completion, then automatically approve and
+merge all resulting pull requests (bump-version, SQS, SQC) as soon as each is green — with no
+further prompts in between, unless something fails or needs a judgment call (see Step 8's
+failure handling). Ask the user to confirm this whole flow once, up front, in plain language —
+triggering a release is a cross-repo, hard-to-reverse action, and the point of this skill is
+that one confirmation here is the only interaction needed; don't ask again before merging each
+PR later.
 
 ## Step 5 — Trigger
 
@@ -99,6 +172,11 @@ before proceeding — triggering a release is a cross-repo, hard-to-reverse acti
 gh workflow run automated-release.yml --repo <owner>/<repo> --ref <branch> \
   -f "<input>=<value>" ...
 ```
+
+`gh workflow run` doesn't print a run URL by default — construct one
+(`https://github.com/<owner>/<repo>/actions/workflows/automated-release.yml`) or fetch the exact
+run link once the run ID is known (see below) and share it immediately so the user can watch
+along if they want to.
 
 Then resolve the run ID the same way `publish-github-release/action.yml` does:
 
@@ -125,8 +203,9 @@ gh run view "$RUN_ID" --repo <owner>/<repo> --json status,conclusion
 
 until `status == "completed"`. If `conclusion != "success"` (or `status` is `cancelled` or
 `failure`), run `gh run view "$RUN_ID" --repo <owner>/<repo> --log-failed`, report the failure
-to the user, and stop. Don't guess at a fix — the actual fix likely needs a human familiar with
-the failing job.
+to the user along with the run's link
+(`https://github.com/<owner>/<repo>/actions/runs/<RUN_ID>`), and stop. Don't guess at a fix —
+the actual fix likely needs a human familiar with the failing job.
 
 ## Step 7 — Discover the three pull requests
 
@@ -162,6 +241,9 @@ PR will ever appear.
 The jobs that open these PRs run sequentially after the main release steps, so if a PR isn't
 found immediately, retry a few times with a short delay before reporting it missing.
 
+As soon as each PR is found, tell the user with its `.url` field from the `gh pr list` output —
+don't make them wait for the final report to see the links.
+
 ## Step 8 — Approve and merge each pull request
 
 For each PR found in Step 7, poll roughly every 30 seconds:
@@ -171,7 +253,11 @@ gh pr view <PR_URL> --json statusCheckRollup,mergeable,mergeStateStatus
 ```
 
 Once all checks in `statusCheckRollup` are `SUCCESS` (or neutral/skipped) and `mergeable ==
-"MERGEABLE"`:
+"MERGEABLE"`, approve and merge immediately — **do not ask for confirmation again here.** The
+user already approved this whole flow once in Step 4; pausing again per-PR defeats the point of
+the skill (trigger once, walk away). Only stop and ask if something is actually ambiguous or
+broken (failing checks, merge conflicts, an unexpected rule violation you can't resolve per the
+guidance below).
 
 1. **Approve**: `gh pr review <PR_URL> --approve`, using the user's own logged-in `gh`
    identity. This works without a separate token — the PR was opened by the vault-sourced
@@ -182,6 +268,12 @@ Once all checks in `statusCheckRollup` are `SUCCESS` (or neutral/skipped) and `m
    `gh repo view <owner>/<repo> --json mergeCommitAllowed,squashMergeAllowed,rebaseMergeAllowed`
    — and use whichever method the repo supports (don't assume squash or merge-commit).
    `gh pr merge <PR_URL> --<method>`.
+   - Some repos (e.g. `sonar-enterprise`) enforce a commit-message-pattern rule on the squash
+     commit (e.g. must start with `SONAR-<num>`/`SCA-<num>`/`SQRP-<num>`). If `gh pr merge`
+     fails with a `Repository rule violations` / commit-message-regex error, retry with an
+     explicit `--subject "<PR title>"` (and `--body ""`) — the PR title usually already matches
+     the required pattern even when the default squash message (which can include the commit
+     list) doesn't.
 
 If a PR's checks fail: stop polling that one, report the failure with a link to the PR, and
 keep polling the others — one failing PR shouldn't block reporting on the rest.
@@ -191,6 +283,9 @@ need for real concurrency since this is a long-running, low-frequency poll.
 
 ## Step 9 — Final report
 
-Summarize what happened: the release version, links to the GitHub release and the Jira release
-ticket (if surfaced in the workflow run logs/summary), and the final state of each of the three
-PRs (merged / needs attention, with a link / skipped because its flag was off).
+Summarize what happened, with a clickable link for every item: the release version and its
+GitHub release link, the Jira release ticket link (if surfaced in the workflow run logs/summary
+— check `$GITHUB_STEP_SUMMARY` via `gh run view --log` if `verbose` was true), and the final
+state of each of the three PRs (merged / needs attention, each with its PR link / skipped
+because its flag was off). If any releasability issues were fixed in Step 2, list those tickets
+and their links too, as a record of what was changed to unblock the release.
