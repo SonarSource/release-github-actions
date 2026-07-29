@@ -381,8 +381,11 @@ Artifacts from Repox can be attached to the GitHub release draft using the `rele
 ### Fully-automated trigger + monitor
 
 The [automated-release-run Claude Code skill](../.claude/skills/automated-release-run/) checks
-releasability, interviews you for the `workflow_dispatch` inputs, triggers the workflow, then
-polls and merges the bump-version, SQS, and SQC pull requests once their checks are green —
-so the checklist above is handled for you instead of relying on someone remembering to come
-back. Copy or symlink `.claude/skills/automated-release-run/` into your own `~/.claude/skills/`
-to run it locally against any analyzer repo.
+releasability, interviews you for the `workflow_dispatch` inputs (including which SQS release
+this version will ship with), triggers the workflow, then polls and merges the bump-version,
+SQS, and SQC pull requests once their checks are green, and sets the fixVersion on the SONAR
+ticket — so everything in the checklist above is handled for you instead of relying on someone
+remembering to come back, except "Update integration ticket statuses in Jira": that one still
+needs a human, since ticket status reflects real-world integration progress the skill has no
+way to observe. Copy or symlink `.claude/skills/automated-release-run/` into your own
+`~/.claude/skills/` to run it locally against any analyzer repo.

@@ -13,8 +13,9 @@ description: >
 # Run an Automated Release
 
 Trigger `automated-release.yml` for an analyzer repo and stay with it until every pull request
-it opens (version bump, SQS, SQC) is reviewed, green, and merged — so the user can ask once and
-walk away instead of babysitting three PRs across three repos.
+it opens (version bump, SQS, SQC) is reviewed, green, and merged, and the SONAR integration
+ticket's fixVersion is set — so the user can ask once and walk away instead of babysitting
+three PRs across three repos and a Jira ticket.
 
 This skill assumes the target repo already has `automated-release.yml` set up (see the
 `automated-release-setup` skill if it doesn't).
@@ -153,18 +154,35 @@ they appear in the YAML:
   tell the user plainly that this is not a true no-op. It only affects the Jira sandbox and
   whether the GitHub release is a draft — the SQS/SQC/bump-version pull requests are still
   created for real either way. Don't let "dry-run" imply nothing will happen outside GitHub.
+- If `sqs-integration` is enabled (default `true`), also ask which SQS release this analyzer
+  version will ship with — this sets the `fixVersion` on the SONAR/SQS integration ticket that
+  the workflow creates later (see Step 9). Ask this now, up front, rather than after the SQS PR
+  merges — the skill's whole point is one confirmation before triggering, then walking away;
+  asking mid-flight would reintroduce the exact interruption it's meant to avoid. Compute a
+  default before asking, don't ask blind: query the Jira **SONAR** project's versions
+  (`jira_client.project_versions()` — same pattern as
+  `get-jira-release-notes/get_jira_release_notes.py`), filter to `released == false`, sort by
+  `releaseDate` ascending, and take the first as "next SQS release" (names follow the
+  `sqs-YYYY.N` convention, e.g. `sqs-2026.5`). Ask via `AskUserQuestion` with that default as
+  the first option (labelled with its name and release date, e.g. "sqs-2026.5 (2026-09-21,
+  next release) — default") and a free-text option to name a different version — "next" is a
+  reasonable guess but not a guarantee, a change can miss a train and ship in a later one.
+  Store the chosen version name; nothing is written to Jira yet — see Step 9.
 
 ## Step 4 — Summary and confirmation
 
 Show a concrete table of input → value (including defaults accepted silently) and the exact
-`gh workflow run` command that will be executed. Also state plainly what happens *after*
-triggering: this skill will monitor the workflow to completion, then automatically approve and
-merge all resulting pull requests (bump-version, SQS, SQC) as soon as each is green — with no
-further prompts in between, unless something fails or needs a judgment call (see Step 8's
-failure handling). Ask the user to confirm this whole flow once, up front, in plain language —
-triggering a release is a cross-repo, hard-to-reverse action, and the point of this skill is
-that one confirmation here is the only interaction needed; don't ask again before merging each
-PR later.
+`gh workflow run` command that will be executed. If `sqs-integration` is enabled, include the
+SQS fixVersion chosen in Step 3 as its own row (e.g. `| SQS fixVersion (SONAR ticket) |
+sqs-2026.5 |`), and note that it will be applied automatically to the SONAR integration ticket
+once that ticket exists later in the run (Step 9) — with no further prompt for it. Also state
+plainly what happens *after* triggering: this skill will monitor the workflow to completion,
+then automatically approve and merge all resulting pull requests (bump-version, SQS, SQC) as
+soon as each is green — with no further prompts in between, unless something fails or needs a
+judgment call (see Step 8's failure handling). Ask the user to confirm this whole flow once, up
+front, in plain language — triggering a release is a cross-repo, hard-to-reverse action, and
+the point of this skill is that one confirmation here is the only interaction needed; don't ask
+again before merging each PR later, or before setting the fixVersion in Step 9.
 
 ## Step 5 — Trigger
 
@@ -293,12 +311,16 @@ the PR, and ask the user how to proceed rather than merging it.
    `gh repo view <owner>/<repo> --json mergeCommitAllowed,squashMergeAllowed,rebaseMergeAllowed`
    — and use whichever method the repo supports (don't assume squash or merge-commit).
    `gh pr merge <PR_URL> --<method>`.
-   - Some repos (e.g. `sonar-enterprise`) enforce a commit-message-pattern rule on the squash
-     commit (e.g. must start with `SONAR-<num>`/`SCA-<num>`/`SQRP-<num>`). If `gh pr merge`
-     fails with a `Repository rule violations` / commit-message-regex error, retry with an
-     explicit `--subject "<PR title>"` (and `--body ""`) — the PR title usually already matches
-     the required pattern even when the default squash message (which can include the commit
-     list) doesn't.
+   - **`sonar-enterprise` requires an explicit `--subject`.** Its GitHub ruleset enforces a
+     commit-message-pattern on the squash commit
+     (`^(SONAR-[0-9]+|SCA-[0-9]+|SQRP-[0-9]+) [A-Z][^#]*$`), and the default squash message
+     (which can append the commit list) fails it. For any PR in `sonar-enterprise`, always pass
+     `--subject "<PR title>" --body ""` on the first merge attempt — the PR title (e.g.
+     `SONAR-31203 Update \`abap\` to version 3.22.0.8389`) already matches. Don't wait for the
+     plain `gh pr merge --squash` to fail first.
+   - Other repos in this flow (`sonar-plugins-deployer`, the release repo itself) have no such
+     rule observed so far; if a future merge fails with a `Repository rule violations` /
+     commit-message-regex error there too, apply the same `--subject`/`--body ""` fix.
 
 If a PR's checks fail: stop polling that one, report the failure with a link to the PR, and
 keep polling the others — one failing PR shouldn't block reporting on the rest.
@@ -306,11 +328,40 @@ keep polling the others — one failing PR shouldn't block reporting on the rest
 A single sequential loop that checks all outstanding PRs each iteration is enough; there's no
 need for real concurrency since this is a long-running, low-frequency poll.
 
-## Step 9 — Final report
+## Step 9 — Set fixVersion on the SONAR integration ticket
+
+Skip entirely if `sqs-integration` was not enabled for this run, or the SQS PR (Step 7/8) was
+never found/merged — no ticket to update. The fixVersion to apply was already decided in
+Step 3; this step just applies it, with no further user interaction.
+
+The "SQS Ticket" created during the workflow run (job "Create Integration Tickets", step
+"Create SQS Ticket") is filed in the Jira **SONAR** project and linked to the release ticket —
+this is the ticket `docs/AUTOMATED_RELEASE.md`'s manual checklist calls "the SONAR ticket" and
+already lists "Set fix versions on the SONAR ticket" as a step a human is supposed to
+remember. This step does it instead.
+
+1. **Find the ticket.** Search by summary rather than assuming an ID:
+   ```
+   project = SONAR AND summary ~ "Update <plugin-name> to <release-version>" ORDER BY created DESC
+   ```
+   via `mcp__atlassian__searchJiraIssuesUsingJql` — this is the same "Update X to Y" summary
+   pattern `create_integration_ticket.py` generates from `plugin-name` + `release-version`, so
+   it should be a unique match. If not found (summary format changed, ticket not created),
+   report this in the final report and skip — don't guess a ticket key.
+
+2. **Set it**: update the ticket's `fixVersions` via `mcp__atlassian__editJiraIssue`
+   (`fields: {"fixVersions": [{"name": "<version chosen in Step 3>"}]}`). If the ticket
+   already has a different fixVersion set (can happen — don't assume it's empty), this
+   overwrites it with the value the user explicitly chose upfront, which is intentional — they
+   already confirmed it once, no need to check twice.
+
+## Step 10 — Final report
 
 Summarize what happened, with a clickable link for every item: the release version and its
 GitHub release link, the Jira release ticket link (if surfaced in the workflow run logs/summary
 — check `$GITHUB_STEP_SUMMARY` via `gh run view --log` if `verbose` was true), and the final
 state of each of the three PRs (merged / needs attention, each with its PR link / skipped
 because its flag was off). If any releasability issues were fixed in Step 2, list those tickets
-and their links too, as a record of what was changed to unblock the release.
+and their links too, as a record of what was changed to unblock the release. If `sqs-integration`
+was enabled, also report the SONAR ticket link and the fixVersion set on it (or "skipped — no
+SQS PR merged", or "ticket not found" if Step 9 couldn't locate it).
