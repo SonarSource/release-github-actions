@@ -253,11 +253,36 @@ gh pr view <PR_URL> --json statusCheckRollup,mergeable,mergeStateStatus
 ```
 
 Once all checks in `statusCheckRollup` are `SUCCESS` (or neutral/skipped) and `mergeable ==
-"MERGEABLE"`, approve and merge immediately — **do not ask for confirmation again here.** The
-user already approved this whole flow once in Step 4; pausing again per-PR defeats the point of
-the skill (trigger once, walk away). Only stop and ask if something is actually ambiguous or
-broken (failing checks, merge conflicts, an unexpected rule violation you can't resolve per the
-guidance below).
+"MERGEABLE"`, **validate the diff before approving** — green CI means the change builds and
+passes tests, not that it's the change you expected. A green PR that touches the wrong files is
+still a bug. Don't skip this just because Step 4's confirmation already covers the overall flow.
+
+### Validate before approving
+
+Each of these three PRs is generated from a known, narrow template — fetch its diff
+(`gh pr diff <PR_URL>`) and check it matches the expected shape:
+
+- **Bump-version PR**: should touch only version-declaration files (`pom.xml`,
+  `gradle.properties`, or whatever `bump-version`/`bump-versions.yaml` targets for this repo's
+  build system) and only bump the version string itself — no unrelated file changes.
+- **SQS PR** (`sonar-enterprise`): should touch only the single build file
+  (`build.gradle`/equivalent) that pins the plugin's version, changing just the version number
+  for `plugin-name` (or `plugin-artifacts-sqs` if set) to the expected `release-version`.
+- **SQC PR** (`sonar-plugins-deployer`): same shape as SQS, in its own config file.
+
+Red flags to stop and report instead of approving:
+- Files outside the expected one (or two, if the tool also touches a lockfile) changed.
+- The version number in the diff doesn't match the `new-version`/`release-version` from this
+  release run.
+- More than one plugin/dependency entry changed when only this release's plugin should have.
+- The diff is empty, or unexpectedly large (e.g. hundreds of lines) for what should be a
+  one-line version bump.
+
+If the diff looks as expected, proceed to approve and merge **without asking for confirmation
+again** — the user already approved this whole flow once in Step 4, and pausing per-PR after a
+clean validation defeats the point of the skill (trigger once, walk away). If the diff raises
+one of the red flags above, stop, show the specific unexpected part of the diff with a link to
+the PR, and ask the user how to proceed rather than merging it.
 
 1. **Approve**: `gh pr review <PR_URL> --approve`, using the user's own logged-in `gh`
    identity. This works without a separate token — the PR was opened by the vault-sourced
