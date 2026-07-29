@@ -110,6 +110,7 @@ This repository includes Claude Code skills for automating common tasks related 
 | Skill | Description |
 |-------|-------------|
 | [automated-release-setup](.claude/skills/automated-release-setup/) | Set up automated release workflow for SonarSource analyzer projects |
+| [automated-release-run](.claude/skills/automated-release-run/) | Trigger and monitor an automated release end-to-end, including merging the resulting pull requests |
 | [devex-release-setup](.claude/skills/devex-release-setup/) | Set up automated release workflow for SonarSource Development Experience projects (SonarLint Core, SonarLint for IntelliJ, etc.) |
 
 ### Usage
@@ -123,6 +124,13 @@ Skills in `.claude/skills/` are automatically discovered by Claude Code when you
 - "Help me create the release automation workflows"
 
 Or use the slash command: `/automated-release-setup`
+
+Once the workflow is set up, trigger and monitor an actual release end-to-end:
+
+- "Release sonar-pli"
+- "Trigger the automated release for this repo"
+
+Or use the slash command: `/automated-release-run <repo-name>`
 
 For Development Experience projects (SonarLint Core, SonarLint for IntelliJ, etc.):
 
@@ -140,11 +148,14 @@ To use these skills in other repositories, you can either download them or symli
 
 ```bash
 # Create the skills directory if it doesn't exist
-mkdir -p .claude/skills/automated-release-setup .claude/skills/devex-release-setup
+mkdir -p .claude/skills/automated-release-setup .claude/skills/automated-release-run .claude/skills/devex-release-setup
 
 # Download the skills
 curl -o .claude/skills/automated-release-setup/SKILL.md \
   https://raw.githubusercontent.com/SonarSource/release-github-actions/master/.claude/skills/automated-release-setup/SKILL.md
+
+curl -o .claude/skills/automated-release-run/SKILL.md \
+  https://raw.githubusercontent.com/SonarSource/release-github-actions/master/.claude/skills/automated-release-run/SKILL.md
 
 curl -o .claude/skills/devex-release-setup/SKILL.md \
   https://raw.githubusercontent.com/SonarSource/release-github-actions/master/.claude/skills/devex-release-setup/SKILL.md
@@ -164,6 +175,8 @@ curl -o .claude/skills/devex-release-setup/SKILL.md \
    mkdir -p .claude/skills
    ln -s /path/to/release-github-actions/.claude/skills/automated-release-setup \
      .claude/skills/automated-release-setup
+   ln -s /path/to/release-github-actions/.claude/skills/automated-release-run \
+     .claude/skills/automated-release-run
    ln -s /path/to/release-github-actions/.claude/skills/devex-release-setup \
      .claude/skills/devex-release-setup
    ```
@@ -174,6 +187,8 @@ curl -o .claude/skills/devex-release-setup/SKILL.md \
 # If installed via curl
 curl -o .claude/skills/automated-release-setup/SKILL.md \
   https://raw.githubusercontent.com/SonarSource/release-github-actions/master/.claude/skills/automated-release-setup/SKILL.md
+curl -o .claude/skills/automated-release-run/SKILL.md \
+  https://raw.githubusercontent.com/SonarSource/release-github-actions/master/.claude/skills/automated-release-run/SKILL.md
 curl -o .claude/skills/devex-release-setup/SKILL.md \
   https://raw.githubusercontent.com/SonarSource/release-github-actions/master/.claude/skills/devex-release-setup/SKILL.md
 

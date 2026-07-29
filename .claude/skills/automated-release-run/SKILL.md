@@ -1,0 +1,367 @@
+---
+name: automated-release-run
+description: >
+  Use this skill whenever the user asks to "release <repo>", "run the release for <repo>",
+  "trigger the automated release for <repo>", or any variation of triggering and monitoring the
+  automated-release.yml workflow for a SonarSource analyzer project to completion. Unlike
+  automated-release-setup (which wires the workflow into a repo once), this skill runs an
+  actual release: it interviews the user for the workflow_dispatch inputs, checks
+  releasability, triggers the workflow, then polls and merges the resulting pull requests so
+  nobody has to remember to come back later.
+---
+
+# Run an Automated Release
+
+Trigger `automated-release.yml` for an analyzer repo and stay with it until every pull request
+it opens (version bump, SQS, SQC) is reviewed, green, and merged, and the SONAR integration
+ticket's fixVersion is set — so the user can ask once and walk away instead of babysitting
+three PRs across three repos and a Jira ticket.
+
+This skill assumes the target repo already has `automated-release.yml` set up (see the
+`automated-release-setup` skill if it doesn't).
+
+**Always link, don't just name.** Whenever you mention a Jira ticket, a GitHub workflow run, or
+a pull request anywhere in this skill's output, include its actual URL
+(`https://sonarsource.atlassian.net/browse/<KEY>` for Jira, or whatever `gh`/the Atlassian MCP
+returns) — not just the key/number. The user should be able to click straight through without
+having to construct the link themselves.
+
+## Step 1 — Identify the repo and read its release config
+
+The user names the repo directly, e.g. "Release sonar-pli" or "Release SonarSource/sonar-pli" —
+don't infer the target from the current working directory.
+
+1. Parse the repo name from the request. A bare name (`sonar-pli`) is assumed to be under the
+   `SonarSource` GitHub org; accept a full `org/repo` too.
+2. Find a local checkout to read `.github/workflows/automated-release.yml` from:
+   - If the current directory is already a checkout of that repo (`git remote get-url origin`
+     matches), use it directly.
+   - Otherwise, ask the user (via `AskUserQuestion`) where it's already cloned — offer a
+     free-text path option and a "not cloned yet" option. Don't assume any particular directory
+     layout (e.g. `~/Projects`) — that's a personal convention, not a portable default.
+   - If not cloned, ask where to clone it, defaulting to a fresh temp directory
+     (`mktemp -d`) so it's disposable. A shallow `git clone` is enough — this only needs to
+     read one YAML file, not build or test anything.
+3. Read `.github/workflows/automated-release.yml` from that checkout. This file is a
+   hand-authored thin wrapper (created by the `automated-release-setup` skill) that declares
+   `workflow_dispatch` inputs and forwards them to
+   `SonarSource/release-github-actions/.github/workflows/automated-release.yml@v1`. **Parse the
+   actual file — don't assume a fixed input list.** Every repo customizes it (e.g. some add
+   `ide-integration`, `dry-run`, `bump-version`; others don't).
+4. From that same file, note the hardcoded `with:` values for `project-name`, `plugin-name`,
+   `jira-project-key` — these are fixed per repo, don't ask the user for them.
+
+## Step 2 — Releasability pre-flight
+
+Before interviewing the user, verify the target branch (default `master`, or whatever the user
+names in Step 3) is actually releasable. This is a fast fail before spending any time on the
+interview or a full workflow run.
+
+```bash
+gh api "/repos/<owner>/<repo>/commits/<branch>/status" \
+  --jq '.statuses[] | select(.context=="Releasability")'
+```
+
+- Fail with the description shown if `.state != "success"`, or if the description contains
+  "failed optional checks" (mirrors `check-releasability-status/action.yml`'s logic).
+- Also check for any other failing required checks on the branch:
+
+```bash
+gh api "/repos/<owner>/<repo>/commits/<branch>/check-runs" \
+  --jq '.check_runs[] | select(.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral")'
+```
+
+- If either check fails, stop — but don't just report the failure and give up. Diagnose it and
+  help the user fix it (see "Diagnosing and fixing releasability problems" below). Do not
+  proceed to Step 3 until releasability passes.
+- Tell the user this is a **pre-flight convenience check**, not the authoritative one — the
+  workflow's own `check-releasability` job re-checks the exact commit SHA via
+  `SonarSource/gh-action_releasability@v3` when it actually runs, so this step is about failing
+  fast and cheaply, not replacing that gate.
+
+### Diagnosing and fixing releasability problems
+
+Don't stop at "releasability failed" — read the `description` field closely, since it usually
+names the specific sub-check that failed (e.g. `"failed optional checks -> Jira"`,
+`"failed optional checks -> Peachee Languages Statistics"`) and diagnose each failure to a
+concrete, actionable cause before presenting it to the user:
+
+- **`-> Jira`**: the releasability check requires no unresolved tickets against the project's
+  unreleased Jira version. Query for the blockers directly instead of asking the user to go
+  look. Resolve the Jira `cloudId` (site host, e.g. `sonarsource.atlassian.net`) via
+  `mcp__atlassian__getAccessibleAtlassianResources` if not already known, then use the
+  Atlassian MCP (`mcp__atlassian__searchJiraIssuesUsingJql`) with something like:
+  `project = <JIRA_PROJECT_KEY> AND fixVersion in unreleasedVersions() AND status not in (Done, Closed, Resolved, Canceled)`
+  — adjust the "done-like" status list per project if that query returns nothing, since
+  workflow status names vary per project. List every matching ticket with its **clickable Jira
+  link** (`https://<site>/browse/<KEY>`), summary, status, and assignee so the user can see
+  exactly what's outstanding without having to go look it up themselves, and check
+  `mcp__atlassian__getTransitionsForJiraIssue` for each to see whether a direct
+  "Close as Done" / "Cancel Issue" / similar terminal transition exists.
+- **`-> Quality Gate`**: a SonarQube quality gate is failing on the release branch — link the
+  user directly to the project's SonarQube quality gate page rather than guessing at a fix;
+  this isn't something to auto-resolve.
+- **`-> Dependencies` / `-> Licenses` / `-> Manifest Values` / `-> Parent POM` / `-> GitHub`**:
+  these indicate a code/config problem (outdated parent POM, license mismatch, manifest
+  metadata) that needs a real code change — report which one failed, with a link to the
+  releasability check run (`target_url` on the status) so the user can see the detail, and
+  stop; don't attempt an automated fix for these.
+- **Other failing check-runs** (from the check-runs API call above, not the Releasability
+  status itself): report the check name with a link to its GitHub Actions run/job (`.html_url`
+  on the check-run) so the user can look at the logs directly; these are usually CI/build
+  failures needing a real fix, not a quick toggle.
+
+For each fixable issue (mainly the Jira case), **suggest the concrete fix, with a link to the
+ticket, and ask for confirmation before acting** — e.g. "[SONARPLI-390](<jira-link>) is 'In
+Validation' and blocking release; transition it to Done?" — since transitioning a ticket or
+touching shared state is visible to others and should not happen silently. Use
+`mcp__atlassian__transitionJiraIssue` once confirmed, and share the ticket's link again in the
+confirmation of what was done.
+
+**After every fix is applied, don't assume it's reflected immediately** — the `Releasability`
+commit status is stale until it's recomputed. Find the job that posted it and re-run just that
+job, then re-poll the status before declaring victory:
+
+```bash
+# The status's target_url points at the workflow run that posted it. Find the specific
+# job named "Releasability Check" (or similar) inside that run:
+gh run view <run-id-from-target_url> --repo <owner>/<repo> --json jobs \
+  --jq '.jobs[] | select(.name | test("Releasability"; "i"))'
+
+# Re-run just that job (not the whole pipeline):
+gh run rerun <run-id> --repo <owner>/<repo> --job <job-id>
+
+# Poll until it completes, then re-fetch the Releasability status (same command as above)
+# and confirm the description no longer mentions the fixed issue.
+```
+
+Repeat the diagnose → fix → confirm → re-run → re-check loop until releasability actually
+passes (description like `"passed releasability checks"`, not just `state == "success"` with a
+lingering "failed optional checks" description). Only then proceed to Step 3.
+
+## Step 3 — Interview
+
+Using `AskUserQuestion`, ask for each `workflow_dispatch` input found in Step 1, in the order
+they appear in the YAML:
+
+- Show each input's description and default value so the user can accept a default with one
+  click instead of retyping it.
+- Present boolean inputs as Yes/No with the YAML default pre-selected.
+- For `new-version` (or equivalent): mention that leaving it blank lets the workflow
+  auto-increment the current minor version.
+- If the user sets `dry-run` (or `use-jira-sandbox`/`is-draft-release`) to `false`... actually,
+  the important warning is the opposite: **if `dry-run` is left `true` or explicitly requested**,
+  tell the user plainly that this is not a true no-op. It only affects the Jira sandbox and
+  whether the GitHub release is a draft — the SQS/SQC/bump-version pull requests are still
+  created for real either way. Don't let "dry-run" imply nothing will happen outside GitHub.
+- If `sqs-integration` is enabled (default `true`), also ask which SQS release this analyzer
+  version will ship with — this sets the `fixVersion` on the SONAR/SQS integration ticket that
+  the workflow creates later (see Step 9). Ask this now, up front, rather than after the SQS PR
+  merges — the skill's whole point is one confirmation before triggering, then walking away;
+  asking mid-flight would reintroduce the exact interruption it's meant to avoid. Compute a
+  default before asking, don't ask blind: query the Jira **SONAR** project's versions
+  (`jira_client.project_versions()` — same pattern as
+  `get-jira-release-notes/get_jira_release_notes.py`), filter to `released == false`, sort by
+  `releaseDate` ascending, and take the first as "next SQS release" (names follow the
+  `sqs-YYYY.N` convention, e.g. `sqs-2026.5`). Ask via `AskUserQuestion` with that default as
+  the first option (labelled with its name and release date, e.g. "sqs-2026.5 (2026-09-21,
+  next release) — default") and a free-text option to name a different version — "next" is a
+  reasonable guess but not a guarantee, a change can miss a train and ship in a later one.
+  Store the chosen version name; nothing is written to Jira yet — see Step 9.
+
+## Step 4 — Summary and confirmation
+
+Show a concrete table of input → value (including defaults accepted silently) and the exact
+`gh workflow run` command that will be executed. If `sqs-integration` is enabled, include the
+SQS fixVersion chosen in Step 3 as its own row (e.g. `| SQS fixVersion (SONAR ticket) |
+sqs-2026.5 |`), and note that it will be applied automatically to the SONAR integration ticket
+once that ticket exists later in the run (Step 9) — with no further prompt for it. Also state
+plainly what happens *after* triggering: this skill will monitor the workflow to completion,
+then automatically approve and merge all resulting pull requests (bump-version, SQS, SQC) as
+soon as each is green — with no further prompts in between, unless something fails or needs a
+judgment call (see Step 8's failure handling). Ask the user to confirm this whole flow once, up
+front, in plain language — triggering a release is a cross-repo, hard-to-reverse action, and
+the point of this skill is that one confirmation here is the only interaction needed; don't ask
+again before merging each PR later, or before setting the fixVersion in Step 9.
+
+## Step 5 — Trigger
+
+```bash
+gh workflow run automated-release.yml --repo <owner>/<repo> --ref <branch> \
+  -f "<input>=<value>" ...
+```
+
+`gh workflow run` doesn't print a run URL by default — construct one
+(`https://github.com/<owner>/<repo>/actions/workflows/automated-release.yml`) or fetch the exact
+run link once the run ID is known (see below) and share it immediately so the user can watch
+along if they want to.
+
+Then resolve the run ID the same way `publish-github-release/action.yml` does:
+
+```bash
+sleep 30
+RUN_ID=$(gh run list --repo <owner>/<repo> --workflow automated-release.yml --limit 1 \
+  --created ">=$SINCE" --json databaseId --jq '.[0].databaseId')
+```
+
+Compute `SINCE` as "5 minutes ago" in UTC ISO-8601. `date` flags differ between macOS (`date -u
+-v-5M`) and GNU/Linux (`date -u -d '5 minutes ago'`) — detect which is available
+(`date -v-5M +%s >/dev/null 2>&1` succeeds on BSD/macOS date) and use the matching form, since
+this skill runs on a user's local machine, not just CI.
+
+If `RUN_ID` comes back empty, wait a bit longer and retry — don't fail immediately.
+
+## Step 6 — Monitor the workflow run
+
+Poll every ~15 seconds:
+
+```bash
+gh run view "$RUN_ID" --repo <owner>/<repo> --json status,conclusion
+```
+
+until `status == "completed"`. If `conclusion != "success"` (or `status` is `cancelled` or
+`failure`), run `gh run view "$RUN_ID" --repo <owner>/<repo> --log-failed`, report the failure
+to the user along with the run's link
+(`https://github.com/<owner>/<repo>/actions/runs/<RUN_ID>`), and stop. Don't guess at a fix —
+the actual fix likely needs a human familiar with the failing job.
+
+## Step 7 — Discover the three pull requests
+
+The workflow's own outputs (`sqs-pull-request-url`, `sqc-pull-request-url`,
+`bump-version-pull-request-url`) are **not** retrievable via `gh run view` for a
+`workflow_dispatch`-triggered run — those outputs only surface to a `workflow_call` caller job.
+Find the PRs directly by their known branch-name conventions instead:
+
+- **Bump-version PR** (same repo as the release): branch prefix
+  `bot/prepare-next-development-iteration-` (this is also what `release-lock.yml` matches on —
+  it's a load-bearing convention, not incidental).
+
+  ```bash
+  gh pr list --repo <owner>/<repo> --state open --json number,url,headRefName \
+    --jq '.[] | select(.headRefName | startswith("bot/prepare-next-development-iteration-"))'
+  ```
+
+- **SQS PR** (SonarQube Server, opens in `sonar-enterprise`): branch pattern
+  `<plugin-name>/update-analyzer-<release-version>`.
+
+  ```bash
+  gh pr list --repo SonarSource/sonar-enterprise --state open --json number,url,headRefName \
+    --jq '.[] | select(.headRefName | startswith("<plugin-name>/update-analyzer-"))'
+  ```
+
+- **SQC PR** (SonarQube Cloud, opens in `sonar-plugins-deployer`): same branch pattern, in
+  `SonarSource/sonar-plugins-deployer` instead.
+
+Only look for a PR if its corresponding integration flag (`sqs-integration`, `sqc-integration`,
+`bump-version`) was `true` in the triggered run — skip the lookup entirely otherwise, since no
+PR will ever appear.
+
+The jobs that open these PRs run sequentially after the main release steps, so if a PR isn't
+found immediately, retry a few times with a short delay before reporting it missing.
+
+As soon as each PR is found, tell the user with its `.url` field from the `gh pr list` output —
+don't make them wait for the final report to see the links.
+
+## Step 8 — Approve and merge each pull request
+
+For each PR found in Step 7, poll roughly every 30 seconds:
+
+```bash
+gh pr view <PR_URL> --json statusCheckRollup,mergeable,mergeStateStatus
+```
+
+Once all checks in `statusCheckRollup` are `SUCCESS` (or neutral/skipped) and `mergeable ==
+"MERGEABLE"`, **validate the diff before approving** — green CI means the change builds and
+passes tests, not that it's the change you expected. A green PR that touches the wrong files is
+still a bug. Don't skip this just because Step 4's confirmation already covers the overall flow.
+
+### Validate before approving
+
+Each of these three PRs is generated from a known, narrow template — fetch its diff
+(`gh pr diff <PR_URL>`) and check it matches the expected shape:
+
+- **Bump-version PR**: should touch only version-declaration files (`pom.xml`,
+  `gradle.properties`, or whatever `bump-version`/`bump-versions.yaml` targets for this repo's
+  build system) and only bump the version string itself — no unrelated file changes.
+- **SQS PR** (`sonar-enterprise`): should touch only the single build file
+  (`build.gradle`/equivalent) that pins the plugin's version, changing just the version number
+  for `plugin-name` (or `plugin-artifacts-sqs` if set) to the expected `release-version`.
+- **SQC PR** (`sonar-plugins-deployer`): same shape as SQS, in its own config file.
+
+Red flags to stop and report instead of approving:
+- Files outside the expected one (or two, if the tool also touches a lockfile) changed.
+- The version number in the diff doesn't match the `new-version`/`release-version` from this
+  release run.
+- More than one plugin/dependency entry changed when only this release's plugin should have.
+- The diff is empty, or unexpectedly large (e.g. hundreds of lines) for what should be a
+  one-line version bump.
+
+If the diff looks as expected, proceed to approve and merge **without asking for confirmation
+again** — the user already approved this whole flow once in Step 4, and pausing per-PR after a
+clean validation defeats the point of the skill (trigger once, walk away). If the diff raises
+one of the red flags above, stop, show the specific unexpected part of the diff with a link to
+the PR, and ask the user how to proceed rather than merging it.
+
+1. **Approve**: `gh pr review <PR_URL> --approve`, using the user's own logged-in `gh`
+   identity. This works without a separate token — the PR was opened by the vault-sourced
+   `release-automation` bot token running inside the GitHub Actions workflow, a different
+   identity than whoever is running this skill locally, so GitHub's "can't approve your own PR"
+   restriction doesn't apply.
+2. **Merge**: check which merge method the target repo actually allows before merging —
+   `gh repo view <owner>/<repo> --json mergeCommitAllowed,squashMergeAllowed,rebaseMergeAllowed`
+   — and use whichever method the repo supports (don't assume squash or merge-commit).
+   `gh pr merge <PR_URL> --<method>`.
+   - **`sonar-enterprise` requires an explicit `--subject`.** Its GitHub ruleset enforces a
+     commit-message-pattern on the squash commit
+     (`^(SONAR-[0-9]+|SCA-[0-9]+|SQRP-[0-9]+) [A-Z][^#]*$`), and the default squash message
+     (which can append the commit list) fails it. For any PR in `sonar-enterprise`, always pass
+     `--subject "<PR title>" --body ""` on the first merge attempt — the PR title (e.g.
+     `SONAR-31203 Update \`abap\` to version 3.22.0.8389`) already matches. Don't wait for the
+     plain `gh pr merge --squash` to fail first.
+   - Other repos in this flow (`sonar-plugins-deployer`, the release repo itself) have no such
+     rule observed so far; if a future merge fails with a `Repository rule violations` /
+     commit-message-regex error there too, apply the same `--subject`/`--body ""` fix.
+
+If a PR's checks fail: stop polling that one, report the failure with a link to the PR, and
+keep polling the others — one failing PR shouldn't block reporting on the rest.
+
+A single sequential loop that checks all outstanding PRs each iteration is enough; there's no
+need for real concurrency since this is a long-running, low-frequency poll.
+
+## Step 9 — Set fixVersion on the SONAR integration ticket
+
+Skip entirely if `sqs-integration` was not enabled for this run, or the SQS PR (Step 7/8) was
+never found/merged — no ticket to update. The fixVersion to apply was already decided in
+Step 3; this step just applies it, with no further user interaction.
+
+The "SQS Ticket" created during the workflow run (job "Create Integration Tickets", step
+"Create SQS Ticket") is filed in the Jira **SONAR** project and linked to the release ticket —
+this is the ticket `docs/AUTOMATED_RELEASE.md`'s manual checklist calls "the SONAR ticket" and
+already lists "Set fix versions on the SONAR ticket" as a step a human is supposed to
+remember. This step does it instead.
+
+1. **Find the ticket.** Search by summary rather than assuming an ID:
+   ```
+   project = SONAR AND summary ~ "Update <plugin-name> to <release-version>" ORDER BY created DESC
+   ```
+   via `mcp__atlassian__searchJiraIssuesUsingJql` — this is the same "Update X to Y" summary
+   pattern `create_integration_ticket.py` generates from `plugin-name` + `release-version`, so
+   it should be a unique match. If not found (summary format changed, ticket not created),
+   report this in the final report and skip — don't guess a ticket key.
+
+2. **Set it**: update the ticket's `fixVersions` via `mcp__atlassian__editJiraIssue`
+   (`fields: {"fixVersions": [{"name": "<version chosen in Step 3>"}]}`). If the ticket
+   already has a different fixVersion set (can happen — don't assume it's empty), this
+   overwrites it with the value the user explicitly chose upfront, which is intentional — they
+   already confirmed it once, no need to check twice.
+
+## Step 10 — Final report
+
+Summarize what happened, with a clickable link for every item: the release version and its
+GitHub release link, the Jira release ticket link (if surfaced in the workflow run logs/summary
+— check `$GITHUB_STEP_SUMMARY` via `gh run view --log` if `verbose` was true), and the final
+state of each of the three PRs (merged / needs attention, each with its PR link / skipped
+because its flag was off). If any releasability issues were fixed in Step 2, list those tickets
+and their links too, as a record of what was changed to unblock the release. If `sqs-integration`
+was enabled, also report the SONAR ticket link and the fixVersion set on it (or "skipped — no
+SQS PR merged", or "ticket not found" if Step 9 couldn't locate it).
