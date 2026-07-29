@@ -377,3 +377,12 @@ Artifacts from Repox can be attached to the GitHub release draft using the `rele
 **If SonarLint integration is enabled:**
 - Monitor the SLVS, SLVSCode, SLE, and/or SLI tickets created in Jira
 - Coordinate with IDE teams for integration timelines
+
+### Fully-automated trigger + monitor
+
+The [automated-release-run Claude Code skill](../.claude/skills/automated-release-run/) checks
+releasability, interviews you for the `workflow_dispatch` inputs, triggers the workflow, then
+polls and merges the bump-version, SQS, and SQC pull requests once their checks are green —
+so the checklist above is handled for you instead of relying on someone remembering to come
+back. Copy or symlink `.claude/skills/automated-release-run/` into your own `~/.claude/skills/`
+to run it locally against any analyzer repo.

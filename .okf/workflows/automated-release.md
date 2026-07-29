@@ -94,6 +94,11 @@ Outputs: `new-version` (Jira version name), `sqaa-pull-request-url`.
 - This workflow has been the subject of an [architecture review](/decisions/architecture-review-2026-07.md)
   identifying reliability, testability, and observability gaps — see the
   [risks](/risks/index.md) directory.
+- The `automated-release-run` Claude Code skill (`.claude/skills/automated-release-run/`) is the
+  recommended way to trigger a release: it checks releasability, interviews for
+  `workflow_dispatch` inputs, triggers the run, then polls and merges the bump-version, SQS, and
+  SQC pull requests once green — see `docs/AUTOMATED_RELEASE.md` § "Fully-automated trigger +
+  monitor".
 
 # Citations
 
