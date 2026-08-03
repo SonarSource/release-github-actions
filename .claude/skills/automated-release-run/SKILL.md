@@ -13,9 +13,9 @@ description: >
 # Run an Automated Release
 
 Trigger `automated-release.yml` for an analyzer repo and stay with it until every pull request
-it opens (version bump, SQS, SQC) is reviewed, green, and merged, and the SONAR integration
-ticket's fixVersion is set — so the user can ask once and walk away instead of babysitting
-three PRs across three repos and a Jira ticket.
+it opens (version bump, SQS, SQC, SQAA) is reviewed, green, and merged, and the SONAR
+integration ticket's fixVersion is set — so the user can ask once and walk away instead of
+babysitting PRs across multiple repos and a Jira ticket.
 
 This skill assumes the target repo already has `automated-release.yml` set up (see the
 `automated-release-setup` skill if it doesn't).
@@ -26,14 +26,24 @@ a pull request anywhere in this skill's output, include its actual URL
 returns) — not just the key/number. The user should be able to click straight through without
 having to construct the link themselves.
 
+**Heads up on permission prompts.** This skill runs a number of read-only shell commands (`gh`,
+`git`, `date`, `mktemp`) to inspect repo/release state and poll status as it goes. If you'd
+rather not approve each one individually, pre-approve these command prefixes for the session (or
+project-locally in `.claude/settings.local.json`) before starting — the skill itself has no way
+to do this for you.
+
 ## Step 1 — Identify the repo and read its release config
 
-The user names the repo directly, e.g. "Release sonar-pli" or "Release SonarSource/sonar-pli" —
-don't infer the target from the current working directory.
-
-1. Parse the repo name from the request. A bare name (`sonar-pli`) is assumed to be under the
-   `SonarSource` GitHub org; accept a full `org/repo` too.
-2. Find a local checkout to read `.github/workflows/automated-release.yml` from:
+1. **Check the current directory first.** If it's already a git checkout of a repo under the
+   `SonarSource` org (`git remote get-url origin`) with `.github/workflows/automated-release.yml`
+   present, ask the user via `AskUserQuestion`: "Release `<repo>` (the one you're in)?" with that
+   as the first/default option and "No, a different repo" as the other. Only fall through to
+   step 2 below if the user picks the latter, or if the current directory isn't a recognizable
+   checkout at all.
+2. Otherwise, parse the repo name from the request, e.g. "Release sonar-pli" or "Release
+   SonarSource/sonar-pli". A bare name (`sonar-pli`) is assumed to be under the `SonarSource`
+   GitHub org; accept a full `org/repo` too.
+3. Find a local checkout to read `.github/workflows/automated-release.yml` from:
    - If the current directory is already a checkout of that repo (`git remote get-url origin`
      matches), use it directly.
    - Otherwise, ask the user (via `AskUserQuestion`) where it's already cloned — offer a
@@ -42,13 +52,13 @@ don't infer the target from the current working directory.
    - If not cloned, ask where to clone it, defaulting to a fresh temp directory
      (`mktemp -d`) so it's disposable. A shallow `git clone` is enough — this only needs to
      read one YAML file, not build or test anything.
-3. Read `.github/workflows/automated-release.yml` from that checkout. This file is a
+4. Read `.github/workflows/automated-release.yml` from that checkout. This file is a
    hand-authored thin wrapper (created by the `automated-release-setup` skill) that declares
    `workflow_dispatch` inputs and forwards them to
    `SonarSource/release-github-actions/.github/workflows/automated-release.yml@v1`. **Parse the
    actual file — don't assume a fixed input list.** Every repo customizes it (e.g. some add
    `ide-integration`, `dry-run`, `bump-version`; others don't).
-4. From that same file, note the hardcoded `with:` values for `project-name`, `plugin-name`,
+5. From that same file, note the hardcoded `with:` values for `project-name`, `plugin-name`,
    `jira-project-key` — these are fixed per repo, don't ask the user for them.
 
 ## Step 2 — Releasability pre-flight
@@ -152,7 +162,7 @@ they appear in the YAML:
 - If the user sets `dry-run` (or `use-jira-sandbox`/`is-draft-release`) to `false`... actually,
   the important warning is the opposite: **if `dry-run` is left `true` or explicitly requested**,
   tell the user plainly that this is not a true no-op. It only affects the Jira sandbox and
-  whether the GitHub release is a draft — the SQS/SQC/bump-version pull requests are still
+  whether the GitHub release is a draft — the SQS/SQC/SQAA/bump-version pull requests are still
   created for real either way. Don't let "dry-run" imply nothing will happen outside GitHub.
 - If `sqs-integration` is enabled (default `true`), also ask which SQS release this analyzer
   version will ship with — this sets the `fixVersion` on the SONAR/SQS integration ticket that
@@ -168,6 +178,25 @@ they appear in the YAML:
   next release) — default") and a free-text option to name a different version — "next" is a
   reasonable guess but not a guarantee, a change can miss a train and ship in a later one.
   Store the chosen version name; nothing is written to Jira yet — see Step 9.
+- For `release-notes`: if the user leaves it blank (accepting auto-generation by
+  `get-jira-release-notes`), ask via `AskUserQuestion` (Yes/No) whether they'd like a short
+  intro paragraph drafted ahead of the auto-generated issue list. The `release-notes` input is
+  all-or-nothing — a non-blank value fully replaces auto-generation — so this only works by
+  building the whole value here, not by asking the workflow to prepend anything:
+  1. If yes, fetch the same issues `get-jira-release-notes` would
+     (`project = <jira-project-key> AND fixVersion = "<new-version>" ORDER BY issuetype ASC, key
+     ASC` via `mcp__atlassian__searchJiraIssuesUsingJql`), using the `issue-categories` order
+     from that repo's `automated-release.yml` `with:` block if it overrides the default
+     (`Feature,False Positive,False Negative,Bug,Security,Maintenance`).
+  2. Draft a 1-2 sentence paragraph summarizing the release's theme from those issue summaries
+     and the `short-description` already given, and show it to the user for approval/edit —
+     one round of confirmation, same as everywhere else in this step.
+  3. Reproduce `get_jira_release_notes.py`'s `format_notes_as_markdown` structure exactly (`#
+     Release notes - {project name} - {version}` header, then `### {category}` sections in
+     order, each issue as `[KEY](jira-url/browse/KEY) summary`), inserting the approved
+     paragraph directly under the header line. Use this full string as the `release-notes`
+     value passed in Step 5.
+  4. If the user declines, leave `release-notes` blank — unchanged, auto-generated behavior.
 
 ## Step 4 — Summary and confirmation
 
@@ -177,8 +206,8 @@ SQS fixVersion chosen in Step 3 as its own row (e.g. `| SQS fixVersion (SONAR ti
 sqs-2026.5 |`), and note that it will be applied automatically to the SONAR integration ticket
 once that ticket exists later in the run (Step 9) — with no further prompt for it. Also state
 plainly what happens *after* triggering: this skill will monitor the workflow to completion,
-then automatically approve and merge all resulting pull requests (bump-version, SQS, SQC) as
-soon as each is green — with no further prompts in between, unless something fails or needs a
+then automatically approve and merge all resulting pull requests (bump-version, SQS, SQC, SQAA)
+as soon as each is green — with no further prompts in between, unless something fails or needs a
 judgment call (see Step 8's failure handling). Ask the user to confirm this whole flow once, up
 front, in plain language — triggering a release is a cross-repo, hard-to-reverse action, and
 the point of this skill is that one confirmation here is the only interaction needed; don't ask
@@ -225,12 +254,12 @@ to the user along with the run's link
 (`https://github.com/<owner>/<repo>/actions/runs/<RUN_ID>`), and stop. Don't guess at a fix —
 the actual fix likely needs a human familiar with the failing job.
 
-## Step 7 — Discover the three pull requests
+## Step 7 — Discover the pull requests
 
 The workflow's own outputs (`sqs-pull-request-url`, `sqc-pull-request-url`,
-`bump-version-pull-request-url`) are **not** retrievable via `gh run view` for a
-`workflow_dispatch`-triggered run — those outputs only surface to a `workflow_call` caller job.
-Find the PRs directly by their known branch-name conventions instead:
+`sqaa-pull-request-url`, `bump-version-pull-request-url`) are **not** retrievable via `gh run
+view` for a `workflow_dispatch`-triggered run — those outputs only surface to a `workflow_call`
+caller job. Find the PRs directly by their known branch-name conventions instead:
 
 - **Bump-version PR** (same repo as the release): branch prefix
   `bot/prepare-next-development-iteration-` (this is also what `release-lock.yml` matches on —
@@ -252,12 +281,26 @@ Find the PRs directly by their known branch-name conventions instead:
 - **SQC PR** (SonarQube Cloud, opens in `sonar-plugins-deployer`): same branch pattern, in
   `SonarSource/sonar-plugins-deployer` instead.
 
+- **SQAA PR** (Analysis as a Service, opens in `sonar-analysis-as-a-service`): branch pattern
+  `<plugin-name>/update-aaas-<release-version>`.
+
+  ```bash
+  gh pr list --repo SonarSource/sonar-analysis-as-a-service --state open --json number,url,headRefName \
+    --jq '.[] | select(.headRefName | startswith("<plugin-name>/update-aaas-"))'
+  ```
+
 Only look for a PR if its corresponding integration flag (`sqs-integration`, `sqc-integration`,
 `bump-version`) was `true` in the triggered run — skip the lookup entirely otherwise, since no
-PR will ever appear.
+PR will ever appear. The SQAA PR needs **both** `sqc-integration` and `sqaa-integration` to be
+`true` (mirrors the workflow's own `if:` condition on the `update-analysis-as-a-service` job) —
+skip looking for it if either is `false`.
 
 The jobs that open these PRs run sequentially after the main release steps, so if a PR isn't
-found immediately, retry a few times with a short delay before reporting it missing.
+found immediately, retry a few times with a short delay before reporting it missing. For the
+SQAA PR specifically, "not found after retrying" can also mean the analyzer just isn't onboarded
+to SQAA yet — `update-analysis-as-a-service` skips silently (no PR, no failure) when it finds no
+matching version-catalog entry. Report that as "no SQAA PR — analyzer not yet onboarded to
+Analysis as a Service," not as a problem to chase.
 
 As soon as each PR is found, tell the user with its `.url` field from the `gh pr list` output —
 don't make them wait for the final report to see the links.
@@ -277,7 +320,7 @@ still a bug. Don't skip this just because Step 4's confirmation already covers t
 
 ### Validate before approving
 
-Each of these three PRs is generated from a known, narrow template — fetch its diff
+Each of these PRs is generated from a known, narrow template — fetch its diff
 (`gh pr diff <PR_URL>`) and check it matches the expected shape:
 
 - **Bump-version PR**: should touch only version-declaration files (`pom.xml`,
@@ -287,6 +330,10 @@ Each of these three PRs is generated from a known, narrow template — fetch its
   (`build.gradle`/equivalent) that pins the plugin's version, changing just the version number
   for `plugin-name` (or `plugin-artifacts-sqs` if set) to the expected `release-version`.
 - **SQC PR** (`sonar-plugins-deployer`): same shape as SQS, in its own config file.
+- **SQAA PR** (`sonar-analysis-as-a-service`): should touch only
+  `gradle/sonar-plugins.versions.toml`, bumping the version-catalog entry/entries for
+  `plugin-name` (or `plugin-artifacts-sqaa` if set) to the expected `release-version` — no other
+  files, no other catalog entries.
 
 Red flags to stop and report instead of approving:
 - Files outside the expected one (or two, if the tool also touches a lockfile) changed.
@@ -360,8 +407,9 @@ remember. This step does it instead.
 Summarize what happened, with a clickable link for every item: the release version and its
 GitHub release link, the Jira release ticket link (if surfaced in the workflow run logs/summary
 — check `$GITHUB_STEP_SUMMARY` via `gh run view --log` if `verbose` was true), and the final
-state of each of the three PRs (merged / needs attention, each with its PR link / skipped
-because its flag was off). If any releasability issues were fixed in Step 2, list those tickets
-and their links too, as a record of what was changed to unblock the release. If `sqs-integration`
-was enabled, also report the SONAR ticket link and the fixVersion set on it (or "skipped — no
-SQS PR merged", or "ticket not found" if Step 9 couldn't locate it).
+state of each PR (merged / needs attention, each with its PR link / skipped because its flag was
+off / for SQAA specifically, "no PR — analyzer not yet onboarded to Analysis as a Service" when
+applicable). If any releasability issues were fixed in Step 2, list those tickets and their
+links too, as a record of what was changed to unblock the release. If `sqs-integration` was
+enabled, also report the SONAR ticket link and the fixVersion set on it (or "skipped — no SQS PR
+merged", or "ticket not found" if Step 9 couldn't locate it).
