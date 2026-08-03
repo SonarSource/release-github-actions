@@ -12,12 +12,14 @@ description: >
 
 # Run an Automated Release
 
-Trigger `automated-release.yml` for an analyzer repo and stay with it until every pull request
-it opens (version bump, SQS, SQC, SQAA) is reviewed, green, and merged, and the SONAR
-integration ticket's fixVersion is set — so the user can ask once and walk away instead of
+Trigger the repo's automated-release wrapper workflow (the hand-authored `.github/workflows/*.yml`
+file that forwards to `SonarSource/release-github-actions/.github/workflows/automated-release.yml@v1`
+— its filename varies per repo, see Step 1) for an analyzer repo and stay with it until every
+pull request it opens (version bump, SQS, SQC, SQAA) is reviewed, green, and merged, and the
+SONAR integration ticket's fixVersion is set — so the user can ask once and walk away instead of
 babysitting PRs across multiple repos and a Jira ticket.
 
-This skill assumes the target repo already has `automated-release.yml` set up (see the
+This skill assumes the target repo already has that wrapper workflow set up (see the
 `automated-release-setup` skill if it doesn't).
 
 **Always link, don't just name.** Whenever you mention a Jira ticket, a GitHub workflow run, or
@@ -35,15 +37,16 @@ to do this for you.
 ## Step 1 — Identify the repo and read its release config
 
 1. **Check the current directory first.** If it's already a git checkout of a repo under the
-   `SonarSource` org (`git remote get-url origin`) with `.github/workflows/automated-release.yml`
-   present, ask the user via `AskUserQuestion`: "Release `<repo>` (the one you're in)?" with that
-   as the first/default option and "No, a different repo" as the other. Only fall through to
-   step 2 below if the user picks the latter, or if the current directory isn't a recognizable
-   checkout at all.
+   `SonarSource` org (`git remote get-url origin`) with a `.github/workflows/*.yml` file that
+   forwards to `release-github-actions/.github/workflows/automated-release.yml@v1` (grep as in
+   step 4 below — don't assume the filename), ask the user via `AskUserQuestion`: "Release
+   `<repo>` (the one you're in)?" with that as the first/default option and "No, a different
+   repo" as the other. Only fall through to step 2 below if the user picks the latter, or if the
+   current directory isn't a recognizable checkout at all.
 2. Otherwise, parse the repo name from the request, e.g. "Release sonar-pli" or "Release
    SonarSource/sonar-pli". A bare name (`sonar-pli`) is assumed to be under the `SonarSource`
    GitHub org; accept a full `org/repo` too.
-3. Find a local checkout to read `.github/workflows/automated-release.yml` from:
+3. Find a local checkout to read the wrapper workflow file from:
    - If the current directory is already a checkout of that repo (`git remote get-url origin`
      matches), use it directly.
    - Otherwise, ask the user (via `AskUserQuestion`) where it's already cloned — offer a
@@ -52,9 +55,17 @@ to do this for you.
    - If not cloned, ask where to clone it, defaulting to a fresh temp directory
      (`mktemp -d`) so it's disposable. A shallow `git clone` is enough — this only needs to
      read one YAML file, not build or test anything.
-4. Read `.github/workflows/automated-release.yml` from that checkout. This file is a
-   hand-authored thin wrapper (created by the `automated-release-setup` skill) that declares
-   `workflow_dispatch` inputs and forwards them to
+4. Read the repo's wrapper workflow file. **Don't assume it's named
+   `automated-release.yml`** — it's hand-authored per repo (by the `automated-release-setup`
+   skill or manually) and the filename varies (e.g. sonar-php uses `AutomateRelease.yml`).
+   Find it by content, not name:
+   ```bash
+   grep -rl "release-github-actions/.github/workflows/automated-release.yml@v1" .github/workflows/
+   ```
+   Use whatever path that returns for every later step in this skill (reading inputs here, and
+   the `gh workflow run <filename>` call in Step 5 — that command also takes the actual
+   filename, not a hardcoded `automated-release.yml`). This file declares `workflow_dispatch`
+   inputs and forwards them to
    `SonarSource/release-github-actions/.github/workflows/automated-release.yml@v1`. **Parse the
    actual file — don't assume a fixed input list.** Every repo customizes it (e.g. some add
    `ide-integration`, `dry-run`, `bump-version`; others don't).
@@ -154,6 +165,22 @@ lingering "failed optional checks" description). Only then proceed to Step 3.
 Using `AskUserQuestion`, ask for each `workflow_dispatch` input found in Step 1, in the order
 they appear in the YAML:
 
+- **`AskUserQuestion` requires ≥2 options per question — it errors out otherwise.** A required
+  free-text input with no meaningful default (e.g. `short-description` on a repo where it has no
+  YAML default) is not a valid multi-choice question. For these, either (a) skip
+  `AskUserQuestion` entirely and just ask in plain text, or (b) derive a concrete draft value
+  first — e.g. from the unreleased Jira ticket(s) for this project (see the derivation pattern
+  used for `short-description` below) — and offer that draft as one option against a "type my
+  own" option as the second. Don't send a single-option question; it fails validation and wastes
+  a round trip. Batch the remaining genuinely-multi-choice inputs (booleans, branch, version) into
+  one `AskUserQuestion` call rather than a call-per-input.
+- If a required free-text field like `short-description` has no natural default, consider
+  proactively querying the project's unreleased Jira backlog
+  (`project = <jira-project-key> AND fixVersion in unreleasedVersions() ORDER BY issuetype ASC,
+  key ASC` via `mcp__atlassian__searchJiraIssuesUsingJql`) and drafting a summary from the
+  ticket(s) found, rather than asking the user to write one from scratch or falling back to a
+  generic placeholder — this is the same backlog Step 3's release-notes drafting already reads,
+  so it's not extra API surface.
 - Show each input's description and default value so the user can accept a default with one
   click instead of retyping it.
 - Present boolean inputs as Yes/No with the YAML default pre-selected.
@@ -215,21 +242,25 @@ again before merging each PR later, or before setting the fixVersion in Step 9.
 
 ## Step 5 — Trigger
 
+Use the actual filename discovered in Step 1 (e.g. `AutomateRelease.yml`), not a hardcoded
+`automated-release.yml` — `gh workflow run` and `gh run list --workflow` both need the real
+filename or they'll silently match nothing / the wrong workflow.
+
 ```bash
-gh workflow run automated-release.yml --repo <owner>/<repo> --ref <branch> \
+gh workflow run <actual-filename> --repo <owner>/<repo> --ref <branch> \
   -f "<input>=<value>" ...
 ```
 
-`gh workflow run` doesn't print a run URL by default — construct one
-(`https://github.com/<owner>/<repo>/actions/workflows/automated-release.yml`) or fetch the exact
-run link once the run ID is known (see below) and share it immediately so the user can watch
-along if they want to.
+Conveniently, `gh workflow run` actually does print the run URL directly to stdout on recent
+`gh` versions — capture and share that; don't assume you need to construct one, but do
+construct `https://github.com/<owner>/<repo>/actions/workflows/<actual-filename>` as a fallback
+if the output is empty.
 
 Then resolve the run ID the same way `publish-github-release/action.yml` does:
 
 ```bash
 sleep 30
-RUN_ID=$(gh run list --repo <owner>/<repo> --workflow automated-release.yml --limit 1 \
+RUN_ID=$(gh run list --repo <owner>/<repo> --workflow <actual-filename> --limit 1 \
   --created ">=$SINCE" --json databaseId --jq '.[0].databaseId')
 ```
 
@@ -242,17 +273,43 @@ If `RUN_ID` comes back empty, wait a bit longer and retry — don't fail immedia
 
 ## Step 6 — Monitor the workflow run
 
-Poll every ~15 seconds:
+Poll every ~15 seconds. **Avoid the bash variable name `status`** in polling scripts — it's a
+read-only/special variable in some shells and assigning to it crashes the script with
+`read-only variable: status`; use `run_status`/`run_conclusion` instead.
 
 ```bash
 gh run view "$RUN_ID" --repo <owner>/<repo> --json status,conclusion
 ```
 
 until `status == "completed"`. If `conclusion != "success"` (or `status` is `cancelled` or
-`failure`), run `gh run view "$RUN_ID" --repo <owner>/<repo> --log-failed`, report the failure
-to the user along with the run's link
-(`https://github.com/<owner>/<repo>/actions/runs/<RUN_ID>`), and stop. Don't guess at a fix —
-the actual fix likely needs a human familiar with the failing job.
+`failure`), don't stop immediately — first check whether the failure is a **real** problem or a
+**transient infra blip**, since the two need very different responses:
+
+1. Run `gh run view "$RUN_ID" --repo <owner>/<repo> --log-failed` and read the actual error.
+2. **Transient/infra signatures** — retry automatically without asking, since these are
+   noise, not signal:
+   - The `Check Releasability` job re-checking the exact commit SHA (this happens even though
+     Step 2 already passed the pre-flight check — the workflow's own check is authoritative and
+     re-runs independently, per Step 2's caveat) fails one specific sub-check with a
+     network-level error rather than a real business-rule violation, e.g.
+     `java.lang.IllegalStateException: java.io.IOException: Connection reset` on the `Jira`
+     sub-check while every other sub-check (`QA`, `GitHub`, `ParentPOM`, `CheckDependencies`,
+     `QualityGate`, etc.) passed. This is a dropped connection to the lambda backing that one
+     check, not an actual unresolved-ticket problem — Step 2 already ruled that out.
+   - Any other single-job failure whose log shows a connection/timeout/network error unrelated
+     to the actual release logic.
+   - In these cases: tell the user plainly what failed and why it looks transient (name the
+     specific error and note which other checks passed), then re-trigger the **entire workflow**
+     with the identical inputs from Step 5 (a full re-run is simpler and safer than trying to
+     rerun just one internal job of someone else's reusable workflow) — don't ask for
+     confirmation first, since this is a low-risk retry of something the user already approved
+     once in Step 4, not a new judgment call.
+3. **Real failure signatures** — stop and report, don't retry blindly: a business-rule check
+   genuinely failing (an actual unresolved Jira ticket, a real quality gate failure, a real build
+   error, a real test failure) or the same transient-looking failure recurring on the retry.
+   Report to the user with the run's link
+   (`https://github.com/<owner>/<repo>/actions/runs/<RUN_ID>`) and stop — don't guess at a fix;
+   the actual fix likely needs a human familiar with the failing job.
 
 ## Step 7 — Discover the pull requests
 
@@ -313,10 +370,48 @@ For each PR found in Step 7, poll roughly every 30 seconds:
 gh pr view <PR_URL> --json statusCheckRollup,mergeable,mergeStateStatus
 ```
 
+**Don't fully trust a background Monitor's summarized state (e.g. a shell loop's own "GREEN" /
+"FAILED" echo) as the final word before merging — re-verify with a direct, fresh `gh pr view`
+call first.** A polling script's own bucketing logic (e.g. matching on generic
+`status`/`conclusion` strings) can misclassify a real failing check as pending/passed if the
+matching is too loose, or simply lag behind the true state by one poll interval. Treat the
+monitor as a wake-up signal, not as ground truth — always re-check the specific PR directly
+before approving/merging, and specifically re-derive the failing/pending lists yourself from the
+raw `statusCheckRollup` array rather than trusting a prior summary string.
+
+If one PR's checks fail while others in the same run are still pending or already green, don't
+let one failure block progress on the rest — validate and merge the clean ones while you
+diagnose the failing one (see below).
+
 Once all checks in `statusCheckRollup` are `SUCCESS` (or neutral/skipped) and `mergeable ==
 "MERGEABLE"`, **validate the diff before approving** — green CI means the change builds and
 passes tests, not that it's the change you expected. A green PR that touches the wrong files is
 still a bug. Don't skip this just because Step 4's confirmation already covers the overall flow.
+
+### A failing check isn't necessarily a real failure — diagnose before giving up
+
+If a check fails, read its actual job log (`gh run view <run-id> --repo <owner>/<repo> --job
+<job-id> --log`) before reporting it as blocking, using the same transient-vs-real distinction
+as Step 6:
+
+- **Transient/infra signatures** — e.g. a Testcontainers/Docker container failing to become
+  healthy (`ContainerLaunchException` → `TimeoutException` → `ConnectException` on a health
+  check), a network blip, a flaky/unrelated integration-test suite (e.g. a `python`-analyzer
+  integration test failing on a PR that only bumps the `php` version — the failure is in a test
+  suite the change doesn't even touch). In these cases, re-run just the failed job (not the
+  whole PR's CI) and keep polling — this is the appropriate scope here because, unlike Step 6's
+  reusable-workflow run, you have direct visibility into and control over each individual CI job
+  on a PR:
+  ```bash
+  gh run rerun <run-id> --repo <owner>/<repo> --job <job-id>
+  ```
+  Don't ask for confirmation before retrying a job like this — it's the same low-risk "retry
+  something that already looked fine" judgment call as Step 6's transient-failure handling.
+- **Real failure signatures** — the diff itself touches unexpected files (see the red flags
+  below), the failing test is actually in the plugin/component being bumped, or the same job
+  fails again after a retry. Stop polling that PR, report the failure with a link to the PR and
+  the specific job log, and keep polling the others — one failing PR shouldn't block reporting
+  on or merging the rest.
 
 ### Validate before approving
 
@@ -369,8 +464,8 @@ the PR, and ask the user how to proceed rather than merging it.
      rule observed so far; if a future merge fails with a `Repository rule violations` /
      commit-message-regex error there too, apply the same `--subject`/`--body ""` fix.
 
-If a PR's checks fail: stop polling that one, report the failure with a link to the PR, and
-keep polling the others — one failing PR shouldn't block reporting on the rest.
+(See "A failing check isn't necessarily a real failure" above for how to triage a failing PR
+check before deciding to stop polling it.)
 
 A single sequential loop that checks all outstanding PRs each iteration is enough; there's no
 need for real concurrency since this is a long-running, low-frequency poll.
