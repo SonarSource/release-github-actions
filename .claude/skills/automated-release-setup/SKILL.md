@@ -21,11 +21,12 @@ Ask the user for the following details using AskUserQuestion:
 4. **PM Email**: Product Manager email address
 5. **Slack Channel**: Check the existing `release.yml` for `slackChannel` value first - reuse it if present, otherwise ask the user
 6. **Build System**: Maven (pom.xml) or Gradle (gradle.properties)
-7. **SonarLint Integration**: Whether to create integration tickets for SonarLint IDE plugins:
-   - **SLVS** (SonarLint for Visual Studio)
-   - **SLVSCode** (SonarLint for VS Code)
-   - **SLE** (SonarLint for Eclipse)
-   - **SLI** (SonarLint for IntelliJ)
+7. **SonarQube for IDE Integration**: Whether to create integration tickets for SonarQube for IDE:
+   - **SLVS** (SonarQube for Visual Studio)
+   - **SLVSCODE** (SonarQube for VS Code)
+   - **SLCORE** (SonarLint Core)
+   - **SLE** (SonarQube for Eclipse)
+   - **SLI** (SonarQube for IntelliJ)
 8. **CLI Integration**: Whether to create an integration ticket for the SonarQube CLI scanner.
 9. **Version Bump**: Whether the automated release workflow should bump the project version after the release (i.e., prepare the next development iteration). If yes, also ask:
    - **Bump Version PR Labels**: Optional comma-separated list of labels to apply to the version bump pull request (e.g., `update-next-dev,skip-qa`). Leave empty if no labels are needed.
@@ -78,7 +79,7 @@ Remind the user of these prerequisites and **ask for confirmation** using AskUse
 
 Create only the `automated-release` workflow file (using the detected extension from Step 1c). **Do not create a separate `bump-versions` workflow** — version bumping is handled directly by the reusable workflow when `bump-version: true` is passed.
 
-#### 3.1 Create `automated-release{EXT}` (standard, no SonarLint, no version bump)
+#### 3.1 Create `automated-release{EXT}` (standard, no SonarQube for IDE integration, no version bump)
 
 ```yaml
 name: Automated Release
@@ -147,7 +148,7 @@ jobs:
       is-draft-release: ${{ github.event.inputs.dry-run == 'true' }}
 ```
 
-#### 3.2 Create `automated-release{EXT}` (standard, no SonarLint, **with version bump**)
+#### 3.2 Create `automated-release{EXT}` (standard, no SonarQube for IDE integration, **with version bump**)
 
 When the user wants version bumping, add `bump-version: true` (and optionally `bump-version-pr-labels`) to the `with:` block:
 
@@ -220,7 +221,7 @@ jobs:
       bump-version-pr-labels: "${BUMP_VERSION_PR_LABELS}"  # omit this line if no labels
 ```
 
-#### 3.3 Create `automated-release{EXT}` (with SonarLint integration, no version bump)
+#### 3.3 Create `automated-release{EXT}` (with SonarQube for IDE integration, no version bump)
 
 ```yaml
 name: Automated Release
@@ -232,7 +233,7 @@ on:
         required: true
         type: string
       sq-ide-short-description:
-        description: "Short description for the SonarLint IDE tickets (leave empty to skip IDE tickets)"
+        description: "Short description for the SonarQube for IDE tickets (leave empty to skip IDE tickets)"
         required: false
         type: string
       sqc-integration:
@@ -244,19 +245,23 @@ on:
         type: boolean
         default: true
       slvs-integration:
-        description: "Create SLVS ticket (SonarLint for Visual Studio)"
+        description: "Create SLVS ticket (SonarQube for Visual Studio)"
         type: boolean
         default: false
       slvscode-integration:
-        description: "Create SLVSCode ticket (SonarLint for VS Code)"
+        description: "Create SLVSCODE ticket (SonarQube for VS Code)"
+        type: boolean
+        default: false
+      slcore-integration:
+        description: "Create SLCORE ticket (SonarLint Core)"
         type: boolean
         default: false
       sle-integration:
-        description: "Create SLE ticket (SonarLint for Eclipse)"
+        description: "Create SLE ticket (SonarQube for Eclipse)"
         type: boolean
         default: false
       sli-integration:
-        description: "Create SLI ticket (SonarLint for IntelliJ)"
+        description: "Create SLI ticket (SonarQube for IntelliJ)"
         type: boolean
         default: false
       branch:
@@ -303,6 +308,7 @@ jobs:
       sqs-integration: ${{ github.event.inputs.sqs-integration == 'true' }}
       create-slvs-ticket: ${{ github.event.inputs.slvs-integration == 'true' }}
       create-slvscode-ticket: ${{ github.event.inputs.slvscode-integration == 'true' }}
+      create-slcore-ticket: ${{ github.event.inputs.slcore-integration == 'true' }}
       create-sle-ticket: ${{ github.event.inputs.sle-integration == 'true' }}
       create-sli-ticket: ${{ github.event.inputs.sli-integration == 'true' }}
       sq-ide-short-description: ${{ github.event.inputs.sq-ide-short-description }}
@@ -314,11 +320,11 @@ jobs:
       is-draft-release: ${{ github.event.inputs.dry-run == 'true' }}
 ```
 
-#### 3.4 Create `automated-release{EXT}` (with SonarLint integration **and** version bump)
+#### 3.4 Create `automated-release{EXT}` (with SonarQube for IDE integration **and** version bump)
 
-Add `bump-version: true` (and optionally `bump-version-pr-labels`) to the SonarLint variant's `with:` block, same as in 3.2.
+Add `bump-version: true` (and optionally `bump-version-pr-labels`) to the SonarQube for IDE variant's `with:` block, same as in 3.2.
 
-#### 3.5 Create `automated-release{EXT}` (with SQ-CLI integration, no version bump, no SonarLint integration)
+#### 3.5 Create `automated-release{EXT}` (with SQ-CLI integration, no version bump, no SonarQube for IDE integration)
 
 ```yaml
 name: Automated Release
@@ -626,10 +632,10 @@ Remind user of post-release tasks:
 - Update integration ticket statuses in Jira
 - Set fix versions on the SONAR ticket
 
-**If SonarLint integration is enabled:**
-- Monitor the SLVS, SLVSCode, SLE, and/or SLI tickets created in Jira
-- Coordinate with IDE teams for integration timelines
-- Verify analyzer compatibility with SonarLint versions
+**If SonarQube for IDE integration is enabled:**
+- Monitor the SLCORE, SLVS, SLVSCODE, SLE, and/or SLI tickets created in Jira
+- Coordinate with the relevant SonarQube for IDE teams for integration timelines
+- Verify analyzer compatibility with SonarQube for IDE versions
 
 ### Advanced Options
 
@@ -640,26 +646,27 @@ Mention these optional configurations if relevant:
 - **Disable releasability check**: `check-releasability: false`
 - **Attach release artifacts**: `release-artifacts-public`, `release-artifacts-private` — download artifacts from Repox and attach them to the GitHub release draft. Provide full Artifactory paths including the repo name, with `{version}` as placeholder for the release version.
 
-### SonarLint Integration Details
+### SonarQube for IDE Integration Details
 
-When SonarLint integration is enabled, the workflow creates Jira tickets for the relevant IDE teams:
+When SonarQube for IDE integration is enabled, the workflow creates Jira tickets for SLCORE and supported IDEs:
 
 | Input | Jira Project | Description |
 |-------|--------------|-------------|
-| `create-slvs-ticket` | SLVS | SonarLint for Visual Studio |
-| `create-slvscode-ticket` | SLVSCODE | SonarLint for VS Code |
-| `create-sle-ticket` | SLE | SonarLint for Eclipse |
-| `create-sli-ticket` | SLI | SonarLint for IntelliJ |
+| `create-slvs-ticket` | SLVS | SonarQube for Visual Studio |
+| `create-slvscode-ticket` | SLVSCODE | SonarQube for VS Code |
+| `create-slcore-ticket` | SLCORE | SonarLint Core |
+| `create-sle-ticket` | SLE | SonarQube for Eclipse |
+| `create-sli-ticket` | SLI | SonarQube for IntelliJ |
 
-The `sq-ide-short-description` input is used as the description for all IDE tickets. This should describe what changes are relevant for IDE integrations (e.g., "New rules for X", "Updated analysis engine", "Breaking API changes").
+The `sq-ide-short-description` input is used as the description for all SonarQube for IDE tickets. This should describe what changes are relevant for these integrations (e.g., "New rules for X", "Updated analysis engine", "Breaking API changes").
 
-**When to enable SonarLint integration:**
-- The analyzer is used by SonarLint (standalone analysis)
+**When to enable SonarQube for IDE integration:**
+- The analyzer is used by SonarQube for IDE (standalone analysis)
 - New rules or rule changes that affect IDE users
 - Breaking changes in the analyzer API
 - Performance improvements relevant to IDE analysis
 
-**Note:** Not all analyzers are integrated with SonarLint. Check with the IDE teams if unsure whether your analyzer requires SonarLint integration tickets.
+**Note:** Not all analyzers are integrated with SonarQube for IDE. Check with the relevant SonarQube for IDE teams if unsure whether your analyzer requires integration tickets.
 
 ### CLI Integration Details
 

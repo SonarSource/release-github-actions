@@ -44,7 +44,7 @@ manually via `workflow_dispatch` from the analyzer repo.
 │           ┌────────────┴──────────────────┐                                  │
 │           ▼                               ▼                                   │
 │  bump-version                   create-integration-tickets                    │
-│  (opens version-bump PR)        (SLVS / SLE / SLI / SQS / SQC / ...)        │
+│  (opens version-bump PR)        (SLCORE / SLVS / SLE / SLI / SQS / ...)       │
 │           │                               │                                   │
 │           │                               ▼                                   │
 │           │                     update-analyzer PRs                           │
@@ -111,7 +111,7 @@ This repository includes Claude Code skills for automating common tasks related 
 |-------|-------------|
 | [automated-release-setup](.claude/skills/automated-release-setup/) | Set up automated release workflow for SonarSource analyzer projects |
 | [automated-release-run](.claude/skills/automated-release-run/) | Trigger and monitor an automated release end-to-end, including merging the resulting pull requests |
-| [devex-release-setup](.claude/skills/devex-release-setup/) | Set up automated release workflow for SonarSource Development Experience projects (SonarLint Core, SonarLint for IntelliJ, etc.) |
+| [devex-release-setup](.claude/skills/devex-release-setup/) | Set up automated release workflow for SonarSource Development Experience projects (SonarLint Core, SonarQube for IntelliJ, etc.) |
 
 ### Usage
 
@@ -132,7 +132,7 @@ Once the workflow is set up, trigger and monitor an actual release end-to-end:
 
 Or use the slash command: `/automated-release-run <repo-name>`
 
-For Development Experience projects (SonarLint Core, SonarLint for IntelliJ, etc.):
+For Development Experience projects (SonarLint Core, SonarQube for IntelliJ, etc.):
 
 - "Set up Development Experience release workflow"
 - "Add full-release workflow using ide-automated-release"

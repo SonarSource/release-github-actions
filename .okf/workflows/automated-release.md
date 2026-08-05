@@ -4,7 +4,7 @@ title: Automated Release (analyzer path)
 description: Orchestrates the full end-to-end analyzer release across Jira, GitHub, and downstream integration repos.
 resource: https://github.com/SonarSource/release-github-actions/blob/master/.github/workflows/automated-release.yml
 tags: [workflow, release, orchestrator, jira, github-release, slack]
-timestamp: 2026-07-23T00:00:00Z
+timestamp: 2026-08-05T00:00:00Z
 ---
 
 # Overview
@@ -42,7 +42,7 @@ create-release-ticket   publish-github-release
                │
        ┌───────┴────────────────────┐
        ▼                            ▼
-  bump-version                create-integration-tickets (SLVS/SLE/SLI/SQS/SQC/...)
+  bump-version                create-integration-tickets (SLCORE/SLVS/SLE/SLI/SQS/...)
   (opens version-bump PR)            │
                                      ▼
                             update-analyzer PRs (sonar-enterprise, sonar-plugins-deployer)
@@ -71,7 +71,8 @@ Key inputs (selected — full list in the action README): `jira-project-key`, `p
 (default `true`), `check-releasability` (default `true`), `sqs-integration` /
 `sqc-integration` (default `true`), `sqaa-integration` (runs only when `sqc-integration` is
 also true; silently skipped if not onboarded), `create-slvs-ticket` / `create-slvscode-ticket` /
-`create-sle-ticket` / `create-sli-ticket` / `create-cli-ticket` (default `false`), `verbose`
+`create-slcore-ticket` / `create-sle-ticket` / `create-sli-ticket` / `create-cli-ticket`
+(default `false`), `verbose`
 (default `false`), `code-quality-leads-slack-notification` (default `true`; opt out of the
 release announcement sent to the Code Quality PM/EM leads Slack channel).
 

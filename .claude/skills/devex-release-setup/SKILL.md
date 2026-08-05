@@ -4,8 +4,7 @@ description: >
   Use this skill whenever the user asks to "set up Development Experience release workflow",
   "configure DevEx release automation", "add full-release workflow", "add release
   automation using ide-automated-release", or any variation of setting up the
-  automated release workflow for a SonarSource Development Experience project (SonarLint
-  Core, SonarLint for IntelliJ, SonarLint for Eclipse, SonarLint for VS Code, etc.).
+  automated release workflow for a SonarSource Development Experience project (SonarLint Core, SonarQube for IntelliJ, SonarQube for Eclipse, SonarQube for VS Code, etc.).
   This skill gathers project details and creates the necessary workflow file.
 ---
 
@@ -62,7 +61,7 @@ Use AskUserQuestion to ask the user. Batch independent questions together.
 
 **Always ask (Batch 1)**:
 - **Jira Project Key**: The Jira project key (e.g., `SLCORE`, `SLI`, `SLVS`, `SLE`).
-- **Project Name**: Human-readable project name used in Jira REL tickets (e.g., `SonarLint Core`, `SonarLint for IntelliJ`).
+- **Project Name**: Human-readable project name used in Jira REL tickets (e.g., `SonarLint Core`, `SonarQube for IntelliJ`).
 
 **Ask only what wasn't auto-detected (Batch 2)**:
 - **Slack channel**: Only ask if not found in existing workflows. Present the default `squad-ide-slcore-bots` as an option.
