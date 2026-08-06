@@ -3,14 +3,14 @@ type: Risk
 title: SonarSource-specific hardcoding makes "reusable" aspirational
 description: Jira project keys and custom field IDs for integration targets are string literals baked into the orchestrator, not configuration.
 tags: [risk, maintainability, hardcoding, p2]
-timestamp: 2026-07-14T00:00:00Z
+timestamp: 2026-08-05T00:00:00Z
 ---
 
 # Observation
 
-Project keys `SLVS`, `SLVSCODE`, `SLE`, `SLI`, `CLI`, `SC`, `SONAR` are hardcoded as string
+Project keys `SLVS`, `SLVSCODE`, `SLCORE`, `SLE`, `SLI`, `CLI`, `SC`, `SONAR` are hardcoded as string
 literals in the fan-out steps of [automated-release](/workflows/automated-release.md)
-(`:763`–`:841`). Adding a new integration target means editing the 1,100-line orchestrator, not
+(`:766`–`:865`). Adding a new integration target means editing the 1,100-line orchestrator, not
 passing config. Custom field IDs (see [shared/jira_common.py](/shared/jira-common.md)) and the
 KTLO epic notion are SonarSource-tenant constants baked into ostensibly "reusable" code.
 

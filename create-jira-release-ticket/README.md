@@ -32,7 +32,7 @@ This action depends on:
 | `documentation-status` | Status of the documentation                                                                                                                                                                                     | No       | `N/A`   |
 | `rule-props-changed`   | Whether rule properties have changed (`Yes` or `No`)                                                                                                                                                            | No       | `No`    |
 | `jira-release-url`     | The URL to the Jira release notes page. Can also be set via `JIRA_RELEASE_URL` environment variable. If neither is provided, the action will automatically fetch the release URL using `get-jira-release-notes` | No       | -       |
-| `sonarlint-changelog`  | The SonarLint changelog content                                                                                                                                                                                 | No       | -       |
+| `sonarlint-changelog`  | The SonarQube for IDE changelog content                                                                                                                                                                         | No       | -       |
 | `start-progress`       | Whether to start progress on the release ticket after creation                                                                                                                                                  | No       | `false` |
 
 *Either the input or corresponding environment variable must be provided for jira-project-key.
@@ -146,13 +146,13 @@ The action uses a Python script that:
 
 The action populates the following Jira custom fields:
 
-| Field                   | Custom Field ID   | Source Input           |
-|-------------------------|-------------------|------------------------|
-| Short Description       | customfield_10146 | `short-description`    |
-| Link to Release Notes   | customfield_10145 | `jira-release-url`     |
-| Documentation Status    | customfield_10147 | `documentation-status` |
-| Rule Properties Changed | customfield_11263 | `rule-props-changed`   |
-| SonarLint Changelog     | customfield_11264 | `sonarlint-changelog`  |
+| Field                       | Custom Field ID   | Source Input           |
+|-----------------------------|-------------------|------------------------|
+| Short Description           | customfield_10146 | `short-description`    |
+| Link to Release Notes       | customfield_10145 | `jira-release-url`     |
+| Documentation Status        | customfield_10147 | `documentation-status` |
+| Rule Properties Changed     | customfield_11263 | `rule-props-changed`   |
+| SonarQube for IDE Changelog | customfield_11264 | `sonarlint-changelog`  |
 
 ## Notes
 

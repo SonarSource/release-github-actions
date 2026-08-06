@@ -15,7 +15,7 @@ The workflow orchestrates these steps:
 5. Create a Jira release ticket
 6. Publish a GitHub release (draft or final)
 7. Release the current Jira version and create the next version in Jira
-8. Optionally create integration tickets (SLVS, SLVSCODE, SLE, SLI, SQC, SQS)
+8. Optionally create integration tickets (SLVS, SLVSCODE, SLCORE, SLE, SLI, CLI, SQC, SQS)
 9. Optionally open analyzer update PRs in SQS and SQC
 10. Optionally post per-job and final workflow summaries when `verbose` is enabled
 
@@ -60,6 +60,7 @@ This workflow composes several actions from this repository:
 | `new-version`                | Next version to create in Jira                                                                                  | Yes      | -            |
 | `create-slvs-ticket`         | Create SLVS integration ticket                                                                                  | No       | `false`      |
 | `create-slvscode-ticket`     | Create SLVSCODE integration ticket                                                                              | No       | `false`      |
+| `create-slcore-ticket`       | Create SLCORE integration ticket                                                                                | No       | `false`      |
 | `create-sle-ticket`          | Create SLE integration ticket                                                                                   | No       | `false`      |
 | `create-sli-ticket`          | Create SLI integration ticket                                                                                   | No       | `false`      |
 | `create-cli-ticket`          | Create CLI integration ticket                                                                                   | No       | `false`      |
@@ -322,18 +323,19 @@ You need to create two workflow files:
 
 See the [Usage](#usage) section for examples, or use the [automated-release-setup skill](../skills/automated-release-setup/) for guided setup.
 
-### SonarLint Integration
+### SonarQube for IDE Integration
 
-When your analyzer is used by SonarLint, you can enable integration ticket creation for IDE teams:
+When your analyzer is used by SonarQube for IDE, you can enable integration ticket creation for its core and supported IDEs:
 
 | Input | Jira Project | Description |
 |-------|--------------|-------------|
-| `create-slvs-ticket` | SLVS | SonarLint for Visual Studio |
-| `create-slvscode-ticket` | SLVSCODE | SonarLint for VS Code |
-| `create-sle-ticket` | SLE | SonarLint for Eclipse |
-| `create-sli-ticket` | SLI | SonarLint for IntelliJ |
+| `create-slvs-ticket` | SLVS | SonarQube for Visual Studio |
+| `create-slvscode-ticket` | SLVSCODE | SonarQube for VS Code |
+| `create-slcore-ticket` | SLCORE | SonarLint Core |
+| `create-sle-ticket` | SLE | SonarQube for Eclipse |
+| `create-sli-ticket` | SLI | SonarQube for IntelliJ |
 
-Use `sq-ide-short-description` to describe changes relevant for IDE integrations.
+Use `sq-ide-short-description` to describe changes relevant for SonarQube for IDE integrations.
 
 ### CLI Integration
 
@@ -374,9 +376,9 @@ Artifacts from Repox can be attached to the GitHub release draft using the `rele
 - Update integration ticket statuses in Jira
 - Set fix versions on the SONAR ticket
 
-**If SonarLint integration is enabled:**
-- Monitor the SLVS, SLVSCode, SLE, and/or SLI tickets created in Jira
-- Coordinate with IDE teams for integration timelines
+**If SonarQube for IDE integration is enabled:**
+- Monitor the SLCORE, SLVS, SLVSCode, SLE, and/or SLI tickets created in Jira
+- Coordinate with the relevant SonarQube for IDE teams for integration timelines
 
 ### Fully-automated trigger + monitor
 

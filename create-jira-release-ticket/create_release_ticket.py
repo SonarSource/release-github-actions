@@ -60,7 +60,7 @@ def main():
     parser.add_argument("--rule-props-changed", default="No", choices=['Yes', 'No'],
                         help="Whether rule properties have changed.")
     parser.add_argument("--jira-release-url", default="", help="The URL to the Jira release notes page.")
-    parser.add_argument("--sonarlint-changelog", default="", help="The SonarLint changelog content.")
+    parser.add_argument("--sonarlint-changelog", default="", help="The SonarQube for IDE changelog content.")
     parser.add_argument("--due-date", default="", help="Due date of the release, for example '2029-12-24'.")
 
     args = parser.parse_args()

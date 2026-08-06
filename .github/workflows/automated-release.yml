@@ -102,6 +102,11 @@ on:
         required: false
         type: boolean
         default: false
+      create-slcore-ticket:
+        description: "Create SLCORE integration ticket"
+        required: false
+        type: boolean
+        default: false
       create-sle-ticket:
         description: "Create SLE integration ticket"
         required: false
@@ -736,13 +741,13 @@ jobs:
         run: echo "Skipped — release-lock status reset requires statuses:write on the lock token"
 
   # This step creates integration tickets in various Jira projects based on the inputs provided.
-  # It creates tickets for SLVS, SLVSCODE, SLE, SLI, SQC, and SQS as specified.
+  # It creates tickets for SLVS, SLVSCODE, SLCORE, SLE, SLI, CLI, SQC, and SQS as specified.
   # It outputs the integration ticket keys for SQC and SQS for further use.
   create-integration-tickets:
     name: Create Integration Tickets
     needs: [ prepare-release, publish-github-release, create-release-ticket ]
     if: |
-      (inputs.create-slvs-ticket || inputs.create-slvscode-ticket || inputs.create-sle-ticket || inputs.create-sli-ticket || inputs.create-cli-ticket || inputs.sqc-integration || inputs.sqs-integration) && 
+      (inputs.create-slvs-ticket || inputs.create-slvscode-ticket || inputs.create-slcore-ticket || inputs.create-sle-ticket || inputs.create-sli-ticket || inputs.create-cli-ticket || inputs.sqc-integration || inputs.sqs-integration) &&
       !cancelled() && 
       needs.prepare-release.result == 'success' &&
       needs.publish-github-release.result == 'success' &&
@@ -777,6 +782,17 @@ jobs:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           target-jira-project: "SLVSCODE"
+          ticket-description: ${{ inputs.sq-ide-short-description != '' && inputs.sq-ide-short-description || inputs.short-description }}
+          jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
+
+      - name: Create SLCORE Ticket
+        if: ${{ inputs.create-slcore-ticket }}
+        uses: SonarSource/release-github-actions/create-integration-ticket@master
+        with:
+          plugin-name: ${{ inputs.plugin-name }}
+          release-version: ${{ needs.prepare-release.outputs.release-version }}
+          release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
+          target-jira-project: "SLCORE"
           ticket-description: ${{ inputs.sq-ide-short-description != '' && inputs.sq-ide-short-description || inputs.short-description }}
           jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
 
@@ -855,6 +871,7 @@ jobs:
           PLUGIN_NAME: ${{ inputs.plugin-name }}
           CREATE_SLVS_TICKET: ${{ inputs.create-slvs-ticket == true && 'true' || 'false' }}
           CREATE_SLVSCODE_TICKET: ${{ inputs.create-slvscode-ticket == true && 'true' || 'false' }}
+          CREATE_SLCORE_TICKET: ${{ inputs.create-slcore-ticket == true && 'true' || 'false' }}
           CREATE_SLE_TICKET: ${{ inputs.create-sle-ticket == true && 'true' || 'false' }}
           CREATE_SLI_TICKET: ${{ inputs.create-sli-ticket == true && 'true' || 'false' }}
           CREATE_CLI_TICKET: ${{ inputs.create-cli-ticket == true && 'true' || 'false' }}
@@ -870,6 +887,7 @@ jobs:
           echo "### Results" >> $GITHUB_STEP_SUMMARY
           if [ "$CREATE_SLVS_TICKET" = "true" ]; then echo "- SLVS ticket created." >> $GITHUB_STEP_SUMMARY; fi
           if [ "$CREATE_SLVSCODE_TICKET" = "true" ]; then echo "- SLVSCODE ticket created." >> $GITHUB_STEP_SUMMARY; fi
+          if [ "$CREATE_SLCORE_TICKET" = "true" ]; then echo "- SLCORE ticket created." >> $GITHUB_STEP_SUMMARY; fi
           if [ "$CREATE_SLE_TICKET" = "true" ]; then echo "- SLE ticket created." >> $GITHUB_STEP_SUMMARY; fi
           if [ "$CREATE_SLI_TICKET" = "true" ]; then echo "- SLI ticket created." >> $GITHUB_STEP_SUMMARY; fi
           if [ "$CREATE_CLI_TICKET" = "true" ]; then echo "- CLI ticket created." >> $GITHUB_STEP_SUMMARY; fi
