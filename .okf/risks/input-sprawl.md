@@ -14,8 +14,12 @@ expressions, with valid combinations undocumented and unenforced:
 - `sqaa-integration: true` with `sqc-integration: false` → the job is silently skipped (`:946`).
 - `sqc-plugins-deployer-integration` is a **deprecated no-op** still in the schema with
   `default: true` — appears in every dispatch form and setup doc.
-- `rule-props-changed` is a required *string* `"true"`/`"false"` compared with `== 'true'`
-  (`:537`): pass a real boolean or `"True"` and it silently maps to "No."
+- ~~`rule-props-changed` is a required *string* `"true"`/`"false"` compared with `== 'true'`
+  (`:537`): pass a real boolean or `"True"` and it silently maps to "No."~~ **Addressed
+  2026-08-10**: the value is now computed by
+  [detect-rule-props-changed](/actions/detect-rule-props-changed.md) and the input is a
+  deprecated no-op. It stays declared until the 42 caller repos drop it, since GitHub errors on
+  an undeclared reusable-workflow input — a worked example of why pruning an input is not free.
 - `new-version` is documented **required** in [AUTOMATED_RELEASE.md](/../docs/AUTOMATED_RELEASE.md)
   but is `required: false` in the YAML (`:91`) — omitting it changes what Jira creates next, and
   **docs and schema disagree**.

@@ -6,6 +6,7 @@
 * [create-jira-release-ticket](create-jira-release-ticket.md) - creates the "Ask for release" ticket in Jira.
 * [create-jira-version](create-jira-version.md) - creates a new version in a Jira project.
 * [create-pull-request](create-pull-request.md) - shared PR-creation building block using the `gh` CLI.
+* [detect-rule-props-changed](detect-rule-props-changed.md) - detects rule property changes since the previous release tag.
 * [get-jira-release-notes](get-jira-release-notes.md) - fetches and formats Jira release notes.
 * [get-jira-version](get-jira-version.md) - converts a release version to Jira's version naming convention.
 * [get-release-version](get-release-version.md) - extracts the release version from the repox commit status.

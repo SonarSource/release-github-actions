@@ -53,7 +53,7 @@ This workflow composes several actions from this repository:
 | `pm-email`                   | Product manager email to assign the release ticket after technical release                                      | Yes      | -            |
 | `release-automation-secret-name` | Secret name used to create analyzer update PRs. If omitted, defaults to `sonar-{plugin-name}-release-automation`. | No       | -            |
 | `short-description`          | Brief summary for release and integration tickets                                                               | Yes      | -            |
-| `rule-props-changed`         | Whether rule properties changed (`true`/`false`); mapped to Yes/No in the release ticket                        | Yes      | -            |
+| `rule-props-changed`         | **Deprecated, no-op.** Detected automatically (see [Rule property detection](#rule-property-detection)); any value passed is ignored | No       | -            |
 | `branch`                     | Branch to release from                                                                                          | Yes      | `master`     |
 | `release-notes`              | Explicit release notes; if empty, Jira release notes are generated                                              | No       | -            |
 | `sq-ide-short-description`   | Short summary of SQ IDE related changes                                                                         | No       | -            |
@@ -131,7 +131,6 @@ jobs:
       plugin-name: "csd"
       pm-email: "pm@example.com"
       short-description: ${{ inputs.short-description }}
-      rule-props-changed: "false"
       branch: "master"
       new-version: ${{ inputs.new-version }}
       sqs-integration: true
@@ -161,6 +160,25 @@ jobs:
   the release-lock gate (see below) guards against this.
 - When `release-notes` is empty, Jira release notes are fetched and used.
 - Integration tickets and analyzer update PRs are created only if their respective flags are enabled and prerequisites are met.
+
+### Rule property detection
+
+The *Rule Properties Changed* field on the release ticket (`customfield_11263`, see SC-4654) is
+computed during `prepare-release` by the
+[detect-rule-props-changed](../detect-rule-props-changed/README.md) action. It diffs the previous
+release tag — the nearest tag reachable from the release commit — against the commit being
+released, and looks for changed rule property declarations. Recognised conventions cover
+`@RuleProperty` (Java/Kotlin), `new RuleParameter(` (sonar-swift, sonar-dart),
+`[RuleParameter(` (sonar-dotnet-enterprise) and SonarJS `config.ts` fields.
+
+The `rule-props-changed` input is therefore no longer needed and is ignored. It is still declared
+so that callers still passing it keep working — GitHub fails a reusable-workflow call that passes
+an undeclared input — and it will be removed once the caller repositories have dropped it. Remove
+the line from your caller workflow whenever convenient.
+
+If a repository declares rule properties in a way the action does not recognise, the detection can
+be extended per repository via the action's `extra-patterns` input. When no tag is reachable from
+the release commit (a first release), the action warns and reports `No`.
 - Summaries:
   - Each job includes a "Summary" step that writes to `$GITHUB_STEP_SUMMARY` only when `verbose: true`.
   - A short release announcement containing the project, released version, and GitHub release-notes link is sent to `#team-code-quality-pm-em-lead` by default after the GitHub release is created. Set `code-quality-leads-slack-notification: false` to opt out.

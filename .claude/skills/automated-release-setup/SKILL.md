@@ -107,11 +107,6 @@ on:
         description: "New version to release (without -SNAPSHOT; if left empty, the current minor version will be auto-incremented)"
         required: false
         type: string
-      rule-props-changed:
-        description: >
-          "@RuleProperty" changed? See SC-4654
-        type: boolean
-        default: false
       verbose:
         description: "Enable verbose logging"
         type: boolean
@@ -135,7 +130,6 @@ jobs:
       project-name: "${PROJECT_NAME}"
       plugin-name: "${PLUGIN_NAME}"
       jira-project-key: "${JIRA_PROJECT_KEY}"
-      rule-props-changed: ${{ github.event.inputs.rule-props-changed }}
       short-description: ${{ github.event.inputs.short-description }}
       new-version: ${{ github.event.inputs.new-version }}
       sqc-integration: ${{ github.event.inputs.sqc-integration == 'true' }}
@@ -178,11 +172,6 @@ on:
         description: "New version to release (without -SNAPSHOT; if left empty, the current minor version will be auto-incremented)"
         required: false
         type: string
-      rule-props-changed:
-        description: >
-          "@RuleProperty" changed? See SC-4654
-        type: boolean
-        default: false
       verbose:
         description: "Enable verbose logging"
         type: boolean
@@ -206,7 +195,6 @@ jobs:
       project-name: "${PROJECT_NAME}"
       plugin-name: "${PLUGIN_NAME}"
       jira-project-key: "${JIRA_PROJECT_KEY}"
-      rule-props-changed: ${{ github.event.inputs.rule-props-changed }}
       short-description: ${{ github.event.inputs.short-description }}
       new-version: ${{ github.event.inputs.new-version }}
       sqc-integration: ${{ github.event.inputs.sqc-integration == 'true' }}
@@ -273,11 +261,6 @@ on:
         description: "New version to release (without -SNAPSHOT; if left empty, the current minor version will be auto-incremented)"
         required: false
         type: string
-      rule-props-changed:
-        description: >
-          "@RuleProperty" changed? See SC-4654
-        type: boolean
-        default: false
       verbose:
         description: "Enable verbose logging"
         type: boolean
@@ -301,7 +284,6 @@ jobs:
       project-name: "${PROJECT_NAME}"
       plugin-name: "${PLUGIN_NAME}"
       jira-project-key: "${JIRA_PROJECT_KEY}"
-      rule-props-changed: ${{ github.event.inputs.rule-props-changed }}
       short-description: ${{ github.event.inputs.short-description }}
       new-version: ${{ github.event.inputs.new-version }}
       sqc-integration: ${{ github.event.inputs.sqc-integration == 'true' }}
@@ -360,11 +342,6 @@ on:
         description: "New version to release (without -SNAPSHOT; if left empty, the current minor version will be auto-incremented)"
         required: false
         type: string
-      rule-props-changed:
-        description: >
-          "@RuleProperty" changed? See SC-4654
-        type: boolean
-        default: false
       verbose:
         description: "Enable verbose logging"
         type: boolean
@@ -388,7 +365,6 @@ jobs:
       project-name: "${PROJECT_NAME}"
       plugin-name: "${PLUGIN_NAME}"
       jira-project-key: "${JIRA_PROJECT_KEY}"
-      rule-props-changed: ${{ github.event.inputs.rule-props-changed }}
       short-description: ${{ github.event.inputs.short-description }}
       new-version: ${{ github.event.inputs.new-version }}
       create-cli-ticket: ${{ github.event.inputs.cli-integration == 'true' }}

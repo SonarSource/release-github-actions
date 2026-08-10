@@ -72,8 +72,11 @@ on:
         required: true
         type: string
       rule-props-changed:
-        description: "Did any rule properties change in this release"
-        required: true
+        description: >
+          Deprecated, no-op. Whether rule properties changed is now detected automatically by
+          diffing the previous release tag against the release commit. Any value passed here is
+          ignored; the input is kept only so existing callers keep working and can drop it.
+        required: false
         type: string
       branch:
         description: "Branch from which to do the release"
@@ -479,11 +482,22 @@ jobs:
       jira-release-notes: ${{ inputs.release-notes != '' && inputs.release-notes || steps.get-jira-release-notes.outputs.jira-release-notes }}
       jira-release-url: ${{ steps.get-jira-release-notes.outputs.jira-release-url }}
       jira-release-issue-filter-url: ${{ steps.get-jira-release-notes.outputs.jira-release-issue-filter-url }}
+      rule-props-changed: ${{ steps.detect-rule-props.outputs.rule-props-changed }}
+      rule-props-base-ref: ${{ steps.detect-rule-props.outputs.base-ref }}
+      rule-props-matched-files: ${{ steps.detect-rule-props.outputs.matched-files }}
     steps:
       - name: Get Release Version
         id: get-release-version
         if: ${{ needs.check-releasability.result == 'skipped' }}
         uses: SonarSource/release-github-actions/get-release-version@master
+        with:
+          branch: ${{ inputs.branch }}
+
+      # Replaces the old hand-answered `rule-props-changed` input: diffs the previous release
+      # tag against the release commit and looks for changed rule property declarations.
+      - name: Detect Rule Property Changes
+        id: detect-rule-props
+        uses: SonarSource/release-github-actions/detect-rule-props-changed@master
         with:
           branch: ${{ inputs.branch }}
 
@@ -506,6 +520,10 @@ jobs:
           JIRA_PROJECT_KEY: ${{ inputs.jira-project-key }}
           USE_JIRA_SANDBOX: ${{ inputs.use-jira-sandbox == true && 'true' || 'false' }}
           RELEASE_NOTES: ${{ inputs.release-notes }}
+          RULE_PROPS_CHANGED: ${{ steps.detect-rule-props.outputs.rule-props-changed }}
+          RULE_PROPS_BASE_REF: ${{ steps.detect-rule-props.outputs.base-ref }}
+          RULE_PROPS_MATCH_COUNT: ${{ steps.detect-rule-props.outputs.match-count }}
+          RULE_PROPS_MATCHED_FILES: ${{ steps.detect-rule-props.outputs.matched-files }}
         run: |
           echo "## 🆗 Prepare Release" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -518,10 +536,19 @@ jobs:
             echo "- Generated release notes from Jira." >> $GITHUB_STEP_SUMMARY
             echo "  - See Jira release: ${{ steps.get-jira-release-notes.outputs.jira-release-url }}" >> $GITHUB_STEP_SUMMARY
           fi
+          if [ -n "$RULE_PROPS_BASE_REF" ]; then
+            echo "- Scanned \`$RULE_PROPS_BASE_REF\`..\`$BRANCH\` for rule property changes." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- No release tag found to compare against, so rule property changes could not be detected." >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Results" >> $GITHUB_STEP_SUMMARY
           echo "- Release version: \`${{ needs.check-releasability.outputs.release-version || steps.get-release-version.outputs.release-version }}\`." >> $GITHUB_STEP_SUMMARY
           echo "- Jira version name: \`${{ steps.get-jira-version.outputs.jira-version-name }}\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Rule properties changed: \`$RULE_PROPS_CHANGED\`." >> $GITHUB_STEP_SUMMARY
+          if [ "$RULE_PROPS_CHANGED" = "true" ]; then
+            echo "  - $RULE_PROPS_MATCH_COUNT change(s) in: $(echo "$RULE_PROPS_MATCHED_FILES" | tr ',' ' ')" >> $GITHUB_STEP_SUMMARY
+          fi
 
   # This step creates a Jira release ticket using the prepared release information.
   # It outputs the release ticket key and URL for further use.
@@ -544,7 +571,7 @@ jobs:
         with:
           project-name: ${{ inputs.project-name }}
           short-description: ${{ inputs.short-description }}
-          rule-props-changed: ${{ inputs.rule-props-changed == 'true' && 'Yes' || 'No' }}
+          rule-props-changed: ${{ needs.prepare-release.outputs.rule-props-changed == 'true' && 'Yes' || 'No' }}
           jira-release-url: ${{ needs.prepare-release.outputs.jira-release-issue-filter-url }}
           start-progress: true
           version: ${{ needs.prepare-release.outputs.release-version }}
@@ -554,13 +581,18 @@ jobs:
         shell: bash
         env:
           PROJECT_NAME: ${{ inputs.project-name }}
-          RULE_PROPS_CHANGED: ${{ inputs.rule-props-changed }}
+          RULE_PROPS_CHANGED: ${{ needs.prepare-release.outputs.rule-props-changed == 'true' && 'Yes' || 'No' }}
+          RULE_PROPS_BASE_REF: ${{ needs.prepare-release.outputs.rule-props-base-ref }}
+          RULE_PROPS_MATCHED_FILES: ${{ needs.prepare-release.outputs.rule-props-matched-files }}
         run: |
           echo "## 🧾 Create Release Ticket" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### What happened" >> $GITHUB_STEP_SUMMARY
           echo "- Created a Jira release ticket for project \`$PROJECT_NAME\` using version \`${{ needs.prepare-release.outputs.release-version }}\`." >> $GITHUB_STEP_SUMMARY
-          echo "- Rule properties changed: \`$RULE_PROPS_CHANGED\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Rule properties changed: \`$RULE_PROPS_CHANGED\` (detected against \`${RULE_PROPS_BASE_REF:-no baseline tag}\`)." >> $GITHUB_STEP_SUMMARY
+          if [ -n "$RULE_PROPS_MATCHED_FILES" ]; then
+            echo "  - Changed in: $(echo "$RULE_PROPS_MATCHED_FILES" | tr ',' ' ')" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Results" >> $GITHUB_STEP_SUMMARY
           echo "- Ticket key: \`${{ steps.create-ticket.outputs.release-ticket-key }}\`." >> $GITHUB_STEP_SUMMARY

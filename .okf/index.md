@@ -9,7 +9,7 @@ Jira integration, GitHub releases, cross-repository updates, and Slack notificat
 
 # Directories
 
-* [actions/](actions/) - the 22 composite GitHub Actions in this repo, one concept per action.
+* [actions/](actions/) - the 23 composite GitHub Actions in this repo, one concept per action.
 * [workflows/](workflows/) - the reusable `workflow_call` orchestrators (automated-release, ide-automated-release, abd-automated-release, release-lock) and the repo's own release workflow.
 * [shared/](shared/) - Python helpers shared across Jira-integration actions.
 * [decisions/](decisions/) - architectural rules and reviews governing this repo (Golden Architecture, security conventions, the 2026-07 architecture review).

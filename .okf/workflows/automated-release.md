@@ -66,7 +66,7 @@ Actions composed: [get-release-version](/actions/get-release-version.md),
 # Schema
 
 Key inputs (selected — full list in the action README): `jira-project-key`, `project-name`,
-`plugin-name`, `pm-email`, `short-description`, `rule-props-changed`, `branch`, `new-version`,
+`plugin-name`, `pm-email`, `short-description`, `branch`, `new-version`,
 `use-jira-sandbox` (default `true`), `is-draft-release` (default `true`), `freeze-branch`
 (default `true`), `check-releasability` (default `true`), `sqs-integration` /
 `sqc-integration` (default `true`), `sqaa-integration` (runs only when `sqc-integration` is
@@ -80,6 +80,12 @@ Outputs: `new-version` (Jira version name), `sqaa-pull-request-url`.
 
 # Notes
 
+- **Rule properties are detected, not declared**: `prepare-release` runs
+  [detect-rule-props-changed](/actions/detect-rule-props-changed.md) against the previous release
+  tag and exposes `rule-props-changed`, which `create-release-ticket` maps to Yes/No on the REL
+  ticket. The `rule-props-changed` *input* is a deprecated no-op, kept only so the 42 caller repos
+  that still pass it keep working — GitHub errors on an undeclared reusable-workflow input, so it
+  can only be deleted after the callers drop it.
 - **Auto-merge sweep**: when `bump-version: true`, strips auto-merge from all open PRs at
   release start, to reduce the race window where a PR could merge before the version-bump PR
   opens. Best-effort — see the [release-lock gate](/workflows/release-lock.md) for the guard of

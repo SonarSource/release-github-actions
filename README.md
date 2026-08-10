@@ -84,6 +84,7 @@ steps, and the freeze-coexistence guarantee.
 | [Create Pull Request](create-pull-request/README.md)                    | Creates or updates a pull request using the `gh` CLI, with vault-based token resolution |
 | [Create Jira Release Ticket](create-jira-release-ticket/README.md)      | Automates the creation of an "Ask for release" ticket in Jira |
 | [Create Jira Version](create-jira-version/README.md)                    | Creates a new version in a Jira project, with the ability to automatically determine the next version number |
+| [Detect Rule Property Changes](detect-rule-props-changed/README.md)     | Detects whether any rule property declaration changed since the previous release tag |
 | [Get Jira Release Notes](get-jira-release-notes/README.md)              | Fetches Jira release notes and generates the release notes URL for a given project and version |
 | [Get Jira Version](get-jira-version/README.md)                          | Extracts a Jira-compatible version number from a release version by formatting it appropriately for Jira |
 | [Get Release Version](get-release-version/README.md)                    | Extracts the release version from the repox status on a specified branch |
