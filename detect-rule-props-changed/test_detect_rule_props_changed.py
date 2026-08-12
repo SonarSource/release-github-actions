@@ -87,6 +87,9 @@ class DetectorTestCase(unittest.TestCase):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content)
 
+    def delete(self, relative_path):
+        (self.repo / relative_path).unlink()
+
     def commit(self, message='change'):
         git(self.repo, 'add', '-A')
         git(self.repo, 'commit', '-q', '-m', message)
@@ -183,6 +186,27 @@ class TestJavaAnnotation(DetectorTestCase):
         self.write('README.md', 'unrelated\n')
         self.commit()
         self.assertNotDetected()
+
+    def test_deleted_check_class_is_detected(self):
+        """
+        Dropping a rule removes its properties just as surely as editing the annotation. The
+        deletion side of the diff is the only place those lines appear, and git labels the
+        target `/dev/null`, so a parser keyed only off `+++` reports a real removal as no change.
+        """
+        self.delete(self.path)
+        self.commit('remove the check entirely')
+        matches = self.assertDetected()
+        self.assertTrue(all(path == self.path for path, _ in matches), matches)
+
+    def test_deleted_file_without_a_property_is_not_detected(self):
+        """Deleting a check that declares no properties is not a rule property change."""
+        plain = 'plain/src/main/java/org/sonar/python/checks/PlainCheck.java'
+        self.write(plain, '@Rule(key = "S200")\npublic class PlainCheck {\n}\n')
+        self.commit('add a check with no properties')
+        self.tag_baseline('1.0.0.101')
+        self.delete(plain)
+        self.commit('remove it again')
+        self.assertFalse(self.run_detect(base_ref='1.0.0.101'))
 
 
 class TestOtherConventions(DetectorTestCase):
@@ -510,6 +534,24 @@ class TestHunkParsing(unittest.TestCase):
         self.assertEqual(hunks[0], ('A.java', [' context', '+++ not a header']))
         self.assertEqual(hunks[1], ('B.java', ['-x', '+y']))
 
+    def test_removed_line_resembling_a_source_header_does_not_desync(self):
+        """The mirror of the above: a body line rendering as '--- x' is content, not a header."""
+        diff = ['diff --git a/A.java b/A.java',
+                '--- a/A.java',
+                '+++ b/A.java',
+                '@@ -1,2 +1,1 @@',
+                '--- not a header',
+                ' context',
+                'diff --git a/B.java b/B.java',
+                '--- a/B.java',
+                '+++ b/B.java',
+                '@@ -1 +1 @@',
+                '-x',
+                '+y']
+        hunks = list(iter_hunks(diff))
+        self.assertEqual(hunks[0], ('A.java', ['--- not a header', ' context']))
+        self.assertEqual(hunks[1], ('B.java', ['-x', '+y']))
+
     def test_no_newline_marker_is_not_counted(self):
         diff = ['+++ b/A.java',
                 '@@ -1 +1 @@',
@@ -530,13 +572,41 @@ class TestHunkParsing(unittest.TestCase):
         self.assertEqual(path, 'A.java')
         self.assertEqual(body, [' context'])
 
-    def test_deleted_file_target_is_skipped(self):
+    def test_deleted_file_is_attributed_to_its_old_path(self):
+        """`+++ /dev/null` is a deletion, and its removed lines are the rule properties."""
         diff = ['diff --git a/A.java b/A.java',
                 '--- a/A.java',
                 '+++ /dev/null',
                 '@@ -1 +0,0 @@',
                 '-@RuleProperty(key = "x")']
-        self.assertEqual(list(iter_hunks(diff)), [])
+        self.assertEqual(list(iter_hunks(diff)),
+                         [('A.java', ['-@RuleProperty(key = "x")'])])
+
+    def test_added_file_is_attributed_to_its_new_path(self):
+        """The mirror image: `--- /dev/null` must not leak into the following hunk's path."""
+        diff = ['diff --git a/A.java b/A.java',
+                '--- /dev/null',
+                '+++ b/A.java',
+                '@@ -0,0 +1 @@',
+                '+@RuleProperty(key = "x")']
+        self.assertEqual(list(iter_hunks(diff)),
+                         [('A.java', ['+@RuleProperty(key = "x")'])])
+
+    def test_old_path_does_not_carry_over_to_the_next_file(self):
+        """A deletion followed by another file must not attribute the second hunk to the first."""
+        diff = ['diff --git a/A.java b/A.java',
+                '--- a/A.java',
+                '+++ /dev/null',
+                '@@ -1 +0,0 @@',
+                '-@RuleProperty(key = "x")',
+                'diff --git a/B.java b/B.java',
+                '+++ b/B.java',
+                '@@ -1 +1 @@',
+                '-old',
+                '+new']
+        self.assertEqual(list(iter_hunks(diff)),
+                         [('A.java', ['-@RuleProperty(key = "x")']),
+                          ('B.java', ['-old', '+new'])])
 
 
 class TestMatchingRules(unittest.TestCase):

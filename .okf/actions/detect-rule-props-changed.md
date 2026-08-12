@@ -77,6 +77,7 @@ which the changed-line matcher reports cleanly.
 | `head-ref` | Commit being released | No | `HEAD` |
 | `extra-patterns` | Extra `<pathspec>::<regex>` rules, one per line | No | - |
 | `include-test-sources` | Scan test sources too | No | `false` |
+| `repository-path` | Inspect this checkout and skip the action's own | No | - |
 
 | Output | Description |
 |---|---|
@@ -93,6 +94,10 @@ which the changed-line matcher reports cleanly.
 - Test sources are excluded by default: changing a test fixture is not a released behaviour change.
 - `rule-props-changed=true` with `match-count=0` is the fallback, not a contradiction — read
   `detection-status` to tell the two apart.
+- The default checkout **replaces `$GITHUB_WORKSPACE`**, so steps after this one in the same job
+  see the checked-out branch rather than whatever was there. `repository-path` suppresses it;
+  the integration test relies on that, since a local `uses: ./` action whose own source lives in
+  the workspace deletes itself the moment the internal checkout runs.
 
 # Citations
 

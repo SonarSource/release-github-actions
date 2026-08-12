@@ -169,7 +169,8 @@ computed during `prepare-release` by the
 release tag — the nearest tag reachable from the release commit — against the commit being
 released, and looks for changed rule property declarations. Recognised conventions cover
 `@RuleProperty` (Java/Kotlin), `new RuleParameter(` (sonar-swift, sonar-dart),
-`[RuleParameter(` (sonar-dotnet-enterprise) and SonarJS `config.ts` fields.
+`[RuleParameter(` (sonar-dotnet-enterprise) and SonarJS `config.ts` fields. Deleting a check class
+counts as a change too, since its rule properties go with it.
 
 The `rule-props-changed` input is therefore no longer needed and is ignored. It is still declared
 so that callers still passing it keep working — GitHub fails a reusable-workflow call that passes

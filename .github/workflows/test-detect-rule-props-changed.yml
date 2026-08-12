@@ -56,18 +56,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      # The action checks out $GITHUB_WORKSPACE itself, so the fixture commits are made on this
-      # repository's own checkout: a baseline tag, then a change on top of it.
-      - name: Create a rule property change on top of a tagged baseline
-        env:
-          FIXTURE_TAG: rule-props-fixture-${{ github.run_id }}
+      # The fixture is built under $RUNNER_TEMP, not in $GITHUB_WORKSPACE, and the action is
+      # pointed at it with `repository-path`. Committing fixtures into the workspace instead
+      # cannot work: the action's own `actions/checkout` replaces the workspace wholesale, so
+      # the fixture -- and, for a local `uses: ./`, the action's own source -- would be gone
+      # before the detector ran.
+      - name: Create the fixture repository with a tagged baseline
         run: |
           set -euo pipefail
-          git config user.email "test@example.com"
-          git config user.name "Test"
+          FIXTURE="$RUNNER_TEMP/rule-props-fixture"
+          echo "FIXTURE=$FIXTURE" >> "$GITHUB_ENV"
 
-          mkdir -p fixture/src/main/java
-          cat > fixture/src/main/java/NamingCheck.java <<'JAVA'
+          mkdir -p "$FIXTURE/src/main/java"
+          git -C "$FIXTURE" init -q -b master
+          git -C "$FIXTURE" config user.email "test@example.com"
+          git -C "$FIXTURE" config user.name "Test"
+          git -C "$FIXTURE" config commit.gpgsign false
+
+          cat > "$FIXTURE/src/main/java/NamingCheck.java" <<'JAVA'
           import org.sonar.check.RuleProperty;
 
           public class NamingCheck {
@@ -75,76 +81,123 @@ jobs:
             public String format = "^[a-z]+$";
           }
           JAVA
-          git add -A && git commit -q -m "fixture baseline"
-          git tag "$FIXTURE_TAG"
+          git -C "$FIXTURE" add -A
+          git -C "$FIXTURE" commit -q -m "baseline"
+          git -C "$FIXTURE" tag 1.0.0.100
 
-          # Rename the property key -- a genuine rule property change.
-          FILE=fixture/src/main/java/NamingCheck.java
-          sed 's/key = "format"/key = "namingFormat"/' "$FILE" > "$FILE.tmp"
-          mv "$FILE.tmp" "$FILE"
-          git add -A && git commit -q -m "fixture: rename rule property key"
+      - name: Rename a rule property key
+        run: |
+          set -euo pipefail
+          sed -i 's/key = "format"/key = "namingFormat"/' \
+            "$FIXTURE/src/main/java/NamingCheck.java"
+          git -C "$FIXTURE" commit -qam "rename the rule property key"
 
+      # No base-ref, so the action has to resolve the baseline itself via `git describe`.
       - name: Detect (expects true)
         id: changed
         uses: ./detect-rule-props-changed
         with:
-          base-ref: rule-props-fixture-${{ github.run_id }}
+          repository-path: ${{ env.FIXTURE }}
 
       - name: Verify a change was detected
         env:
           RESULT: ${{ steps.changed.outputs.rule-props-changed }}
+          STATUS: ${{ steps.changed.outputs.detection-status }}
           MATCHED: ${{ steps.changed.outputs.matched-files }}
           BASE_REF: ${{ steps.changed.outputs.base-ref }}
-          EXPECTED_BASE: rule-props-fixture-${{ github.run_id }}
         run: |
-          if [[ "$RESULT" != "true" ]]; then
-            echo "❌ Expected rule-props-changed=true, got '$RESULT'"
+          if [[ "$RESULT" != "true" || "$STATUS" != "detected" ]]; then
+            echo "❌ Expected true/detected, got '$RESULT'/'$STATUS'"
             exit 1
           fi
           if [[ "$MATCHED" != *"NamingCheck.java"* ]]; then
             echo "❌ Expected NamingCheck.java in matched-files, got '$MATCHED'"
             exit 1
           fi
-          if [[ "$BASE_REF" != "$EXPECTED_BASE" ]]; then
-            echo "❌ Expected base-ref '$EXPECTED_BASE', got '$BASE_REF'"
+          if [[ "$BASE_REF" != "1.0.0.100" ]]; then
+            echo "❌ Expected the baseline to resolve to 1.0.0.100, got '$BASE_REF'"
             exit 1
           fi
           echo "✅ detected: $MATCHED"
 
-      # An unrelated import added to the same file: the classic false positive a plain
-      # `grep RuleProperty` over the diff would report.
+      # The action must not have replaced the workspace with its own checkout.
+      - name: Verify the caller's workspace was left alone
+        run: |
+          if [[ ! -f detect-rule-props-changed/action.yml ]]; then
+            echo "❌ The action clobbered the workspace it was told not to touch"
+            exit 1
+          fi
+          echo "✅ workspace untouched"
+
+      # An unrelated import added to a check class: the classic false positive a plain
+      # `grep RuleProperty` over the diff would report, because the import shows up as context.
       - name: Add an unrelated import on a fresh baseline
-        env:
-          FIXTURE_TAG: rule-props-fixture-clean-${{ github.run_id }}
         run: |
           set -euo pipefail
-          git tag "$FIXTURE_TAG"
-          FILE=fixture/src/main/java/NamingCheck.java
+          git -C "$FIXTURE" tag 1.0.0.101
+          FILE="$FIXTURE/src/main/java/NamingCheck.java"
           { echo 'import java.util.List;'; cat "$FILE"; } > "$FILE.tmp"
           mv "$FILE.tmp" "$FILE"
-          git add -A && git commit -q -m "fixture: unrelated import"
+          git -C "$FIXTURE" commit -qam "unrelated import"
 
       - name: Detect (expects false)
         id: unchanged
         uses: ./detect-rule-props-changed
         with:
-          base-ref: rule-props-fixture-clean-${{ github.run_id }}
+          repository-path: ${{ env.FIXTURE }}
 
       - name: Verify the import was not mistaken for a property change
         env:
           RESULT: ${{ steps.unchanged.outputs.rule-props-changed }}
-          MATCHED: ${{ steps.unchanged.outputs.matched-files }}
           STATUS: ${{ steps.unchanged.outputs.detection-status }}
+          MATCHED: ${{ steps.unchanged.outputs.matched-files }}
+          BASE_REF: ${{ steps.unchanged.outputs.base-ref }}
         run: |
           if [[ "$RESULT" != "false" ]]; then
-            echo "❌ Expected rule-props-changed=false for an import-only change, got '$RESULT' ($MATCHED)"
+            echo "❌ Expected false for an import-only change, got '$RESULT' ($MATCHED)"
             exit 1
           fi
           if [[ "$STATUS" != "detected" ]]; then
             echo "❌ Expected detection-status=detected, got '$STATUS'"
             exit 1
           fi
+          if [[ "$BASE_REF" != "1.0.0.101" ]]; then
+            echo "❌ Expected the baseline to resolve to 1.0.0.101, got '$BASE_REF'"
+            exit 1
+          fi
           echo "✅ import-only change correctly reported as no rule property change"
+
+      # Deleting the check removes its properties too. git names the target of a deletion
+      # `/dev/null`, so a parser keyed only off the `+++` line drops the hunk that holds the
+      # removed declarations and reports a real removal as no change.
+      - name: Delete the whole check class
+        run: |
+          set -euo pipefail
+          git -C "$FIXTURE" tag 1.0.0.102
+          git -C "$FIXTURE" rm -q src/main/java/NamingCheck.java
+          git -C "$FIXTURE" commit -qm "drop the check entirely"
+
+      - name: Detect (expects true for the deletion)
+        id: deleted
+        uses: ./detect-rule-props-changed
+        with:
+          repository-path: ${{ env.FIXTURE }}
+
+      - name: Verify the deletion was detected
+        env:
+          RESULT: ${{ steps.deleted.outputs.rule-props-changed }}
+          STATUS: ${{ steps.deleted.outputs.detection-status }}
+          MATCHED: ${{ steps.deleted.outputs.matched-files }}
+        run: |
+          if [[ "$RESULT" != "true" || "$STATUS" != "detected" ]]; then
+            echo "❌ Expected a deleted check class to be detected, got '$RESULT'/'$STATUS'"
+            exit 1
+          fi
+          if [[ "$MATCHED" != *"NamingCheck.java"* ]]; then
+            echo "❌ Expected the deleted file in matched-files, got '$MATCHED'"
+            exit 1
+          fi
+          echo "✅ deleted check class reported as a rule property change"
 
       # A comparison that cannot be made must answer "changed", never "unchanged": an
       # undetected rule property change reaching SQC is far more expensive than a spurious Yes.
@@ -152,6 +205,7 @@ jobs:
         id: undetermined
         uses: ./detect-rule-props-changed
         with:
+          repository-path: ${{ env.FIXTURE }}
           base-ref: no-such-tag-${{ github.run_id }}
 
       - name: Verify an impossible comparison falls back to "changed"

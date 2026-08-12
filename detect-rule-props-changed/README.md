@@ -21,6 +21,10 @@ workflow input; this action computes it instead.
    - edits a declaration attribute (`key`, `defaultValue`, `description`, `type`, `paramKey`)
      inside a hunk that shows the declaration.
 
+Deleting a check class counts. git names the target of a deletion `/dev/null`, so the removed
+declarations are attributed to the `--- a/<path>` side of the diff instead — dropping them would
+report a rule that no longer exists as no change at all.
+
 ## Fail-safe: "cannot tell" means "changed"
 
 If the comparison cannot be made, the action reports `rule-props-changed=true` — never `false` —
@@ -79,6 +83,7 @@ changed-line matcher above reports the same history with no false positives.
 | `head-ref`             | The commit being released                                                                                      | No       | `HEAD`   |
 | `extra-patterns`       | Extra detection rules, one `<pathspec>::<regex>` per line, appended to the built-in ruleset                    | No       | -        |
 | `include-test-sources` | Scan test sources too. Excluded by default, since changing a test fixture is not a released behaviour change   | No       | `false`  |
+| `repository-path`      | Inspect an existing checkout at this path and skip the action's own checkout, leaving the workspace untouched  | No       | -        |
 
 ## Outputs
 
@@ -117,7 +122,15 @@ With an extra convention for an analyzer the built-in ruleset does not cover:
 ```
 
 The action checks out the repository itself with `fetch-depth: 0`, because the tags and the
-history back to the previous release must be present.
+history back to the previous release must be present. That checkout **replaces the workspace**.
+Pass `repository-path` when the caller has already prepared a checkout — the action then inspects
+that path and skips its own checkout, so nothing in the workspace moves:
+
+```yaml
+- uses: SonarSource/release-github-actions/detect-rule-props-changed@v1
+  with:
+    repository-path: ${{ github.workspace }}/analyzer
+```
 
 ## Limitations
 

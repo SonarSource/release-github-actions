@@ -28,6 +28,12 @@ inputs:
     description: 'Scan test sources as well. Excluded by default.'
     required: false
     default: 'false'
+  repository-path:
+    description: |
+      Path to a checkout to inspect. When set, the action analyses that path and skips its own
+      checkout, so the caller's workspace is left exactly as it was. Leave empty to have the
+      action check `branch` out into the workspace itself.
+    required: false
 
 outputs:
   rule-props-changed:
@@ -54,7 +60,10 @@ runs:
   using: 'composite'
   steps:
     # fetch-depth: 0 so the release tags and the history back to the previous one are present.
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    # Skipped when the caller points at a checkout of its own: this step replaces the whole
+    # workspace, so running it anyway would discard the very tree we were asked to inspect.
+    - if: inputs.repository-path == ''
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         ref: ${{ inputs.branch }}
         fetch-depth: 0
@@ -72,6 +81,7 @@ runs:
         INPUT_HEAD_REF: ${{ inputs.head-ref }}
         INPUT_EXTRA_PATTERNS: ${{ inputs.extra-patterns }}
         INPUT_INCLUDE_TEST_SOURCES: ${{ inputs.include-test-sources }}
+        INPUT_REPOSITORY_PATH: ${{ inputs.repository-path }}
         SCRIPT_PATH: ${{ github.action_path }}/detect_rule_props_changed.py
       run: |
         DETECTOR_OUTPUT="$(mktemp)"
@@ -79,7 +89,7 @@ runs:
         # where it cannot run at all -- a broken interpreter, an unreadable script -- which
         # would otherwise write no outputs, and an empty output reads downstream as "unchanged".
         if ! python "$SCRIPT_PATH" \
-            --repo "$GITHUB_WORKSPACE" \
+            --repo "${INPUT_REPOSITORY_PATH:-$GITHUB_WORKSPACE}" \
             --base-ref "$INPUT_BASE_REF" \
             --head-ref "$INPUT_HEAD_REF" \
             --extra-patterns "$INPUT_EXTRA_PATTERNS" \

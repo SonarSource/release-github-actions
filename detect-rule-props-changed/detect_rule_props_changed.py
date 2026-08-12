@@ -121,6 +121,16 @@ def single_line(value):
     return ' '.join(str(value).split())
 
 
+def path_from_diff_header(value, prefix):
+    """
+    Return the repository-relative path named by a `---`/`+++` diff header, or None for
+    /dev/null, which is what git writes for the missing side of an addition or a deletion.
+    """
+    if value == '/dev/null':
+        return None
+    return value[len(prefix):] if value.startswith(prefix) else value
+
+
 def run_git(args, cwd):
     try:
         result = subprocess.run(['git'] + args, cwd=cwd, capture_output=True, text=True)
@@ -236,8 +246,13 @@ def iter_hunks(diff_lines):
     Hunk bodies are consumed using the line counts in the `@@` header rather than by
     looking for the next marker, so added content that itself looks like a diff header
     (`+++ foo`) cannot desynchronise the parse.
+
+    A deleted file has `+++ /dev/null` as its target, so the hunk is attributed to the
+    `--- a/<path>` source instead. Deleting a check class is a legitimate way for rule
+    properties to disappear; dropping those hunks would report a real removal as no change.
     """
     current_file = None
+    source_file = None
     index, total = 0, len(diff_lines)
 
     while index < total:
@@ -245,15 +260,17 @@ def iter_hunks(diff_lines):
 
         if line.startswith('diff --git '):
             current_file = None
+            source_file = None
+            index += 1
+            continue
+
+        if line.startswith('--- '):
+            source_file = path_from_diff_header(line[4:].strip(), 'a/')
             index += 1
             continue
 
         if line.startswith('+++ '):
-            path = line[4:].strip()
-            if path == '/dev/null':
-                current_file = None
-            else:
-                current_file = path[2:] if path.startswith('b/') else path
+            current_file = path_from_diff_header(line[4:].strip(), 'b/') or source_file
             index += 1
             continue
 
