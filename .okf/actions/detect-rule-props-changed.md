@@ -19,6 +19,25 @@ and almost always hardcoded to `false`. That input is now a deprecated no-op —
 Called from the `prepare-release` job, which exposes the result as the `rule-props-changed`,
 `rule-props-base-ref` and `rule-props-matched-files` job outputs.
 
+# Fail-safe
+
+The answer is asymmetric: an undetected rule property change reaching SQC is a production
+surprise, an unnecessary "Yes" is one manual check. So **every path that cannot produce an answer
+resolves to `true`** — no reachable tag, a shallow checkout, an unresolvable ref, malformed
+`extra-patterns`, a failing `git diff`, or an unforeseen exception.
+
+The fallback is enforced at three levels, because each one covers a hole the level below cannot:
+
+1. **Script** — never exits non-zero. A non-zero exit writes no outputs at all, and an absent
+   output reads downstream as "unchanged" — precisely the failure the fallback exists to prevent.
+   Output values are collapsed to a single line: `$GITHUB_OUTPUT` is one `key=value` per line, so
+   a newline inside a git error message could otherwise inject `rule-props-changed=false`.
+2. **`action.yml`** — wraps the interpreter call, so a detector that cannot start (broken
+   interpreter, unreadable script) still writes the safe outputs.
+3. **[automated-release](/workflows/automated-release.md)** — the detect step is
+   `continue-on-error`, and the ticket expression is `== 'false' && 'No' || 'Yes'`, so a failed
+   or skipped step yields an empty output that maps to `Yes` rather than `No`.
+
 # Detection
 
 Baseline is the nearest tag **reachable from** the release commit
@@ -61,17 +80,19 @@ which the changed-line matcher reports cleanly.
 
 | Output | Description |
 |---|---|
-| `rule-props-changed` | `"true"` / `"false"` |
-| `base-ref` | Baseline compared against; empty when no tag was reachable |
+| `rule-props-changed` | `"true"` / `"false"`; `"true"` also when no comparison was possible |
+| `base-ref` | Baseline compared against; empty when no comparison was made |
 | `match-count` | Number of changed lines that altered a declaration |
 | `matched-files` | Comma-separated files, capped at 20 |
+| `detection-status` | `"detected"` / `"assumed-changed"` |
 
 # Notes
 
-- No reachable tag (first release) → `::warning::` and `false`; there is no baseline.
 - A default held in a distant constant (`defaultValue = "" + DEFAULT_THRESHOLD`) is only detected
   when the declaration block itself changes.
 - Test sources are excluded by default: changing a test fixture is not a released behaviour change.
+- `rule-props-changed=true` with `match-count=0` is the fallback, not a contradiction — read
+  `detection-status` to tell the two apart.
 
 # Citations
 

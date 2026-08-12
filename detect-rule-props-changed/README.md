@@ -21,6 +21,30 @@ workflow input; this action computes it instead.
    - edits a declaration attribute (`key`, `defaultValue`, `description`, `type`, `paramKey`)
      inside a hunk that shows the declaration.
 
+## Fail-safe: "cannot tell" means "changed"
+
+If the comparison cannot be made, the action reports `rule-props-changed=true` — never `false` —
+and sets `detection-status=assumed-changed`.
+
+The two wrong answers are not equally costly. A rule property change that reaches SQC
+unannounced is a production surprise; a spurious `Yes` on the release ticket costs one manual
+check. So every path that cannot produce an answer resolves to `true`:
+
+| Situation | Annotation |
+|---|---|
+| No release tag reachable from the release commit (first release) | `::warning::` |
+| The release tag points at the release commit and no earlier tag is reachable | `::warning::` |
+| Shallow checkout — the previous release and its history may be missing | `::warning::` |
+| `base-ref` or `head-ref` cannot be resolved | `::error::` |
+| Malformed `extra-patterns` — a requested convention is not being scanned | `::error::` |
+| `git diff` fails, git cannot be run, or the detector hits an unforeseen bug | `::error::` |
+
+The script **never exits non-zero**, deliberately. A non-zero exit writes no outputs at all, and
+an absent output reads downstream as "not changed" — exactly the answer the fallback exists to
+prevent. `action.yml` wraps the call as well, so a detector that cannot start at all still
+produces the safe outputs, and `automated-release.yml` treats anything other than an explicit
+`false` as `Yes`.
+
 ## Conventions recognised
 
 Analyzers do not declare rule properties the same way, so the action carries one rule per
@@ -58,12 +82,16 @@ changed-line matcher above reports the same history with no false positives.
 
 ## Outputs
 
-| Output               | Description                                                                    |
-|----------------------|--------------------------------------------------------------------------------|
-| `rule-props-changed` | `"true"` when a rule property declaration changed, `"false"` otherwise           |
-| `base-ref`           | The baseline actually compared against; empty when the repository has no tag     |
-| `match-count`        | Number of changed lines that altered a declaration                               |
-| `matched-files`      | Comma-separated files containing the changes (capped at 20)                      |
+| Output               | Description                                                                                     |
+|----------------------|---------------------------------------------------------------------------------------------------|
+| `rule-props-changed` | `"true"` when a rule property declaration changed **or the comparison was impossible**, `"false"` otherwise |
+| `base-ref`           | The baseline actually compared against; empty when no comparison was made                          |
+| `match-count`        | Number of changed lines that altered a declaration                                                 |
+| `matched-files`      | Comma-separated files containing the changes (capped at 20)                                        |
+| `detection-status`   | `"detected"` when the diff was compared, `"assumed-changed"` when the fallback fired                |
+
+Read `detection-status` when you need to tell a detected change from an assumed one — with the
+fallback, `rule-props-changed=true` alone does not mean anything was found.
 
 ## Usage
 
@@ -93,8 +121,6 @@ history back to the previous release must be present.
 
 ## Limitations
 
-- **No baseline.** If no tag is reachable from the release commit (a first release), the action
-  emits a `::warning::` and reports `false` — there is nothing to compare against.
 - **Defaults held in distant constants.** A declaration such as
   `defaultValue = "" + DEFAULT_THRESHOLD` is detected when the declaration block changes, but not
   when only the far-away `DEFAULT_THRESHOLD` constant does.
@@ -112,4 +138,6 @@ python -m pytest test_detect_rule_props_changed.py -v \
 ```
 
 The tests build throwaway git repositories and run the detector end to end, so real `git diff`
-output is exercised — including the import-context false positive taken from sonar-python history.
+output is exercised — including the import-context false positive taken from sonar-python history
+and every fallback path, each asserting that the answer is `true` and that the process still
+exits 0.

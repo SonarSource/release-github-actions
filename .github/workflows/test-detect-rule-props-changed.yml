@@ -134,9 +134,37 @@ jobs:
         env:
           RESULT: ${{ steps.unchanged.outputs.rule-props-changed }}
           MATCHED: ${{ steps.unchanged.outputs.matched-files }}
+          STATUS: ${{ steps.unchanged.outputs.detection-status }}
         run: |
           if [[ "$RESULT" != "false" ]]; then
             echo "❌ Expected rule-props-changed=false for an import-only change, got '$RESULT' ($MATCHED)"
             exit 1
           fi
+          if [[ "$STATUS" != "detected" ]]; then
+            echo "❌ Expected detection-status=detected, got '$STATUS'"
+            exit 1
+          fi
           echo "✅ import-only change correctly reported as no rule property change"
+
+      # A comparison that cannot be made must answer "changed", never "unchanged": an
+      # undetected rule property change reaching SQC is far more expensive than a spurious Yes.
+      - name: Detect against a baseline that does not exist (expects the safe fallback)
+        id: undetermined
+        uses: ./detect-rule-props-changed
+        with:
+          base-ref: no-such-tag-${{ github.run_id }}
+
+      - name: Verify an impossible comparison falls back to "changed"
+        env:
+          RESULT: ${{ steps.undetermined.outputs.rule-props-changed }}
+          STATUS: ${{ steps.undetermined.outputs.detection-status }}
+        run: |
+          if [[ "$RESULT" != "true" ]]; then
+            echo "❌ Expected the fallback to report rule-props-changed=true, got '$RESULT'"
+            exit 1
+          fi
+          if [[ "$STATUS" != "assumed-changed" ]]; then
+            echo "❌ Expected detection-status=assumed-changed, got '$STATUS'"
+            exit 1
+          fi
+          echo "✅ undeterminable comparison assumed changed"

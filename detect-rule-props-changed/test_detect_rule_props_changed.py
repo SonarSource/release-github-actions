@@ -23,6 +23,8 @@ from detect_rule_props_changed import (  # noqa: E402
     MAX_REPORTED_FILES,
     RULESET,
     DetectionRule,
+    UndeterminedError,
+    check_repository,
     detect,
     emit,
     find_matches,
@@ -32,6 +34,7 @@ from detect_rule_props_changed import (  # noqa: E402
     pathspec_matches,
     report,
     resolve_base_ref,
+    single_line,
 )
 
 BASELINE_TAG = '1.0.0.100'
@@ -354,11 +357,12 @@ class TestBaseRefResolution(DetectorTestCase):
         git(self.repo, 'tag', '1.1.0.200')
         self.assertEqual(resolve_base_ref(str(self.repo), 'HEAD', ''), '1.0.0.100')
 
-    def test_rerun_without_an_earlier_release_returns_none(self):
+    def test_rerun_without_an_earlier_release_is_undetermined(self):
         self.write('a.txt', '1\n')
         self.commit('only commit')
         git(self.repo, 'tag', '1.0.0.100')
-        self.assertIsNone(resolve_base_ref(str(self.repo), 'HEAD', ''))
+        with self.assertRaises(UndeterminedError):
+            resolve_base_ref(str(self.repo), 'HEAD', '')
 
     def test_rerun_detects_changes_against_the_previous_release(self):
         """End to end: the property change is still found when the release tag already exists."""
@@ -373,17 +377,53 @@ class TestBaseRefResolution(DetectorTestCase):
         base = resolve_base_ref(str(self.repo), 'HEAD', '')
         self.assertTrue(self.run_detect(base_ref=base))
 
-    def test_no_tag_returns_none(self):
+    def test_no_tag_is_undetermined(self):
         self.write('a.txt', '1\n')
         self.commit('only commit')
-        self.assertIsNone(resolve_base_ref(str(self.repo), 'HEAD', ''))
+        with self.assertRaises(UndeterminedError) as ctx:
+            resolve_base_ref(str(self.repo), 'HEAD', '')
+        self.assertIn('no release tag is reachable', str(ctx.exception))
 
-    def test_unresolvable_explicit_base_ref_exits(self):
+    def test_unresolvable_explicit_base_ref_is_undetermined(self):
         self.write('a.txt', '1\n')
         self.commit('only commit')
-        with self.assertRaises(SystemExit) as ctx:
+        with self.assertRaises(UndeterminedError) as ctx:
             resolve_base_ref(str(self.repo), 'HEAD', 'no-such-tag')
-        self.assertEqual(ctx.exception.code, 1)
+        self.assertEqual(ctx.exception.severity, 'error')
+
+
+class TestRepositoryPreconditions(DetectorTestCase):
+    """Checkouts that cannot support a trustworthy diff must be caught before comparing."""
+
+    def test_usable_checkout_passes(self):
+        self.write('a.txt', '1\n')
+        self.commit('only commit')
+        self.assertIsNone(check_repository(str(self.repo), 'HEAD'))
+
+    def test_unresolvable_head_ref_is_undetermined(self):
+        self.write('a.txt', '1\n')
+        self.commit('only commit')
+        with self.assertRaises(UndeterminedError) as ctx:
+            check_repository(str(self.repo), 'no-such-branch')
+        self.assertEqual(ctx.exception.severity, 'error')
+
+    def test_shallow_checkout_is_undetermined(self):
+        """
+        A shallow clone can hide the previous release tag and the history back to it, so its
+        diff would be quietly incomplete rather than obviously broken.
+        """
+        for index in range(3):
+            self.write('a.txt', f'{index}\n')
+            self.commit(f'commit {index}')
+
+        with TemporaryDirectory() as shallow_parent:
+            shallow = Path(shallow_parent) / 'shallow'
+            subprocess.run(
+                ['git', 'clone', '-q', '--depth', '1', f'file://{self.repo}', str(shallow)],
+                check=True, capture_output=True, text=True)
+            with self.assertRaises(UndeterminedError) as ctx:
+                check_repository(str(shallow), 'HEAD')
+        self.assertIn('shallow', str(ctx.exception))
 
 
 class TestExtraPatterns(unittest.TestCase):
@@ -397,16 +437,21 @@ class TestExtraPatterns(unittest.TestCase):
         self.assertEqual(parse_extra_patterns('\n# a comment\n\n'), [])
 
     def test_rejects_line_without_separator(self):
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(UndeterminedError):
             parse_extra_patterns('*.scala@RuleParam')
 
     def test_rejects_empty_side(self):
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(UndeterminedError):
             parse_extra_patterns('*.scala::')
 
     def test_rejects_invalid_regex(self):
-        with self.assertRaises(SystemExit):
+        """
+        A pattern the repository asked for but we cannot compile means we are not scanning a
+        convention somebody expects us to scan -- undetermined, not silently ignored.
+        """
+        with self.assertRaises(UndeterminedError) as ctx:
             parse_extra_patterns('*.scala::([unclosed')
+        self.assertEqual(ctx.exception.severity, 'error')
 
 
 class TestExtraPatternsDetection(DetectorTestCase):
@@ -544,7 +589,45 @@ class TestReportingAndOutput(unittest.TestCase):
             'base-ref=1.0.0.100',
             'match-count=1',
             'matched-files=A.java',
+            'detection-status=detected',
         ])
+
+    def test_emit_marks_a_fallback_result(self):
+        _, out, _ = self.capture(emit, True, '', [], [], 'no release tag is reachable.')
+        self.assertIn('rule-props-changed=true', out)
+        self.assertIn('detection-status=assumed-changed', out)
+
+    def test_emit_keeps_every_value_on_one_line(self):
+        """
+        $GITHUB_OUTPUT is one `key=value` per line, so a newline inside a value would start a
+        new pair -- and the pair an injected line would most want to write is
+        `rule-props-changed=false`, defeating the whole fail-safe.
+        """
+        _, out, _ = self.capture(
+            emit, True, 'tag\nrule-props-changed=false', [], [],
+            'boom\nrule-props-changed=false')
+        lines = out.strip().splitlines()
+        self.assertEqual(len(lines), 5, 'no value may add a line')
+        # The injected text survives inside a value, which is harmless; what must not happen is
+        # a second line whose key is rule-props-changed.
+        self.assertEqual([line for line in lines if line.startswith('rule-props-changed=')],
+                         ['rule-props-changed=true'])
+
+    def test_single_line_leaves_a_short_value_alone(self):
+        self.assertEqual(single_line('1.0.0.100'), '1.0.0.100')
+
+    def test_emit_does_not_truncate_a_long_file_list(self):
+        """
+        MAX_REPORTED_FILES bounds this output by entry count. A character cap on top of it
+        would cut a real file list off mid-path -- three java check paths already exceed 200
+        characters, so it would fire on ordinary releases, not just pathological ones.
+        """
+        files = [f'python-checks/src/main/java/org/sonar/python/checks/RuleCheck{i}.java'
+                 for i in range(MAX_REPORTED_FILES)]
+        _, out, _ = self.capture(emit, True, '1.0.0.100', files, files)
+        emitted = next(line for line in out.splitlines() if line.startswith('matched-files='))
+        self.assertNotIn('...', emitted)
+        self.assertEqual(emitted, 'matched-files=' + ','.join(files))
 
     def test_emit_false_when_nothing_changed(self):
         _, out, _ = self.capture(emit, False, '1.0.0.100', [], [])
@@ -599,15 +682,18 @@ class TestMainCli(DetectorTestCase):
         self.assertEqual(outputs['matched-files'], path)
         self.assertIn('rule property change(s)', err)
 
-    def test_reports_false_and_warns_without_a_baseline_tag(self):
-        self.write('a.txt', '1\n')
-        self.commit('only commit')
+    def test_reports_false_for_a_release_with_no_property_change(self):
+        path = 'checks/src/main/java/Check.java'
+        self.write(path, JAVA_CHECK)
+        self.commit('baseline')
+        self.tag_baseline()
+        self.write(path, JAVA_CHECK.replace('Pattern.compile(format);',
+                                            'Pattern.compile(format, 0);'))
+        self.commit()
 
-        outputs, err = self.run_main()
+        outputs, _ = self.run_main()
         self.assertEqual(outputs['rule-props-changed'], 'false')
-        self.assertEqual(outputs['base-ref'], '')
-        self.assertEqual(outputs['match-count'], '0')
-        self.assertIn('::warning::', err)
+        self.assertEqual(outputs['detection-status'], 'detected')
 
     def test_include_test_sources_flag_is_honoured(self):
         path = 'checks/src/test/java/CheckTest.java'
@@ -621,14 +707,128 @@ class TestMainCli(DetectorTestCase):
         outputs, _ = self.run_main('--include-test-sources', 'true')
         self.assertEqual(outputs['rule-props-changed'], 'true')
 
-    def test_bad_diff_range_exits_with_an_error_annotation(self):
+    def test_bad_diff_range_is_undetermined(self):
         self.write('a.txt', '1\n')
         self.commit('only commit')
-        stderr = StringIO()
-        with redirect_stderr(stderr), self.assertRaises(SystemExit) as ctx:
+        with self.assertRaises(UndeterminedError) as ctx:
             detect(str(self.repo), 'no-such-ref', 'HEAD', RULESET, False)
-        self.assertEqual(ctx.exception.code, 1)
-        self.assertIn('::error::', stderr.getvalue())
+        self.assertEqual(ctx.exception.severity, 'error')
+
+
+class TestFailSafeFallback(DetectorTestCase):
+    """
+    Whenever the comparison cannot be made, the answer must be "changed".
+
+    Under-reporting is the expensive direction: a rule property change reaching SQC unannounced
+    is a production surprise, while a spurious "Yes" costs one manual check. So every one of
+    these paths reports true, annotates why, and still exits 0 -- a non-zero exit would write no
+    outputs at all, which the workflow reads as "unchanged".
+    """
+
+    def run_main(self, *extra_args):
+        argv = ['detect_rule_props_changed.py', '--repo', str(self.repo), *extra_args]
+        stdout, stderr = StringIO(), StringIO()
+        with patch.object(sys, 'argv', argv), redirect_stdout(stdout), redirect_stderr(stderr):
+            main()  # must not raise, including SystemExit
+        outputs = dict(line.split('=', 1) for line in stdout.getvalue().strip().splitlines())
+        return outputs, stderr.getvalue()
+
+    def assertAssumedChanged(self, outputs, severity='warning', stderr=''):
+        self.assertEqual(outputs['rule-props-changed'], 'true')
+        self.assertEqual(outputs['detection-status'], 'assumed-changed')
+        self.assertEqual(outputs['base-ref'], '')
+        self.assertEqual(outputs['match-count'], '0')
+        if stderr:
+            self.assertIn(f'::{severity}::', stderr)
+
+    def test_no_baseline_tag_assumes_changed(self):
+        """A first release has nothing to compare against, so it cannot claim "unchanged"."""
+        self.write('a.txt', '1\n')
+        self.commit('only commit')
+
+        outputs, err = self.run_main()
+        self.assertAssumedChanged(outputs, 'warning', err)
+
+    def test_rerun_without_an_earlier_release_assumes_changed(self):
+        self.write('a.txt', '1\n')
+        self.commit('only commit')
+        git(self.repo, 'tag', '1.0.0.100')
+
+        outputs, err = self.run_main()
+        self.assertAssumedChanged(outputs, 'warning', err)
+
+    def test_unresolvable_base_ref_assumes_changed(self):
+        self.write('a.txt', '1\n')
+        self.commit('only commit')
+
+        outputs, err = self.run_main('--base-ref', 'no-such-tag')
+        self.assertAssumedChanged(outputs, 'error', err)
+
+    def test_unresolvable_head_ref_assumes_changed(self):
+        self.write('a.txt', '1\n')
+        self.commit('only commit')
+        self.tag_baseline()
+
+        outputs, err = self.run_main('--head-ref', 'no-such-branch')
+        self.assertAssumedChanged(outputs, 'error', err)
+
+    def test_directory_that_is_not_a_repository_assumes_changed(self):
+        with TemporaryDirectory() as plain_dir:
+            self.repo = Path(plain_dir)
+            outputs, err = self.run_main()
+        self.assertAssumedChanged(outputs, 'error', err)
+
+    def test_invalid_extra_pattern_assumes_changed(self):
+        path = 'checks/src/main/java/Check.java'
+        self.write(path, JAVA_CHECK)
+        self.commit('baseline')
+        self.tag_baseline()
+        self.write('README.md', 'unrelated\n')
+        self.commit()
+
+        outputs, err = self.run_main('--extra-patterns', '*.scala::([unclosed')
+        self.assertAssumedChanged(outputs, 'error', err)
+
+    def test_missing_git_binary_assumes_changed(self):
+        self.write('a.txt', '1\n')
+        self.commit('baseline')
+        self.tag_baseline()
+
+        with patch('detect_rule_props_changed.subprocess.run',
+                   side_effect=OSError('No such file or directory: git')):
+            outputs, err = self.run_main()
+
+        self.assertAssumedChanged(outputs, 'error', err)
+
+    def test_unexpected_exception_assumes_changed(self):
+        """The last resort: a bug in the matcher must not answer "unchanged" by crashing."""
+        self.write('a.txt', '1\n')
+        self.commit('baseline')
+        self.tag_baseline()
+        self.write('a.txt', '2\n')
+        self.commit()
+
+        with patch('detect_rule_props_changed.detect',
+                   side_effect=RuntimeError('matcher blew up')):
+            outputs, err = self.run_main()
+
+        self.assertAssumedChanged(outputs, 'error', err)
+        self.assertIn('Traceback', err)
+
+    def test_a_successful_detection_is_not_marked_as_assumed(self):
+        """The guard rails must not fire on the happy path."""
+        path = 'checks/src/main/java/Check.java'
+        self.write(path, JAVA_CHECK)
+        self.commit('baseline')
+        self.tag_baseline()
+        self.write(path, JAVA_CHECK.replace('key = "format"', 'key = "pattern"'))
+        self.commit()
+
+        outputs, err = self.run_main()
+        self.assertEqual(outputs['rule-props-changed'], 'true')
+        self.assertEqual(outputs['detection-status'], 'detected')
+        self.assertNotIn('::warning::', err)
+        self.assertNotIn('::error::', err)
 
 
 class TestRuleset(unittest.TestCase):

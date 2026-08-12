@@ -495,9 +495,12 @@ jobs:
 
       # Replaces the old hand-answered `rule-props-changed` input: diffs the previous release
       # tag against the release commit and looks for changed rule property declarations.
+      # continue-on-error, because a detection that cannot run must not stop a release: the
+      # step then produces no output, and the expressions below read that as "Yes".
       - name: Detect Rule Property Changes
         id: detect-rule-props
-        uses: SonarSource/release-github-actions/detect-rule-props-changed@master
+        continue-on-error: true
+        uses: SonarSource/release-github-actions/detect-rule-props-changed@ms/detect-rule-props-changed
         with:
           branch: ${{ inputs.branch }}
 
@@ -524,6 +527,7 @@ jobs:
           RULE_PROPS_BASE_REF: ${{ steps.detect-rule-props.outputs.base-ref }}
           RULE_PROPS_MATCH_COUNT: ${{ steps.detect-rule-props.outputs.match-count }}
           RULE_PROPS_MATCHED_FILES: ${{ steps.detect-rule-props.outputs.matched-files }}
+          RULE_PROPS_STATUS: ${{ steps.detect-rule-props.outputs.detection-status || 'assumed-changed' }}
         run: |
           echo "## 🆗 Prepare Release" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -536,18 +540,22 @@ jobs:
             echo "- Generated release notes from Jira." >> $GITHUB_STEP_SUMMARY
             echo "  - See Jira release: ${{ steps.get-jira-release-notes.outputs.jira-release-url }}" >> $GITHUB_STEP_SUMMARY
           fi
-          if [ -n "$RULE_PROPS_BASE_REF" ]; then
+          if [ "$RULE_PROPS_STATUS" = "detected" ]; then
             echo "- Scanned \`$RULE_PROPS_BASE_REF\`..\`$BRANCH\` for rule property changes." >> $GITHUB_STEP_SUMMARY
           else
-            echo "- No release tag found to compare against, so rule property changes could not be detected." >> $GITHUB_STEP_SUMMARY
+            echo "- ⚠️ Could not compare against a previous release, see detect-rule-props step for details." >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Results" >> $GITHUB_STEP_SUMMARY
           echo "- Release version: \`${{ needs.check-releasability.outputs.release-version || steps.get-release-version.outputs.release-version }}\`." >> $GITHUB_STEP_SUMMARY
           echo "- Jira version name: \`${{ steps.get-jira-version.outputs.jira-version-name }}\`." >> $GITHUB_STEP_SUMMARY
-          echo "- Rule properties changed: \`$RULE_PROPS_CHANGED\`." >> $GITHUB_STEP_SUMMARY
-          if [ "$RULE_PROPS_CHANGED" = "true" ]; then
-            echo "  - $RULE_PROPS_MATCH_COUNT change(s) in: $(echo "$RULE_PROPS_MATCHED_FILES" | tr ',' ' ')" >> $GITHUB_STEP_SUMMARY
+          if [ "$RULE_PROPS_STATUS" != "detected" ]; then
+            echo "- Rule properties changed: \`true\` — **assumed**, not detected. Check the diff by hand." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Rule properties changed: \`$RULE_PROPS_CHANGED\`." >> $GITHUB_STEP_SUMMARY
+            if [ "$RULE_PROPS_CHANGED" = "true" ]; then
+              echo "  - $RULE_PROPS_MATCH_COUNT change(s) in: $(echo "$RULE_PROPS_MATCHED_FILES" | tr ',' ' ')" >> $GITHUB_STEP_SUMMARY
+            fi
           fi
 
   # This step creates a Jira release ticket using the prepared release information.
@@ -571,7 +579,7 @@ jobs:
         with:
           project-name: ${{ inputs.project-name }}
           short-description: ${{ inputs.short-description }}
-          rule-props-changed: ${{ needs.prepare-release.outputs.rule-props-changed == 'true' && 'Yes' || 'No' }}
+          rule-props-changed: ${{ needs.prepare-release.outputs.rule-props-changed == 'false' && 'No' || 'Yes' }}
           jira-release-url: ${{ needs.prepare-release.outputs.jira-release-issue-filter-url }}
           start-progress: true
           version: ${{ needs.prepare-release.outputs.release-version }}
@@ -581,7 +589,7 @@ jobs:
         shell: bash
         env:
           PROJECT_NAME: ${{ inputs.project-name }}
-          RULE_PROPS_CHANGED: ${{ needs.prepare-release.outputs.rule-props-changed == 'true' && 'Yes' || 'No' }}
+          RULE_PROPS_CHANGED: ${{ needs.prepare-release.outputs.rule-props-changed == 'false' && 'No' || 'Yes' }}
           RULE_PROPS_BASE_REF: ${{ needs.prepare-release.outputs.rule-props-base-ref }}
           RULE_PROPS_MATCHED_FILES: ${{ needs.prepare-release.outputs.rule-props-matched-files }}
         run: |
@@ -589,7 +597,11 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### What happened" >> $GITHUB_STEP_SUMMARY
           echo "- Created a Jira release ticket for project \`$PROJECT_NAME\` using version \`${{ needs.prepare-release.outputs.release-version }}\`." >> $GITHUB_STEP_SUMMARY
-          echo "- Rule properties changed: \`$RULE_PROPS_CHANGED\` (detected against \`${RULE_PROPS_BASE_REF:-no baseline tag}\`)." >> $GITHUB_STEP_SUMMARY
+          if [ -n "$RULE_PROPS_BASE_REF" ]; then
+            echo "- Rule properties changed: \`$RULE_PROPS_CHANGED\` (detected against \`$RULE_PROPS_BASE_REF\`)." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Rule properties changed: \`$RULE_PROPS_CHANGED\` — ⚠️ **assumed**. Check the diff by hand." >> $GITHUB_STEP_SUMMARY
+          fi
           if [ -n "$RULE_PROPS_MATCHED_FILES" ]; then
             echo "  - Changed in: $(echo "$RULE_PROPS_MATCHED_FILES" | tr ',' ' ')" >> $GITHUB_STEP_SUMMARY
           fi

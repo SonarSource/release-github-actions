@@ -177,8 +177,13 @@ an undeclared input — and it will be removed once the caller repositories have
 the line from your caller workflow whenever convenient.
 
 If a repository declares rule properties in a way the action does not recognise, the detection can
-be extended per repository via the action's `extra-patterns` input. When no tag is reachable from
-the release commit (a first release), the action warns and reports `No`.
+be extended per repository via the action's `extra-patterns` input.
+
+Detection is **fail-safe**: whenever the comparison cannot be made — a first release with no tag
+to compare against, a shallow checkout, a git failure, a detection step that does not run at all —
+the ticket gets `Yes`, never `No`, and the job summary marks the value as *assumed* rather than
+detected. An undetected rule property change reaching SQC is far more expensive than a `Yes` that
+turns out to be unnecessary. Only an explicit `false` from the detector produces `No`.
 - Summaries:
   - Each job includes a "Summary" step that writes to `$GITHUB_STEP_SUMMARY` only when `verbose: true`.
   - A short release announcement containing the project, released version, and GitHub release-notes link is sent to `#team-code-quality-pm-em-lead` by default after the GitHub release is created. Set `code-quality-leads-slack-notification: false` to opt out.

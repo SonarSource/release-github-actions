@@ -83,9 +83,12 @@ Outputs: `new-version` (Jira version name), `sqaa-pull-request-url`.
 - **Rule properties are detected, not declared**: `prepare-release` runs
   [detect-rule-props-changed](/actions/detect-rule-props-changed.md) against the previous release
   tag and exposes `rule-props-changed`, which `create-release-ticket` maps to Yes/No on the REL
-  ticket. The `rule-props-changed` *input* is a deprecated no-op, kept only so the 42 caller repos
-  that still pass it keep working — GitHub errors on an undeclared reusable-workflow input, so it
-  can only be deleted after the callers drop it.
+  ticket. The mapping is `== 'false' && 'No' || 'Yes'`, not `== 'true' && 'Yes' || 'No'`: the step
+  is `continue-on-error`, so it can legitimately produce no output, and an empty value must land
+  on Yes. Inverting this expression would silently reintroduce the unsafe default the detector
+  was built to remove. The `rule-props-changed` *input* is a deprecated no-op, kept only so the
+  42 caller repos that still pass it keep working — GitHub errors on an undeclared
+  reusable-workflow input, so it can only be deleted after the callers drop it.
 - **Auto-merge sweep**: when `bump-version: true`, strips auto-merge from all open PRs at
   release start, to reduce the race window where a PR could merge before the version-bump PR
   opens. Best-effort — see the [release-lock gate](/workflows/release-lock.md) for the guard of

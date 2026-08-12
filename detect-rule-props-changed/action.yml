@@ -31,10 +31,12 @@ inputs:
 
 outputs:
   rule-props-changed:
-    description: '"true" when a rule property declaration changed, "false" otherwise.'
+    description: |
+      "true" when a rule property declaration changed, "false" otherwise. Also "true" when the
+      comparison could not be made at all, so an undetectable change is never reported as absent.
     value: ${{ steps.detect.outputs.rule-props-changed }}
   base-ref:
-    description: 'The baseline ref actually compared against; empty when no tag was found.'
+    description: 'The baseline ref actually compared against; empty when no comparison was made.'
     value: ${{ steps.detect.outputs.base-ref }}
   match-count:
     description: 'Number of changed lines that altered a rule property declaration.'
@@ -42,6 +44,11 @@ outputs:
   matched-files:
     description: 'Comma-separated files containing the changes (capped at 20).'
     value: ${{ steps.detect.outputs.matched-files }}
+  detection-status:
+    description: |
+      "detected" when the diff was actually compared, "assumed-changed" when it could not be and
+      rule-props-changed was forced to "true".
+    value: ${{ steps.detect.outputs.detection-status }}
 
 runs:
   using: 'composite'
@@ -65,11 +72,26 @@ runs:
         INPUT_HEAD_REF: ${{ inputs.head-ref }}
         INPUT_EXTRA_PATTERNS: ${{ inputs.extra-patterns }}
         INPUT_INCLUDE_TEST_SOURCES: ${{ inputs.include-test-sources }}
+        SCRIPT_PATH: ${{ github.action_path }}/detect_rule_props_changed.py
       run: |
-        python ${{ github.action_path }}/detect_rule_props_changed.py \
-          --repo "$GITHUB_WORKSPACE" \
-          --base-ref "$INPUT_BASE_REF" \
-          --head-ref "$INPUT_HEAD_REF" \
-          --extra-patterns "$INPUT_EXTRA_PATTERNS" \
-          --include-test-sources "$INPUT_INCLUDE_TEST_SOURCES" \
-          >> $GITHUB_OUTPUT
+        DETECTOR_OUTPUT="$(mktemp)"
+        # The detector already answers "changed" when it cannot compare. This covers the case
+        # where it cannot run at all -- a broken interpreter, an unreadable script -- which
+        # would otherwise write no outputs, and an empty output reads downstream as "unchanged".
+        if ! python "$SCRIPT_PATH" \
+            --repo "$GITHUB_WORKSPACE" \
+            --base-ref "$INPUT_BASE_REF" \
+            --head-ref "$INPUT_HEAD_REF" \
+            --extra-patterns "$INPUT_EXTRA_PATTERNS" \
+            --include-test-sources "$INPUT_INCLUDE_TEST_SOURCES" \
+            > "$DETECTOR_OUTPUT"; then
+          echo "::error::The rule property detector could not run. Assuming rule properties changed."
+          {
+            echo "rule-props-changed=true"
+            echo "base-ref="
+            echo "match-count=0"
+            echo "matched-files="
+            echo "detection-status=assumed-changed"
+          } > "$DETECTOR_OUTPUT"
+        fi
+        cat "$DETECTOR_OUTPUT" >> "$GITHUB_OUTPUT"
