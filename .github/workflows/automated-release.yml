@@ -368,7 +368,7 @@ jobs:
           version: ${{ steps.get-version.outputs.release-version }}
 
       - name: Summary
-        if: ${{ always() && inputs.verbose }}
+        if: ${{ always() && (inputs.verbose || steps.releasability.outcome != 'success') }}
         shell: bash
         env:
           BRANCH: ${{ inputs.branch }}
