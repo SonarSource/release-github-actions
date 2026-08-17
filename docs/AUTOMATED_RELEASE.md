@@ -146,6 +146,7 @@ jobs:
   - Execute a releasability check on the specified branch immediately after freezing (using `SonarSource/gh-action_releasability@v3`)
   - Update the commit status with the latest releasability results
   - Fail early if the releasability check does not pass, preventing unnecessary work (like creating REL tickets)
+  - Name the specific failing sub-check(s) (e.g. `QA`, `Jira`, `QualityGate`) in the Check Releasability job's own step summary, on any failure (not only when `verbose: true`)
 - When `freeze-branch: true`, the workflow will:
   - Lock the specified branch at the start of the release
   - Proceed with the release steps

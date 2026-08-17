@@ -95,6 +95,17 @@ Outputs: `new-version` (Jira version name), `sqaa-pull-request-url`.
 - This workflow has been the subject of an [architecture review](/decisions/architecture-review-2026-07.md)
   identifying reliability, testability, and observability gaps — see the
   [risks](/risks/index.md) directory.
+- **Releasability failure detail**: the `check-releasability` job's own `Summary` step runs
+  whenever `verbose` is true *or* the releasability action didn't succeed — not only when
+  `verbose` is true — so the ✅/❌ per-check breakdown (e.g. `QA`, `Jira`, `QualityGate`) always
+  appears in that job's own step-summary section on failure, without needing `verbose`. Since the
+  GitHub Actions run-summary page stacks every job's step summary in one place, this section is
+  visible right alongside `summarize-release`'s top-level message — no need to click into the job
+  or thread the data through job outputs. `summarize-release`'s own top-level message is
+  unchanged (still the generic "One or more jobs failed" line on any failure). This narrowly
+  addresses the releasability case of
+  [unhelpful-failure-summary](/risks/unhelpful-failure-summary.md); the other eight jobs still
+  have no verbose-independent step summary at all.
 - The `automated-release-run` Claude Code skill (`.claude/skills/automated-release-run/`) is the
   recommended way to trigger a release: it checks releasability, interviews for
   `workflow_dispatch` inputs, triggers the run, then polls and merges the bump-version, SQS, and
