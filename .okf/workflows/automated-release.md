@@ -4,7 +4,7 @@ title: Automated Release (analyzer path)
 description: Orchestrates the full end-to-end analyzer release across Jira, GitHub, and downstream integration repos.
 resource: https://github.com/SonarSource/release-github-actions/blob/master/.github/workflows/automated-release.yml
 tags: [workflow, release, orchestrator, jira, github-release, slack]
-timestamp: 2026-08-05T00:00:00Z
+timestamp: 2026-08-26T00:00:00Z
 ---
 
 # Overview
@@ -74,7 +74,9 @@ also true; silently skipped if not onboarded), `create-slvs-ticket` / `create-sl
 `create-slcore-ticket` / `create-sle-ticket` / `create-sli-ticket` / `create-cli-ticket`
 (default `false`), `verbose`
 (default `false`), `code-quality-leads-slack-notification` (default `true`; opt out of the
-release announcement sent to the Code Quality PM/EM leads Slack channel).
+release announcement sent to the Code Quality PM/EM leads Slack channel),
+`require-rule-metadata-update` (default `false`) and `rule-metadata-pr-labels` (labels for the
+PR that [update-rule-metadata](/actions/update-rule-metadata.md) opens when metadata is stale).
 
 Outputs: `new-version` (Jira version name), `sqaa-pull-request-url`.
 

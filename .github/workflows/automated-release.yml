@@ -181,6 +181,10 @@ on:
         required: false
         type: boolean
         default: false
+      rule-metadata-pr-labels:
+        description: "Labels to apply to the rule metadata pull request created when require-rule-metadata-update is true. For example, 'skip-qa,skip-pvf'."
+        required: false
+        type: string
       slack-channel:
         description: "Slack channel for notifications"
         required: false
@@ -426,6 +430,7 @@ jobs:
         uses: SonarSource/release-github-actions/update-rule-metadata@master
         with:
           branch: ${{ inputs.branch }}
+          labels: ${{ inputs.rule-metadata-pr-labels }}
 
       - name: Check Rule Metadata Changes
         if: steps.update-rule-metadata.outputs.has-changes == 'true'
@@ -445,6 +450,7 @@ jobs:
           BRANCH: ${{ inputs.branch }}
           HAS_CHANGES: ${{ steps.update-rule-metadata.outputs.has-changes }}
           PR_URL: ${{ steps.update-rule-metadata.outputs.pull-request-url || 'none' }}
+          PR_LABELS: ${{ inputs.rule-metadata-pr-labels }}
         run: |
           echo "## 📋 Update Rule Metadata" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -455,6 +461,9 @@ jobs:
           echo "- Changes detected: \`$HAS_CHANGES\`." >> $GITHUB_STEP_SUMMARY
           if [ "$HAS_CHANGES" = "true" ]; then
             echo "- Pull Request: $PR_URL" >> $GITHUB_STEP_SUMMARY
+            if [ -n "$PR_LABELS" ]; then
+              echo "- Labels applied: \`$PR_LABELS\`." >> $GITHUB_STEP_SUMMARY
+            fi
           fi
 
   # This step determines the release version, Jira version name, and gathers release notes.
