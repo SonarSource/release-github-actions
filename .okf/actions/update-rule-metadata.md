@@ -17,10 +17,7 @@ per-language summary. A *skipped* run of this job has previously caused downstre
 [risk: success()/skipped transitive gate](/risks/orchestrator-untested.md).
 
 The generated PR carries **no label by default** — the `labels` input is the only source of
-labels (GHA-418). Consumers use it to steer CI on the bot PR: Cloud Security analyzers run the
-whole PVF on every pull request unless it carries `skip-pvf`. The orchestrator
-[automated-release](/workflows/automated-release.md) exposes this as `rule-metadata-pr-labels`.
-Before GHA-418 the README wrongly claimed a `skip-qa` label was applied automatically.
+labels. Consumers can define multiple labels for example: `skip-qa,skip-pvf` if needed.
 
 # Schema
 

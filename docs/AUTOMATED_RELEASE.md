@@ -151,8 +151,7 @@ jobs:
   - Name the specific failing sub-check(s) (e.g. `QA`, `Jira`, `QualityGate`) in the Check Releasability job's own step summary, on any failure (not only when `verbose: true`)
 - When `require-rule-metadata-update: true`, the workflow runs the rule metadata check before the
   release and fails it if metadata is stale, pointing to the pull request that must be merged
-  first. Use `rule-metadata-pr-labels` to label that pull request — for example, Cloud Security
-  analyzers run the whole PVF on every PR unless it carries the `skip-pvf` label.
+  first. Use `rule-metadata-pr-labels` to label that pull request — for example, `skip-qa,skip-pvf` labels.
 - When `freeze-branch: true`, the workflow will:
   - Lock the specified branch at the start of the release
   - Proceed with the release steps
