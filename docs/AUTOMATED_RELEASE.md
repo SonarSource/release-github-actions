@@ -77,6 +77,8 @@ This workflow composes several actions from this repository:
 | `freeze-branch`              | When `true`, locks the target branch during the release and unlocks it after publishing                         | No       | `true`       |
 | `freeze-branch-slack-notification` | When `false`, suppresses Slack notifications for the freeze and unfreeze steps                           | No       | `true`       |
 | `check-releasability`        | When `true`, verifies the releasability status on the branch before proceeding                                  | No       | `true`       |
+| `require-rule-metadata-update` | When `true`, runs the rule metadata update check before the release and fails it if metadata changes are detected and need to be merged first | No       | `false`      |
+| `rule-metadata-pr-labels`    | Labels applied to the rule metadata pull request when `require-rule-metadata-update` is `true`, e.g. `skip-qa,skip-pvf`                          | No       | -            |
 | `slack-channel`              | Slack channel to notify when locking/unlocking the branch                                                       | No       | -            |
 | `code-quality-leads-slack-notification` | When `false`, suppresses the release announcement sent to `#team-code-quality-pm-em-lead`                | No       | `true`       |
 | `release-artifacts-public`   | Newline-separated Repox paths from public repositories to attach to the GitHub release                          | No       | -            |
@@ -147,6 +149,9 @@ jobs:
   - Update the commit status with the latest releasability results
   - Fail early if the releasability check does not pass, preventing unnecessary work (like creating REL tickets)
   - Name the specific failing sub-check(s) (e.g. `QA`, `Jira`, `QualityGate`) in the Check Releasability job's own step summary, on any failure (not only when `verbose: true`)
+- When `require-rule-metadata-update: true`, the workflow runs the rule metadata check before the
+  release and fails it if metadata is stale, pointing to the pull request that must be merged
+  first. Use `rule-metadata-pr-labels` to label that pull request — for example, `skip-qa,skip-pvf` labels.
 - When `freeze-branch: true`, the workflow will:
   - Lock the specified branch at the start of the release
   - Proceed with the release steps

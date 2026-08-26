@@ -5,12 +5,14 @@ on:
   pull_request:
     paths:
       - 'update-rule-metadata/**'
+      - '.github/workflows/automated-release.yml'
       - '.github/workflows/test-update-rule-metadata.yml'
   push:
     branches:
       - branch-*
     paths:
       - 'update-rule-metadata/**'
+      - '.github/workflows/automated-release.yml'
       - '.github/workflows/test-update-rule-metadata.yml'
   workflow_dispatch:
 
@@ -56,6 +58,13 @@ jobs:
           branch: ${{ github.ref_name }}
         continue-on-error: true
 
+      - name: Test Custom Labels
+        id: test-labels
+        uses: ./update-rule-metadata
+        with:
+          labels: 'skip-qa,skip-pvf'
+        continue-on-error: true
+
       - name: Test All Optional Parameters
         id: test-all-params
         uses: ./update-rule-metadata
@@ -63,6 +72,7 @@ jobs:
           rule-api-version: '2.16.0.5000'
           sonarpedia-files: 'test/sonarpedia.json'
           branch: ${{ github.ref_name }}
+          labels: 'skip-qa'
         continue-on-error: true
 
       - name: Verify Parameter Tests
@@ -73,6 +83,7 @@ jobs:
           echo "Custom sonarpedia-files test outcome: ${{ steps.test-sonarpedia-files.outcome }}"
           echo "Custom branch (master) test outcome: ${{ steps.test-branch-master.outcome }}"
           echo "Custom branch (current) test outcome: ${{ steps.test-branch-current.outcome }}"
+          echo "Custom labels test outcome: ${{ steps.test-labels.outcome }}"
           echo "All parameters test outcome: ${{ steps.test-all-params.outcome }}"
 
           # All tests are expected to fail due to missing vault access
@@ -125,6 +136,58 @@ jobs:
           fi
 
           echo "✓ Branch parameter structure test completed successfully!"
+
+  labels-parameter-tests:
+    name: Test Labels Parameter Structure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Test Labels Parameter Structure
+        run: |
+          echo "Testing labels parameter structure..."
+
+          # Test that the action file has the labels input defined
+          if grep -qE "^  labels:" update-rule-metadata/action.yml; then
+            echo "✓ labels input found in action.yml"
+          else
+            echo "✗ labels input not found in action.yml"
+            exit 1
+          fi
+
+          # Test that the labels input is forwarded to the create-pull-request step
+          PR_STEP=$(sed -n '/name: Create PR/,/name: Notify Slack/p' update-rule-metadata/action.yml)
+          if echo "$PR_STEP" | grep -q "labels: .*inputs.labels"; then
+            echo "✓ PR creation forwards the labels input"
+          else
+            echo "✗ PR creation does not forward the labels input"
+            exit 1
+          fi
+
+          echo "✓ Labels parameter structure test completed successfully!"
+
+      - name: Verify automated-release forwards labels to the action
+        run: |
+          echo "Testing that automated-release.yml exposes and forwards rule-metadata-pr-labels..."
+
+          if grep -qE "^      rule-metadata-pr-labels:" .github/workflows/automated-release.yml; then
+            echo "✓ rule-metadata-pr-labels input declared in automated-release.yml"
+          else
+            echo "✗ rule-metadata-pr-labels input not declared in automated-release.yml"
+            exit 1
+          fi
+
+          JOB_BLOCK=$(sed -n '/^  update-rule-metadata:/,/^  prepare-release:/p' .github/workflows/automated-release.yml)
+          if echo "$JOB_BLOCK" | grep -q "labels: .*inputs.rule-metadata-pr-labels"; then
+            echo "✓ update-rule-metadata job forwards rule-metadata-pr-labels as labels"
+          else
+            echo "✗ update-rule-metadata job does not forward rule-metadata-pr-labels"
+            exit 1
+          fi
+
+          echo "✓ automated-release.yml labels plumbing verified"
 
   output-validation:
     name: Test Output Schema
@@ -279,7 +342,7 @@ jobs:
   validation-summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [input-parameter-tests, branch-parameter-tests, output-validation, integration-tests, vault-and-env-tests, generate-summary-tests]
+    needs: [input-parameter-tests, branch-parameter-tests, labels-parameter-tests, output-validation, integration-tests, vault-and-env-tests, generate-summary-tests]
     if: always()
 
     steps:
@@ -290,6 +353,7 @@ jobs:
           echo "================================"
           echo "Input Parameter Tests: ${{ needs.input-parameter-tests.result }}"
           echo "Branch Parameter Tests: ${{ needs.branch-parameter-tests.result }}"
+          echo "Labels Parameter Tests: ${{ needs.labels-parameter-tests.result }}"
           echo "Output Validation: ${{ needs.output-validation.result }}"
           echo "Integration Tests: ${{ needs.integration-tests.result }}"
           echo "Vault & Env Variable Tests: ${{ needs.vault-and-env-tests.result }}"
@@ -298,6 +362,7 @@ jobs:
 
           if [[ "${{ needs.input-parameter-tests.result }}" == "success" && \
                 "${{ needs.branch-parameter-tests.result }}" == "success" && \
+                "${{ needs.labels-parameter-tests.result }}" == "success" && \
                 "${{ needs.output-validation.result }}" == "success" && \
                 "${{ needs.vault-and-env-tests.result }}" == "success" && \
                 "${{ needs.generate-summary-tests.result }}" == "success" ]]; then
