@@ -45,7 +45,7 @@ on:
         type: string
         default: 'squad-ide-slcore-bots'
       new-version:
-        description: "New Jira version to create after the release (e.g. 10.9). If not provided, the last version segment is auto-incremented."
+        description: "Next Jira version to create after the release (e.g. 10.9), NOT the version being released. If not provided, the last version segment is auto-incremented."
         required: false
         type: string
 
