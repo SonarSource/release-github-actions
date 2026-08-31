@@ -89,7 +89,7 @@ on:
         required: false
         type: string
       new-version:
-        description: "New version to release"
+        description: "Next Jira version to create after the release (e.g. 2.2), NOT the version being released. If empty, the current Jira version's last component is incremented (e.g. 2.1 -> 2.2)."
         required: false
         type: string
       create-slvs-ticket:
@@ -232,7 +232,7 @@ on:
 
     outputs:
       new-version:
-        description: "New version to release"
+        description: "Jira version name for the next development iteration (the pre-existing version if it already existed and creation was skipped)"
         value: ${{ jobs.release-in-jira.outputs.new-version }}
       release-version:
         description: "Released version in major.minor.patch.build format"
@@ -683,18 +683,18 @@ jobs:
         if: ${{ inputs.verbose }}
         shell: bash
         env:
-          NEW_VERSION: ${{ inputs.new-version || 'not specified, autoincrement minor version' }}
+          NEW_VERSION: ${{ inputs.new-version || 'not specified, autoincrement the last version component' }}
           PM_EMAIL: ${{ inputs.pm-email }}
         run: |
           echo "## 🗂️ Release in Jira" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### What happened" >> $GITHUB_STEP_SUMMARY
           echo "- Released current Jira version \`${{ needs.prepare-release.outputs.jira-version-name }}\`." >> $GITHUB_STEP_SUMMARY
-          echo "- Created new Jira version named \`$NEW_VERSION\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Requested next Jira version: \`$NEW_VERSION\`." >> $GITHUB_STEP_SUMMARY
           echo "- Moved the release ticket to \"Technical Release Done\" and assigned it to \`$PM_EMAIL\`." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Results" >> $GITHUB_STEP_SUMMARY
-          echo "- New Jira version: \`${{ steps.create-jira-version.outputs.jira-new-version-name }}\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Next Jira version: \`${{ steps.create-jira-version.outputs.jira-new-version-name }}\` (pre-existing if creation was skipped)." >> $GITHUB_STEP_SUMMARY
 
   # This step bumps the version in the codebase and creates a pull request for the next development iteration.
   bump-version:

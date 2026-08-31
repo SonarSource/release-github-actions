@@ -68,13 +68,13 @@ on:
         required: true
         type: string
       new-version:
-        description: "New version to release"
+        description: "Next Jira version to create after the release (e.g. 2.2), NOT the version being released."
         required: true
         type: string
 
     outputs:
       new-version:
-        description: "New version to release"
+        description: "Jira version name for the next development iteration (the pre-existing version if it already existed and creation was skipped)"
         value: ${{ jobs.release-in-jira.outputs.new-version }}
 
 jobs:
