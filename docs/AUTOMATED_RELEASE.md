@@ -57,7 +57,7 @@ This workflow composes several actions from this repository:
 | `branch`                     | Branch to release from                                                                                          | Yes      | `master`     |
 | `release-notes`              | Explicit release notes; if empty, Jira release notes are generated                                              | No       | -            |
 | `sq-ide-short-description`   | Short summary of SQ IDE related changes                                                                         | No       | -            |
-| `new-version`                | Next version to create in Jira                                                                                  | Yes      | -            |
+| `new-version`                | Next Jira version to create **after** the release (e.g. `2.2`), not the version being released. Leave empty to increment the current Jira version's last component (`2.1` → `2.2`). | No       | -            |
 | `create-slvs-ticket`         | Create SLVS integration ticket                                                                                  | No       | `false`      |
 | `create-slvscode-ticket`     | Create SLVSCODE integration ticket                                                                              | No       | `false`      |
 | `create-slcore-ticket`       | Create SLCORE integration ticket                                                                                | No       | `false`      |
@@ -86,7 +86,7 @@ This workflow composes several actions from this repository:
 
 | Output                  | Description                                                |
 |-------------------------|------------------------------------------------------------|
-| `new-version`           | The newly created Jira version name (from the Jira release job) |
+| `new-version`           | Jira version name for the next development iteration (the pre-existing version if it already existed and creation was skipped) |
 | `sqaa-pull-request-url` | URL of the SQAA analyzer-update pull request               |
 
 ## Environment Variables
