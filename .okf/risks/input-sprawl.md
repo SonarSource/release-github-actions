@@ -28,7 +28,7 @@ expressions, with valid combinations undocumented and unenforced:
 # Recommendation
 
 1. Prune deprecated inputs (`sqc-plugins-deployer-integration`); make booleans real booleans.
-2. Reconcile docs vs. schema on `new-version`.
+2. ~~Reconcile docs vs. schema on `new-version`.~~ Done (GHA-417).
 3. Collapse the integration-target scalars into one structured input — see
    [hardcoded integration targets](/risks/hardcoded-integration-targets.md).
 4. Validate mutually-exclusive/invalid combinations early with a clear error instead of silently

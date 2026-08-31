@@ -109,8 +109,8 @@ on:
   workflow_dispatch:
     inputs:
       new-version:
-        description: "Next version to create in Jira"
-        required: true
+        description: "Next Jira version to create after the release (e.g. 2.2), NOT the version being released; if left empty, the current Jira version's last component is incremented (e.g. 2.1 -> 2.2)"
+        required: false
         type: string
       short-description:
         description: "Brief summary for release and integration tickets"
