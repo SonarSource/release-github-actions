@@ -39,7 +39,9 @@ jobs:
           # Pin every internal @master ref to the exact release commit SHA so
           # the version branch is a frozen snapshot, not a floating reference.
           RELEASE_SHA=$(git rev-parse "${RELEASE_TAG}^{commit}")
-          find . -type f \( -name "action.yml" -o -name "automated-release.yml" \) \
+          # The glob must stay "*automated-release.yml" so the abd- and ide- flavours are
+          # pinned too; a bare "automated-release.yml" silently skipped them.
+          find . -type f \( -name "action.yml" -o -name "*automated-release.yml" \) \
             -not -path "./.git/*" \
             -exec grep -l "SonarSource/release-github-actions/" {} \; \
             | while read -r f; do
