@@ -685,7 +685,7 @@ jobs:
           echo "- Moved the release ticket to \"Technical Release Done\" and assigned it to \`$PM_EMAIL\`." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Results" >> $GITHUB_STEP_SUMMARY
-          echo "- New Jira version: \`${{ steps.create-jira-version.outputs.jira-new-version-name }}\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Next Jira version: \`${{ steps.create-jira-version.outputs.jira-new-version-name }}\` (pre-existing if creation was skipped)." >> $GITHUB_STEP_SUMMARY
 
   # This step bumps the version in the codebase and creates a pull request for the next development iteration.
   bump-version:
