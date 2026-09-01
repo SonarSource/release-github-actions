@@ -63,7 +63,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: SonarSource/release-github-actions/lock-branch@master
+      - uses: SonarSource/release-github-actions/lock-branch@c0da64503d0438488fda702c33c797678143be4e
         with:
           branch: ${{ inputs.branch }}
           freeze: true
@@ -86,19 +86,19 @@ jobs:
         # Full version (with build number)
       - name: Get Release Version
         id: get-release-version
-        uses: SonarSource/release-github-actions/get-release-version@master
+        uses: SonarSource/release-github-actions/get-release-version@c0da64503d0438488fda702c33c797678143be4e
         with:
           branch: ${{ inputs.branch }}
 
         # Short version
       - name: Get Jira Version
         id: get-jira-version
-        uses: SonarSource/release-github-actions/get-jira-version@master
+        uses: SonarSource/release-github-actions/get-jira-version@c0da64503d0438488fda702c33c797678143be4e
 
         # We need only link from here 
       - name: Get Jira Release Notes
         id: get-jira-release-notes
-        uses: SonarSource/release-github-actions/get-jira-release-notes@master
+        uses: SonarSource/release-github-actions/get-jira-release-notes@c0da64503d0438488fda702c33c797678143be4e
 
         # Due date value
       - name: Calculate due date
@@ -122,7 +122,7 @@ jobs:
     steps:
       - name: Create Jira Release Ticket
         id: create-ticket
-        uses: SonarSource/release-github-actions/create-jira-release-ticket@master
+        uses: SonarSource/release-github-actions/create-jira-release-ticket@c0da64503d0438488fda702c33c797678143be4e
         with:
           project-name: ${{ inputs.project-name }}
           short-description: ${{ inputs.short-description }}
@@ -145,7 +145,7 @@ jobs:
     steps:
       - name: Publish GitHub Release
         id: publish-github-release
-        uses: SonarSource/release-github-actions/publish-github-release@master
+        uses: SonarSource/release-github-actions/publish-github-release@c0da64503d0438488fda702c33c797678143be4e
         with:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           release-notes: ${{ format('For full release notes, see [JIRA]({0})', needs.prepare-release.outputs.jira-release-url) }}
@@ -164,19 +164,19 @@ jobs:
       new-version: ${{ steps.create-jira-version.outputs.jira-new-version-name }}
     steps:
       - name: Release in Jira
-        uses: SonarSource/release-github-actions/release-jira-version@master
+        uses: SonarSource/release-github-actions/release-jira-version@c0da64503d0438488fda702c33c797678143be4e
         with:
           jira-version-name: ${{ needs.prepare-release.outputs.jira-version-name }}
 
       - name: Create new release in jira
         id: create-jira-version
-        uses: SonarSource/release-github-actions/create-jira-version@master
+        uses: SonarSource/release-github-actions/create-jira-version@c0da64503d0438488fda702c33c797678143be4e
         with:
           jira-version-name: ${{ needs.prepare-release.outputs.jira-version-name }}
           jira-new-version-name: ${{ inputs.new-version }}
 
       - name: Move release ticket to Technical release Done
-        uses: SonarSource/release-github-actions/update-release-ticket-status@master
+        uses: SonarSource/release-github-actions/update-release-ticket-status@c0da64503d0438488fda702c33c797678143be4e
         with:
           release-ticket-key: ${{ needs.create-release-ticket.outputs.release-ticket-key }}
           status: "Technical Release Done"
@@ -191,7 +191,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: SonarSource/release-github-actions/lock-branch@master
+      - uses: SonarSource/release-github-actions/lock-branch@c0da64503d0438488fda702c33c797678143be4e
         with:
           branch: ${{ inputs.branch }}
           freeze: false

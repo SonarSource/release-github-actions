@@ -10,7 +10,7 @@ outputs:
 runs:
     using: "composite"
     steps:
-      - uses: SonarSource/release-github-actions/get-release-version@master
+      - uses: SonarSource/release-github-actions/get-release-version@c0da64503d0438488fda702c33c797678143be4e
         if: ${{ !env.RELEASE_VERSION }}
       - name: Get jira version from release version
         id: get_version
