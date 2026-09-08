@@ -57,7 +57,7 @@ This workflow composes several actions from this repository:
 | `branch`                     | Branch to release from                                                                                          | Yes      | `master`     |
 | `release-notes`              | Explicit release notes; if empty, Jira release notes are generated                                              | No       | -            |
 | `sq-ide-short-description`   | Short summary of SQ IDE related changes                                                                         | No       | -            |
-| `new-version`                | Next version to create in Jira                                                                                  | Yes      | -            |
+| `new-version`                | Next Jira version to create **after** the release (e.g. `2.2`), not the version being released. Leave empty to increment the current Jira version's last component (`2.1` → `2.2`). | No       | -            |
 | `create-slvs-ticket`         | Create SLVS integration ticket                                                                                  | No       | `false`      |
 | `create-slvscode-ticket`     | Create SLVSCODE integration ticket                                                                              | No       | `false`      |
 | `create-slcore-ticket`       | Create SLCORE integration ticket                                                                                | No       | `false`      |
@@ -77,6 +77,8 @@ This workflow composes several actions from this repository:
 | `freeze-branch`              | When `true`, locks the target branch during the release and unlocks it after publishing                         | No       | `true`       |
 | `freeze-branch-slack-notification` | When `false`, suppresses Slack notifications for the freeze and unfreeze steps                           | No       | `true`       |
 | `check-releasability`        | When `true`, verifies the releasability status on the branch before proceeding                                  | No       | `true`       |
+| `require-rule-metadata-update` | When `true`, runs the rule metadata update check before the release and fails it if metadata changes are detected and need to be merged first | No       | `false`      |
+| `rule-metadata-pr-labels`    | Labels applied to the rule metadata pull request when `require-rule-metadata-update` is `true`, e.g. `skip-qa,skip-pvf`                          | No       | -            |
 | `slack-channel`              | Slack channel to notify when locking/unlocking the branch                                                       | No       | -            |
 | `code-quality-leads-slack-notification` | When `false`, suppresses the release announcement sent to `#team-code-quality-pm-em-lead`                | No       | `true`       |
 | `release-artifacts-public`   | Newline-separated Repox paths from public repositories to attach to the GitHub release                          | No       | -            |
@@ -86,7 +88,7 @@ This workflow composes several actions from this repository:
 
 | Output                  | Description                                                |
 |-------------------------|------------------------------------------------------------|
-| `new-version`           | The newly created Jira version name (from the Jira release job) |
+| `new-version`           | Jira version name for the next development iteration (the pre-existing version if it already existed and creation was skipped) |
 | `sqaa-pull-request-url` | URL of the SQAA analyzer-update pull request               |
 
 ## Environment Variables
@@ -109,8 +111,8 @@ on:
   workflow_dispatch:
     inputs:
       new-version:
-        description: "Next version to create in Jira"
-        required: true
+        description: "Next Jira version to create after the release (e.g. 2.2), NOT the version being released; if left empty, the current Jira version's last component is incremented (e.g. 2.1 -> 2.2)"
+        required: false
         type: string
       short-description:
         description: "Brief summary for release and integration tickets"
@@ -146,6 +148,10 @@ jobs:
   - Execute a releasability check on the specified branch immediately after freezing (using `SonarSource/gh-action_releasability@v3`)
   - Update the commit status with the latest releasability results
   - Fail early if the releasability check does not pass, preventing unnecessary work (like creating REL tickets)
+  - Name the specific failing sub-check(s) (e.g. `QA`, `Jira`, `QualityGate`) in the Check Releasability job's own step summary, on any failure (not only when `verbose: true`)
+- When `require-rule-metadata-update: true`, the workflow runs the rule metadata check before the
+  release and fails it if metadata is stale, pointing to the pull request that must be merged
+  first. Use `rule-metadata-pr-labels` to label that pull request — for example, `skip-qa,skip-pvf` labels.
 - When `freeze-branch: true`, the workflow will:
   - Lock the specified branch at the start of the release
   - Proceed with the release steps

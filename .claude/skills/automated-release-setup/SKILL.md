@@ -104,7 +104,7 @@ on:
         default: "master"
         type: string
       new-version:
-        description: "New version to release (without -SNAPSHOT; if left empty, the current minor version will be auto-incremented)"
+        description: "Next Jira version to create after the release (e.g. 2.2), NOT the version being released; if left empty, the current Jira version's last component is incremented (e.g. 2.1 -> 2.2)"
         required: false
         type: string
       rule-props-changed:
@@ -175,7 +175,7 @@ on:
         default: "master"
         type: string
       new-version:
-        description: "New version to release (without -SNAPSHOT; if left empty, the current minor version will be auto-incremented)"
+        description: "Next Jira version to create after the release (e.g. 2.2), NOT the version being released; if left empty, the current Jira version's last component is incremented (e.g. 2.1 -> 2.2)"
         required: false
         type: string
       rule-props-changed:
@@ -270,7 +270,7 @@ on:
         default: "master"
         type: string
       new-version:
-        description: "New version to release (without -SNAPSHOT; if left empty, the current minor version will be auto-incremented)"
+        description: "Next Jira version to create after the release (e.g. 2.2), NOT the version being released; if left empty, the current Jira version's last component is incremented (e.g. 2.1 -> 2.2)"
         required: false
         type: string
       rule-props-changed:
@@ -357,7 +357,7 @@ on:
         default: "master"
         type: string
       new-version:
-        description: "New version to release (without -SNAPSHOT; if left empty, the current minor version will be auto-incremented)"
+        description: "Next Jira version to create after the release (e.g. 2.2), NOT the version being released; if left empty, the current Jira version's last component is incremented (e.g. 2.1 -> 2.2)"
         required: false
         type: string
       rule-props-changed:

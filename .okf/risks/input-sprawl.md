@@ -16,14 +16,19 @@ expressions, with valid combinations undocumented and unenforced:
   `default: true` — appears in every dispatch form and setup doc.
 - `rule-props-changed` is a required *string* `"true"`/`"false"` compared with `== 'true'`
   (`:537`): pass a real boolean or `"True"` and it silently maps to "No."
-- `new-version` is documented **required** in [AUTOMATED_RELEASE.md](/../docs/AUTOMATED_RELEASE.md)
-  but is `required: false` in the YAML (`:91`) — omitting it changes what Jira creates next, and
-  **docs and schema disagree**.
+- `new-version` was documented **required** in [AUTOMATED_RELEASE.md](/../docs/AUTOMATED_RELEASE.md)
+  but is `required: false` in the YAML (`:91`), and its input description read "New version to
+  release" while it is only ever consumed as `create-jira-version`'s `jira-new-version-name`
+  (`:665`) — i.e. the *next* version. **Fixed (GHA-420)**: descriptions and the docs table now say
+  "next Jira version to create". The footgun it caused: passing the version being released
+  normalizes to an already-existing Jira version, so nothing is created and
+  `release-in-jira.outputs.new-version` returns the just-released version, which the
+  `bump-version` job would then "bump" the branch to.
 
 # Recommendation
 
 1. Prune deprecated inputs (`sqc-plugins-deployer-integration`); make booleans real booleans.
-2. Reconcile docs vs. schema on `new-version`.
+2. ~~Reconcile docs vs. schema on `new-version`.~~ Done (GHA-420).
 3. Collapse the integration-target scalars into one structured input — see
    [hardcoded integration targets](/risks/hardcoded-integration-targets.md).
 4. Validate mutually-exclusive/invalid combinations early with a clear error instead of silently

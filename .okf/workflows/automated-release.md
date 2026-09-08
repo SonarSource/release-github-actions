@@ -4,7 +4,7 @@ title: Automated Release (analyzer path)
 description: Orchestrates the full end-to-end analyzer release across Jira, GitHub, and downstream integration repos.
 resource: https://github.com/SonarSource/release-github-actions/blob/master/.github/workflows/automated-release.yml
 tags: [workflow, release, orchestrator, jira, github-release, slack]
-timestamp: 2026-08-05T00:00:00Z
+timestamp: 2026-08-26T00:00:00Z
 ---
 
 # Overview
@@ -74,7 +74,9 @@ also true; silently skipped if not onboarded), `create-slvs-ticket` / `create-sl
 `create-slcore-ticket` / `create-sle-ticket` / `create-sli-ticket` / `create-cli-ticket`
 (default `false`), `verbose`
 (default `false`), `code-quality-leads-slack-notification` (default `true`; opt out of the
-release announcement sent to the Code Quality PM/EM leads Slack channel).
+release announcement sent to the Code Quality PM/EM leads Slack channel),
+`require-rule-metadata-update` (default `false`) and `rule-metadata-pr-labels` (labels for the
+PR that [update-rule-metadata](/actions/update-rule-metadata.md) opens when metadata is stale).
 
 Outputs: `new-version` (Jira version name), `sqaa-pull-request-url`.
 
@@ -95,6 +97,17 @@ Outputs: `new-version` (Jira version name), `sqaa-pull-request-url`.
 - This workflow has been the subject of an [architecture review](/decisions/architecture-review-2026-07.md)
   identifying reliability, testability, and observability gaps — see the
   [risks](/risks/index.md) directory.
+- **Releasability failure detail**: the `check-releasability` job's own `Summary` step runs
+  whenever `verbose` is true *or* the releasability action didn't succeed — not only when
+  `verbose` is true — so the ✅/❌ per-check breakdown (e.g. `QA`, `Jira`, `QualityGate`) always
+  appears in that job's own step-summary section on failure, without needing `verbose`. Since the
+  GitHub Actions run-summary page stacks every job's step summary in one place, this section is
+  visible right alongside `summarize-release`'s top-level message — no need to click into the job
+  or thread the data through job outputs. `summarize-release`'s own top-level message is
+  unchanged (still the generic "One or more jobs failed" line on any failure). This narrowly
+  addresses the releasability case of
+  [unhelpful-failure-summary](/risks/unhelpful-failure-summary.md); the other eight jobs still
+  have no verbose-independent step summary at all.
 - The `automated-release-run` Claude Code skill (`.claude/skills/automated-release-run/`) is the
   recommended way to trigger a release: it checks releasability, interviews for
   `workflow_dispatch` inputs, triggers the run, then polls and merges the bump-version, SQS, and

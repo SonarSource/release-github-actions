@@ -21,13 +21,16 @@ This action depends on:
 
 ## Inputs
 
-| Input              | Description                                                                                                                | Required | Default         |
-|--------------------|----------------------------------------------------------------------------------------------------------------------------|----------|-----------------|
-| `rule-api-version` | Version of the rule-api tooling to be used for the workflow.                                                               | No       | `2.18.0.5734`   |
-| `sonarpedia-files` | Comma-separated list of sonarpedia files to be updated. By default, it will update all Sonarpedia files in the repository. | No       | Auto-discovered |
-| `branch`           | Branch to run the check against and create the PR for. By default, it will use master.                                     | No       | `master`        |
-| `rspec-branch`     | Branch of the rspec repository to be used. If not specified, the `master` branch will be used by default.                  | No       | `master`        |
-| `slack-channel`    | Slack channel to notify when a PR is created or updated. If empty, no notification is sent.                                | No       | -               |
+| Input                | Description                                                                                                                                | Required | Default         |
+|----------------------|--------------------------------------------------------------------------------------------------------------------------------------------|----------|-----------------|
+| `rule-api-version`   | Version of the rule-api tooling to be used for the workflow. Leave empty to use the latest release.                                        | No       | Latest release  |
+| `sonarpedia-files`   | Comma-separated list of sonarpedia files to be updated. By default, it will update all Sonarpedia files in the repository.                 | No       | Auto-discovered |
+| `branch`             | Branch to run the check against and create the PR for. By default, it will use master.                                                     | No       | `master`        |
+| `rspec-branch`       | Branch of the rspec repository to be used. If not specified, the `master` branch will be used by default.                                  | No       | `master`        |
+| `labels`             | Comma or newline-separated list of labels to add to the created pull request, for example `skip-qa,skip-pvf`. No label is added if empty.  | No       | -               |
+| `post-update`        | Additional shell commands to run after the rule-api update, before changes are detected.                                                   | No       | -               |
+| `rspec-token-suffix` | Suffix of the vault GitHub token used to read the rspec repository, if different from `rspec-read`.                                        | No       | `rspec-read`    |
+| `slack-channel`      | Slack channel to notify when a PR is created or updated. If empty, no notification is sent.                                                | No       | -               |
 
 ## Outputs
 
@@ -82,6 +85,20 @@ permissions:
     branch: 'develop'
 ```
 
+### Add labels to the created pull request
+
+Labels are useful to control which CI jobs run on the generated PR. For example, the following labels: `skip-qa` and `skip-pvf` can be
+added in following way:
+
+```yaml
+- name: Update Rule Metadata
+  uses: SonarSource/release-github-actions/update-rule-metadata@v1
+  with:
+    labels: 'skip-qa,skip-pvf'
+```
+
+The labels must already exist in the repository, otherwise PR creation fails.
+
 ### Notify a Slack channel when a PR is created or updated
 
 ```yaml
@@ -109,6 +126,7 @@ jobs:
           sonarpedia-files: 'frontend/java/sonarpedia.json,frontend/csharp/sonarpedia.json'
           branch: 'develop'
           rspec-branch: 'feature/my-rspec-branch'
+          labels: 'skip-qa,skip-pvf'
           slack-channel: 'team-channel'
 ```
 
@@ -140,7 +158,7 @@ The repository must have:
 
 - This action requires access to SonarSource's HashiCorp Vault for Artifactory credentials and a GitHub token for the private rspec repository
 - The action automatically discovers all sonarpedia.json files unless specific files are provided
-- Pull requests are created with the label `skip-qa` and target the specified branch (defaults to `master`)
+- Pull requests target the specified branch (defaults to `master`) and carry only the labels passed via the `labels` input; no label is applied by default
 - The rule-api JAR is cached to improve performance on subsequent runs
 - Changes to sonarpedia.json files themselves are excluded when detecting metadata changes
 - The action will fail if no sonarpedia.json files are found to process

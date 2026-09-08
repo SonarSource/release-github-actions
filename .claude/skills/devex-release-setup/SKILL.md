@@ -147,7 +147,7 @@ on:
         default: '${DEFAULT_BRANCH}'
         type: string
       new-version:
-        description: 'New Jira version to create after the release (e.g. 10.9). Leave empty to auto-increment the last segment.'
+        description: 'Next Jira version to create after the release (e.g. 10.9), NOT the version being released. Leave empty to auto-increment the last segment.'
         required: false
         type: string
 
@@ -191,7 +191,7 @@ on:
         default: '${DEFAULT_BRANCH}'
         type: string
       new-version:
-        description: 'New Jira version to create after the release (e.g. 10.9). Leave empty to auto-increment the last segment.'
+        description: 'Next Jira version to create after the release (e.g. 10.9), NOT the version being released. Leave empty to auto-increment the last segment.'
         required: false
         type: string
       dry-run:
@@ -241,7 +241,7 @@ on:
         default: '${DEFAULT_BRANCH}'
         type: string
       new-version:
-        description: 'New Jira version to create after the release (e.g. 10.9). Leave empty to auto-increment the last segment.'
+        description: 'Next Jira version to create after the release (e.g. 10.9), NOT the version being released. Leave empty to auto-increment the last segment.'
         required: false
         type: string
       dry-run:

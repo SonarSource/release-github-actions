@@ -89,7 +89,7 @@ on:
         required: false
         type: string
       new-version:
-        description: "New version to release"
+        description: "Next Jira version to create after the release (e.g. 2.2), NOT the version being released. If empty, the current Jira version's last component is incremented (e.g. 2.1 -> 2.2)."
         required: false
         type: string
       create-slvs-ticket:
@@ -181,6 +181,10 @@ on:
         required: false
         type: boolean
         default: false
+      rule-metadata-pr-labels:
+        description: "Labels to apply to the rule metadata pull request created when require-rule-metadata-update is true. For example, 'skip-qa,skip-pvf'."
+        required: false
+        type: string
       slack-channel:
         description: "Slack channel for notifications"
         required: false
@@ -228,7 +232,7 @@ on:
 
     outputs:
       new-version:
-        description: "New version to release"
+        description: "Jira version name for the next development iteration (the pre-existing version if it already existed and creation was skipped)"
         value: ${{ jobs.release-in-jira.outputs.new-version }}
       release-version:
         description: "Released version in major.minor.patch.build format"
@@ -368,7 +372,7 @@ jobs:
           version: ${{ steps.get-version.outputs.release-version }}
 
       - name: Summary
-        if: ${{ always() && inputs.verbose }}
+        if: ${{ always() && (inputs.verbose || steps.releasability.outcome != 'success') }}
         shell: bash
         env:
           BRANCH: ${{ inputs.branch }}
@@ -426,6 +430,7 @@ jobs:
         uses: SonarSource/release-github-actions/update-rule-metadata@master
         with:
           branch: ${{ inputs.branch }}
+          labels: ${{ inputs.rule-metadata-pr-labels }}
 
       - name: Check Rule Metadata Changes
         if: steps.update-rule-metadata.outputs.has-changes == 'true'
@@ -445,6 +450,7 @@ jobs:
           BRANCH: ${{ inputs.branch }}
           HAS_CHANGES: ${{ steps.update-rule-metadata.outputs.has-changes }}
           PR_URL: ${{ steps.update-rule-metadata.outputs.pull-request-url || 'none' }}
+          PR_LABELS: ${{ inputs.rule-metadata-pr-labels }}
         run: |
           echo "## 📋 Update Rule Metadata" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -455,6 +461,9 @@ jobs:
           echo "- Changes detected: \`$HAS_CHANGES\`." >> $GITHUB_STEP_SUMMARY
           if [ "$HAS_CHANGES" = "true" ]; then
             echo "- Pull Request: $PR_URL" >> $GITHUB_STEP_SUMMARY
+            if [ -n "$PR_LABELS" ]; then
+              echo "- Labels applied: \`$PR_LABELS\`." >> $GITHUB_STEP_SUMMARY
+            fi
           fi
 
   # This step determines the release version, Jira version name, and gathers release notes.
@@ -674,18 +683,18 @@ jobs:
         if: ${{ inputs.verbose }}
         shell: bash
         env:
-          NEW_VERSION: ${{ inputs.new-version || 'not specified, autoincrement minor version' }}
+          NEW_VERSION: ${{ inputs.new-version || 'not specified, autoincrement the last version component' }}
           PM_EMAIL: ${{ inputs.pm-email }}
         run: |
           echo "## 🗂️ Release in Jira" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### What happened" >> $GITHUB_STEP_SUMMARY
           echo "- Released current Jira version \`${{ needs.prepare-release.outputs.jira-version-name }}\`." >> $GITHUB_STEP_SUMMARY
-          echo "- Created new Jira version named \`$NEW_VERSION\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Requested next Jira version: \`$NEW_VERSION\`." >> $GITHUB_STEP_SUMMARY
           echo "- Moved the release ticket to \"Technical Release Done\" and assigned it to \`$PM_EMAIL\`." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Results" >> $GITHUB_STEP_SUMMARY
-          echo "- New Jira version: \`${{ steps.create-jira-version.outputs.jira-new-version-name }}\`." >> $GITHUB_STEP_SUMMARY
+          echo "- Next Jira version: \`${{ steps.create-jira-version.outputs.jira-new-version-name }}\` (pre-existing if creation was skipped)." >> $GITHUB_STEP_SUMMARY
 
   # This step bumps the version in the codebase and creates a pull request for the next development iteration.
   bump-version:
@@ -927,7 +936,7 @@ jobs:
       - name: Update analyzer in sonar-plugins-deployer
         id: update-plugins-deployer
         if: ${{ inputs.sqc-integration }}
-        uses: SonarSource/release-github-actions/update-plugins-deployer@v1
+        uses: SonarSource/release-github-actions/update-plugins-deployer@master
         with:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           ticket-key: ${{ needs.create-integration-tickets.outputs.sqc-ticket-key }}
