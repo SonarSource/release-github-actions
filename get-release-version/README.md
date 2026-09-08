@@ -6,7 +6,9 @@ This GitHub Action extracts the release version from the `repox` status on a spe
 
 The action retrieves the release version by:
 1. Calling the GitHub API to get the commit status for the specified branch (defaults to master)
-2. Filtering for statuses with context starting with `repox`
+2. Preferring the repo's own promoted-build status, `repox-<repo-name>-<branch>` (e.g.
+   `repox-sonar-analyzer-commons-master`) — falling back to any status starting with
+   `repox-<branch>` if that repo-specific one isn't present
 3. Extracting the version from the status description using jq
 4. Setting the version as both an action output and environment variable
 
@@ -79,23 +81,36 @@ After successful execution, the following environment variable is set:
 ## Implementation Details
 
 The action uses a shell script that:
-- Executes the gh CLI command: `gh api "/repos/{owner/repo}/commits/{branch}/status" --jq ".statuses[] | select(.context | startswith(\"repox\")) | .description | split(\"'\")[1]"`
-- Uses the standard GitHub context `${{ github.repository }}` to get the repository owner and name
-- Uses the specified branch input (defaults to master if not provided)
+- Fetches the commit status JSON once: `gh api "/repos/{owner/repo}/commits/{branch}/status"`
+- Looks for the exact context `repox-<repo-name>-<branch>` first (the repo's own promoted-build
+  status), then falls back to any context starting with `repox-<branch>` if that isn't found
+- Uses the standard GitHub context `${{ github.repository }}` for the API call, and the
+  `GITHUB_REPOSITORY` runner env var to derive `<repo-name>` for the exact-match lookup
 - Validates that a version was successfully extracted
 - Sets both `GITHUB_OUTPUT` and `GITHUB_ENV` for maximum compatibility
+
+### Why prefer the repo-specific context?
+
+Repox also posts a generic `repox-<branch>` status that mirrors whichever build-name was
+promoted most recently. For a repo that only ever promotes one artifact this is identical to its
+own `repox-<repo-name>-<branch>` status. But a repo that promotes more than one artifact under
+different build names (e.g. a Maven build plus a secondary npm/NuGet package) can have that
+generic status flip between the two, each with a different version format — the npm side, for
+example, needs valid semver and typically rewrites a `X.Y.Z.buildNumber` Maven version into a
+`X.Y.Z-buildNumber` prerelease tag. Preferring the repo-specific context avoids inheriting
+whichever artifact happened to promote last.
 
 ## Error Handling
 
 The action will fail with a non-zero exit code if:
 - The GitHub API call fails
-- No `repox` status is found
+- No matching `repox` status is found (neither the repo-specific context nor the generic fallback)
 - The version cannot be extracted from the status description
 - The extracted version is empty
 
 ## Notes
 
-- This action assumes that the `repox` status contains the version in a specific format within single quotes
-- The action works with any context that starts with `repox` (e.g., `repox-master`, `someone/some_new_feature`)
+- This action assumes that the matched `repox` status contains the version in a specific format
+  within single quotes
 - The action requires read access to the repository's commit statuses
 - The `gh` CLI tool must be available in the runner environment (it's pre-installed on GitHub-hosted runners)
