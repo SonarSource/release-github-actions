@@ -30,10 +30,7 @@ runs:
         STATUS_JSON=$(gh api "/repos/${{ github.repository }}/commits/$BRANCH_NAME/status")
         REPO_NAME="${GITHUB_REPOSITORY#*/}"
 
-        # Prefer the primary build's own status (e.g. repox-sonar-analyzer-commons-master) over
-        # the generic repox-$BRANCH_NAME mirror. Repox posts that mirror as "whichever build-name
-        # promoted most recently," which is ambiguous for repos that also promote a secondary
-        # artifact (e.g. an npm/NuGet side package) under its own build name and version scheme.
+        # See README.md ("Why prefer the repo-specific context?") for the rationale.
         RELEASE_VERSION=$(echo "$STATUS_JSON" | jq -r --arg ctx "repox-$REPO_NAME-$BRANCH_NAME" '.statuses[] | select(.context == $ctx) | ((.description // "") | split("\u0027")[1] // empty)')
 
         if [ -z "$RELEASE_VERSION" ]; then

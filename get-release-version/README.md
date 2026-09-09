@@ -89,8 +89,16 @@ The action uses a shell script that:
 - Validates that a version was successfully extracted
 - Sets both `GITHUB_OUTPUT` and `GITHUB_ENV` for maximum compatibility
 
-See the comment above the extraction logic in `action.yml` for why the repo-specific context is
-preferred over the generic mirror.
+### Why prefer the repo-specific context?
+
+Repox also posts a generic `repox-<branch>` status that mirrors whichever build-name was
+promoted most recently. For a repo that only ever promotes one artifact this is identical to its
+own `repox-<repo-name>-<branch>` status. But a repo that promotes more than one artifact under
+different build names (e.g. a Maven build plus a secondary npm/NuGet package) can have that
+generic status flip between the two, each with a different version format — the npm side, for
+example, needs valid semver and typically rewrites a `X.Y.Z.buildNumber` Maven version into a
+`X.Y.Z-buildNumber` prerelease tag. Preferring the repo-specific context avoids inheriting
+whichever artifact happened to promote last.
 
 ## Error Handling
 
