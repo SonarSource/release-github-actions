@@ -22,6 +22,20 @@ per-job `RESULT_*` values are already collected and then thrown away into a sing
   the recovery runbook from [no idempotency](/risks/no-idempotency.md).
 - Replace "re-run as needed" with idempotency-aware guidance.
 
+# Partial resolution (2026-08-14)
+
+The `check-releasability` case is fixed, minimally: its `Summary` step now runs whenever
+`verbose` is true *or* the releasability action didn't succeed (not only when `verbose` is
+true), so the per-check ✅/❌ breakdown (e.g. `QA`, `Jira`, `QualityGate`) that step already
+printed is now visible on every failure, not just when `verbose` was explicitly requested. No
+job-output plumbing to `summarize-release` was needed for this — GitHub's run-summary page
+already stacks every job's step summary together, so this section shows up next to
+`summarize-release`'s message without any wiring. See
+[automated-release § Releasability failure detail](/workflows/automated-release.md).
+`summarize-release`'s own top-level message is unchanged and still generic; the other eight jobs
+in the DAG have no equivalent step summary at all — the broader per-job checklist recommendation
+above remains open.
+
 # Citations
 
 [1] [docs/ARCHITECTURE_REVIEW.md § 5.1](/../docs/ARCHITECTURE_REVIEW.md)

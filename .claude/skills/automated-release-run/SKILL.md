@@ -184,8 +184,13 @@ they appear in the YAML:
 - Show each input's description and default value so the user can accept a default with one
   click instead of retyping it.
 - Present boolean inputs as Yes/No with the YAML default pre-selected.
-- For `new-version` (or equivalent): mention that leaving it blank lets the workflow
-  auto-increment the current minor version.
+- For `new-version` (or equivalent): explain it is the *next* Jira version to create after this
+  release, **not** the version being released, and that leaving it blank lets the workflow
+  increment the last component of the current Jira version (`2.1` → `2.2`). Passing the version
+  being released is a trap: it normalizes to the version that was just released, so
+  `create-jira-version` finds it already exists, skips creation, and returns the just-released
+  version as the "next" one — which the bump-version job would then write back to the branch.
+  Wrapper repos often still describe this input as "new version to release"; ignore that wording.
 - If the user sets `dry-run` (or `use-jira-sandbox`/`is-draft-release`) to `false`... actually,
   the important warning is the opposite: **if `dry-run` is left `true` or explicitly requested**,
   tell the user plainly that this is not a true no-op. It only affects the Jira sandbox and

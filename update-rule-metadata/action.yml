@@ -23,7 +23,10 @@ inputs:
       If not specified, the 'master' branch of the rspec repository will be used.
     default: master
   labels:
-    description: 'Labels to add to the PR'
+    description: |
+      Comma or newline-separated list of labels to add to the created pull request,
+      for example 'skip-qa,skip-pvf'. Labels must already exist in the repository.
+    required: false
   post-update:
     description: 'Additional commands to run after rule-api.jar update'
     required: false
