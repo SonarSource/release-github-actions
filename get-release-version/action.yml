@@ -34,10 +34,10 @@ runs:
         # the generic repox-$BRANCH_NAME mirror. Repox posts that mirror as "whichever build-name
         # promoted most recently," which is ambiguous for repos that also promote a secondary
         # artifact (e.g. an npm/NuGet side package) under its own build name and version scheme.
-        RELEASE_VERSION=$(echo "$STATUS_JSON" | jq -r --arg ctx "repox-$REPO_NAME-$BRANCH_NAME" ".statuses[] | select(.context == \$ctx) | .description | split(\"'\")[1]")
+        RELEASE_VERSION=$(echo "$STATUS_JSON" | jq -r --arg ctx "repox-$REPO_NAME-$BRANCH_NAME" '.statuses[] | select(.context == $ctx) | ((.description // "") | split("\u0027")[1] // empty)')
 
         if [ -z "$RELEASE_VERSION" ]; then
-          RELEASE_VERSION=$(echo "$STATUS_JSON" | jq -r ".statuses[] | select(.context | startswith(\"repox-$BRANCH_NAME\")) | .description | split(\"'\")[1]")
+          RELEASE_VERSION=$(echo "$STATUS_JSON" | jq -r --arg prefix "repox-$BRANCH_NAME" '.statuses[] | select(.context | startswith($prefix)) | ((.description // "") | split("\u0027")[1] // empty)')
         fi
 
         if [ -z "$RELEASE_VERSION" ]; then
