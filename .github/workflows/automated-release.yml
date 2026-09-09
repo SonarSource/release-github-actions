@@ -358,7 +358,7 @@ jobs:
     steps:
       - name: Get Release Version
         id: get-version
-        uses: SonarSource/release-github-actions/get-release-version@master
+        uses: SonarSource/release-github-actions/get-release-version@dt/fix-repox-version-ambiguity
         with:
           branch: ${{ inputs.branch }}
 
@@ -492,7 +492,7 @@ jobs:
       - name: Get Release Version
         id: get-release-version
         if: ${{ needs.check-releasability.result == 'skipped' }}
-        uses: SonarSource/release-github-actions/get-release-version@master
+        uses: SonarSource/release-github-actions/get-release-version@dt/fix-repox-version-ambiguity
         with:
           branch: ${{ inputs.branch }}
 
