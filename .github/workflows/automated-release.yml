@@ -24,7 +24,7 @@ on:
         required: true
         type: string
       set-sonar-prefix:
-        description: "Whether the plugin anchor key in sonar-plugins-deployer is prefixed with sonar-"
+        description: "Whether the plugin artifact in sonar-enterprise and the anchor key in sonar-plugins-deployer follow the sonar- naming convention"
         required: false
         type: boolean
         default: true
@@ -928,6 +928,7 @@ jobs:
           release-version: ${{ needs.prepare-release.outputs.release-version }}
           ticket-key: ${{ needs.create-integration-tickets.outputs.sqs-ticket-key }}
           plugin-name: ${{ inputs.plugin-name }}
+          set-sonar-prefix: ${{ inputs.set-sonar-prefix }}
           secret-name: ${{ inputs.release-automation-secret-name || format('sonar-{0}-release-automation', inputs.plugin-name) }}
           plugin-artifacts: ${{inputs.plugin-artifacts-sqs }}
           draft: ${{ inputs.is-draft-release }}
