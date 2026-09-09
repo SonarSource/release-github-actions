@@ -118,14 +118,25 @@ jobs:
           echo "✓ Action accepts both default and custom branch parameters"
 
   context-selection-tests:
-    name: Test Context Selection
+    name: Test Context Selection (${{ matrix.scenario }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - scenario: prefers-repo-specific-status
+            include_repo_context: "true"
+            expected: "9.9.0.999"
+          - scenario: falls-back-to-generic-mirror
+            include_repo_context: "false"
+            expected: "9.9.0-999"
 
     steps:
       - name: Checkout code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Stub gh CLI to read a fixture file
+      - name: Stub gh CLI and write fixture
+        env:
+          INCLUDE_REPO_CONTEXT: ${{ matrix.include_repo_context }}
         run: |
           mkdir -p "$RUNNER_TEMP/stub-bin"
           cat > "$RUNNER_TEMP/stub-bin/gh" <<STUB
@@ -136,47 +147,22 @@ jobs:
           chmod +x "$RUNNER_TEMP/stub-bin/gh"
           echo "$RUNNER_TEMP/stub-bin" >> "$GITHUB_PATH"
 
-      - name: Write ambiguous multi-artifact fixture (Maven + npm racing for repox-master)
-        run: |
-          cat > "$RUNNER_TEMP/gh-stub-fixture.json" <<'JSON'
-          {
-            "statuses": [
-              { "context": "repox-master", "description": "Latest promoted build of '9.9.0-999' from branch 'refs/heads/master'" },
-              { "context": "repox-release-github-actions-master", "description": "Latest promoted build of '9.9.0.999' from branch 'refs/heads/master'" }
-            ]
-          }
+          REPO_STATUS=""
+          if [ "$INCLUDE_REPO_CONTEXT" = "true" ]; then
+            REPO_STATUS=', { "context": "repox-release-github-actions-master", "description": "Latest promoted build of '"'"'9.9.0.999'"'"' from branch '"'"'refs/heads/master'"'"'" }'
+          fi
+          cat > "$RUNNER_TEMP/gh-stub-fixture.json" <<JSON
+          { "statuses": [ { "context": "repox-master", "description": "Latest promoted build of '9.9.0-999' from branch 'refs/heads/master'" }$REPO_STATUS ] }
           JSON
 
-      - name: Get release version from ambiguous multi-artifact fixture
-        id: multi
+      - name: Get release version
+        id: get-version
         uses: ./get-release-version
 
-      - name: Verify repo-specific status wins over the generic mirror
+      - name: Verify expected version was selected
         run: |
-          if [ "${{ steps.multi.outputs.release-version }}" != "9.9.0.999" ]; then
-            echo "✗ Expected 9.9.0.999 (repo-specific dot version), got '${{ steps.multi.outputs.release-version }}'"
+          if [ "${{ steps.get-version.outputs.release-version }}" != "${{ matrix.expected }}" ]; then
+            echo "✗ Expected ${{ matrix.expected }}, got '${{ steps.get-version.outputs.release-version }}'"
             exit 1
           fi
-          echo "✓ Correctly preferred repo-specific status over the ambiguous generic mirror"
-
-      - name: Write single-artifact fixture (only the generic mirror exists)
-        run: |
-          cat > "$RUNNER_TEMP/gh-stub-fixture.json" <<'JSON'
-          {
-            "statuses": [
-              { "context": "repox-master", "description": "Latest promoted build of '1.2.3.456' from branch 'refs/heads/master'" }
-            ]
-          }
-          JSON
-
-      - name: Get release version from single-artifact fixture
-        id: single
-        uses: ./get-release-version
-
-      - name: Verify fallback still extracts the generic status
-        run: |
-          if [ "${{ steps.single.outputs.release-version }}" != "1.2.3.456" ]; then
-            echo "✗ Expected fallback to extract 1.2.3.456, got '${{ steps.single.outputs.release-version }}'"
-            exit 1
-          fi
-          echo "✓ Fallback to generic repox-<branch> status still works"
+          echo "✓ Correctly selected ${{ matrix.expected }} for scenario: ${{ matrix.scenario }}"
