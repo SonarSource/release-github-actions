@@ -29,8 +29,6 @@ runs:
       run: |
         STATUS_JSON=$(gh api "/repos/${{ github.repository }}/commits/$BRANCH_NAME/status")
         REPO_NAME="${GITHUB_REPOSITORY#*/}"
-
-        # See README.md ("Why prefer the repo-specific context?") for the rationale.
         RELEASE_VERSION=$(echo "$STATUS_JSON" | jq -r --arg ctx "repox-$REPO_NAME-$BRANCH_NAME" '.statuses[] | select(.context == $ctx) | ((.description // "") | split("\u0027")[1] // empty)')
 
         if [ -z "$RELEASE_VERSION" ]; then
