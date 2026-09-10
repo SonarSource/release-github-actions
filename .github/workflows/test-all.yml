@@ -20,6 +20,12 @@ jobs:
 
   test-create-integration-ticket:
     uses: ./.github/workflows/test-create-integration-ticket.yml
+    permissions:
+      contents: read
+      id-token: write
+
+  test-shared:
+    uses: ./.github/workflows/test-shared.yml
 
   test-check-releasability-status:
     uses: ./.github/workflows/test-check-releasability-status.yml

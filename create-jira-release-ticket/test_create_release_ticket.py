@@ -15,6 +15,7 @@ from io import StringIO
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from create_release_ticket import create_release_ticket, main
+from jira_common import CUSTOM_FIELDS
 from jira.exceptions import JIRAError
 
 
@@ -58,11 +59,11 @@ class TestCreateReleaseTicket(unittest.TestCase):
         self.assertEqual(call_args['issuetype'], 'Ask for release')
         self.assertEqual(call_args['summary'], 'TestProject 1.2.3')
         self.assertEqual(call_args['duedate'], '2029-12-24')
-        self.assertEqual(call_args['customfield_10146'], 'Test release')  # SHORT_DESCRIPTION
-        self.assertEqual(call_args['customfield_10145'], release_url)  # LINK_TO_RELEASE_NOTES
-        self.assertEqual(call_args['customfield_10147'], 'Ready')  # DOCUMENTATION_STATUS
-        self.assertEqual(call_args['customfield_11263'], {'value': 'Yes'})  # RULE_PROPS_CHANGED
-        self.assertEqual(call_args['customfield_11264'], 'Test changelog')  # SONARLINT_CHANGELOG
+        self.assertEqual(call_args[CUSTOM_FIELDS['SHORT_DESCRIPTION']], 'Test release')
+        self.assertEqual(call_args[CUSTOM_FIELDS['LINK_TO_RELEASE_NOTES']], release_url)
+        self.assertEqual(call_args[CUSTOM_FIELDS['DOCUMENTATION_STATUS']], 'Ready')
+        self.assertEqual(call_args[CUSTOM_FIELDS['RULE_PROPS_CHANGED']], {'value': 'Yes'})
+        self.assertEqual(call_args[CUSTOM_FIELDS['SONARLINT_CHANGELOG']], 'Test changelog')
 
     def test_create_release_ticket_without_due_date(self):
         """Test creating release ticket without due date."""
@@ -95,11 +96,11 @@ class TestCreateReleaseTicket(unittest.TestCase):
         self.assertEqual(call_args['issuetype'], 'Ask for release')
         self.assertEqual(call_args['summary'], 'TestProject 1.2.4')
         self.assertNotIn('duedate', call_args)  # Verify duedate is not present
-        self.assertEqual(call_args['customfield_10146'], 'Test release')  # SHORT_DESCRIPTION
-        self.assertEqual(call_args['customfield_10145'], release_url)  # LINK_TO_RELEASE_NOTES
-        self.assertEqual(call_args['customfield_10147'], 'Ready')  # DOCUMENTATION_STATUS
-        self.assertEqual(call_args['customfield_11263'], {'value': 'No'})  # RULE_PROPS_CHANGED
-        self.assertEqual(call_args['customfield_11264'], 'Test changelog')  # SONARLINT_CHANGELOG
+        self.assertEqual(call_args[CUSTOM_FIELDS['SHORT_DESCRIPTION']], 'Test release')
+        self.assertEqual(call_args[CUSTOM_FIELDS['LINK_TO_RELEASE_NOTES']], release_url)
+        self.assertEqual(call_args[CUSTOM_FIELDS['DOCUMENTATION_STATUS']], 'Ready')
+        self.assertEqual(call_args[CUSTOM_FIELDS['RULE_PROPS_CHANGED']], {'value': 'No'})
+        self.assertEqual(call_args[CUSTOM_FIELDS['SONARLINT_CHANGELOG']], 'Test changelog')
 
     # noinspection DuplicatedCode,PyUnusedLocal
     @patch('create_release_ticket.eprint')

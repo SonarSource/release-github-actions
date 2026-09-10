@@ -99,7 +99,12 @@ customfield_10145  # LINK_TO_RELEASE_NOTES
 customfield_10147  # DOCUMENTATION_STATUS
 customfield_11263  # RULE_PROPS_CHANGED
 customfield_11264  # SONARLINT_CHANGELOG
+customfield_10045  # EDITION (single-select; write as {'value': ...})
+customfield_10001  # TEAM (atlassian-team picker; write as a bare team UUID)
 ```
+
+The sandbox preserves these IDs; `shared/test_jira_common.py` compares the whole dict, so a
+new entry needs a matching assertion.
 
 ### Version Formats
 - Release version: `X.Y.Z.buildNumber` (e.g., `11.44.2.12345`)

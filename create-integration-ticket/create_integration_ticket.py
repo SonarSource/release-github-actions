@@ -12,7 +12,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'shared'))
-from jira_common import eprint, get_jira_instance
+from jira_common import eprint, get_jira_instance, CUSTOM_FIELDS
 from jira.exceptions import JIRAError
 
 
@@ -79,6 +79,12 @@ def create_integration_ticket(jira_client, args):
 
     if getattr(args, 'parent_epic', None):
         ticket_details['parent'] = {'key': args.parent_epic}
+
+    if getattr(args, 'edition', None):
+        ticket_details[CUSTOM_FIELDS['EDITION']] = {'value': args.edition}
+
+    if getattr(args, 'team', None):
+        ticket_details[CUSTOM_FIELDS['TEAM']] = args.team
 
     try:
         new_ticket = jira_client.create_issue(fields=ticket_details)
@@ -151,6 +157,10 @@ def main():
                        help="The type of link to create (e.g., 'relates to', 'depends on').")
     parser.add_argument("--parent-epic",
                        help="Optional Jira issue key to set as parent of the created ticket (e.g. CPP-7858).")
+    parser.add_argument("--edition",
+                       help="Optional 'Edition' value (e.g. 'Community Build & Server').")
+    parser.add_argument("--team",
+                       help="Optional Atlassian team UUID for the 'Team' field.")
 
     args = parser.parse_args()
 

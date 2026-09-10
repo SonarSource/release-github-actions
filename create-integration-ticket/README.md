@@ -31,8 +31,20 @@ This action requires:
 | `use-jira-sandbox`    | Use the sandbox Jira server instead of production. Can also be controlled via `USE_JIRA_SANDBOX` environment variable                     | No       | -            |
 | `link-type`           | The type of link to create (e.g., "relates to", "depends on")                                                                             | No       | `relates to` |
 | `jira-release-url`    | Jira release URL to append to ticket description                                                                                          | No       | -            |
+| `parent-epic`         | Jira issue key to set as parent of the created ticket (e.g. CPP-7858)                                                                     | No       | -            |
+| `edition`             | Jira "Edition" value. One of: `N/A`, `Community Build`, `Server`, `Community Build & Server`                                              | No       | -            |
+| `team`                | Atlassian team **UUID** for the Jira "Team" field                                                                                         | No       | -            |
 
 **Note:** Either `ticket-summary` must be provided, or both `plugin-name` and `release-version` must be provided. If `ticket-summary` is not provided, it will be automatically generated as "Update {plugin-name} to {release-version}".
+
+### Optional Jira fields
+
+`parent-epic`, `edition` and `team` are only sent when non-empty, and applied at ticket
+creation — the field must exist on the target project's create screen, or Jira rejects the
+request and the action fails. `edition` is available on `SONAR`, not on `SC`; `team` on both.
+
+`team` takes the team UUID, not the name (find it via `customfield_10001.id` on an existing
+ticket's `/rest/api/2/issue/<KEY>`). UUIDs differ between production and sandbox.
 
 ## Outputs
 
