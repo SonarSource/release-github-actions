@@ -782,7 +782,7 @@ jobs:
     steps:
       - name: Create SLVS Ticket
         if: ${{ inputs.create-slvs-ticket }}
-        uses: SonarSource/release-github-actions/create-integration-ticket@master
+        uses: SonarSource/release-github-actions/create-integration-ticket@jw/integration-ticket-edition-team
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.outputs.release-version }}
@@ -793,7 +793,7 @@ jobs:
 
       - name: Create SLVSCODE Ticket
         if: ${{ inputs.create-slvscode-ticket }}
-        uses: SonarSource/release-github-actions/create-integration-ticket@master
+        uses: SonarSource/release-github-actions/create-integration-ticket@jw/integration-ticket-edition-team
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.outputs.release-version }}
@@ -804,7 +804,7 @@ jobs:
 
       - name: Create SLCORE Ticket
         if: ${{ inputs.create-slcore-ticket }}
-        uses: SonarSource/release-github-actions/create-integration-ticket@master
+        uses: SonarSource/release-github-actions/create-integration-ticket@jw/integration-ticket-edition-team
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.outputs.release-version }}
@@ -815,7 +815,7 @@ jobs:
 
       - name: Create SLE Ticket
         if: ${{ inputs.create-sle-ticket }}
-        uses: SonarSource/release-github-actions/create-integration-ticket@master
+        uses: SonarSource/release-github-actions/create-integration-ticket@jw/integration-ticket-edition-team
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.outputs.release-version }}
@@ -826,7 +826,7 @@ jobs:
 
       - name: Create SLI Ticket
         if: ${{ inputs.create-sli-ticket }}
-        uses: SonarSource/release-github-actions/create-integration-ticket@master
+        uses: SonarSource/release-github-actions/create-integration-ticket@jw/integration-ticket-edition-team
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.outputs.release-version }}
@@ -837,7 +837,7 @@ jobs:
 
       - name: Create CLI Ticket
         if: ${{ inputs.create-cli-ticket }}
-        uses: SonarSource/release-github-actions/create-integration-ticket@master
+        uses: SonarSource/release-github-actions/create-integration-ticket@jw/integration-ticket-edition-team
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.outputs.release-version }}
@@ -858,7 +858,7 @@ jobs:
       - name: Create SQC Ticket
         if: ${{ inputs.sqc-integration }}
         id: create-sqc-ticket
-        uses: SonarSource/release-github-actions/create-integration-ticket@master
+        uses: SonarSource/release-github-actions/create-integration-ticket@jw/integration-ticket-edition-team
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.outputs.release-version }}
@@ -872,7 +872,7 @@ jobs:
       - name: Create SQS Ticket
         if: ${{ inputs.sqs-integration }}
         id: create-sqs-ticket
-        uses: SonarSource/release-github-actions/create-integration-ticket@master
+        uses: SonarSource/release-github-actions/create-integration-ticket@jw/integration-ticket-edition-team
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.outputs.release-version }}
