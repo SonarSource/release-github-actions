@@ -91,7 +91,7 @@ runs:
 
     - name: Create Pull Request
       id: create_pr
-      uses: SonarSource/release-github-actions/create-pull-request@master
+      uses: SonarSource/release-github-actions/create-pull-request@01dbff4b0f06f73eaafa96aa640c2f9e442adfce
       with:
         token: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
         author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
