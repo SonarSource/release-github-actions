@@ -28,6 +28,12 @@ inputs:
   parent-epic:
     description: 'Optional Jira issue key to set as parent of the created ticket (e.g. CPP-7858). When provided, sets fields.parent.key on ticket creation.'
     required: false
+  edition:
+    description: 'Optional Jira "Edition" value, applicable to the SONAR space. One of: N/A, Community Build, Server, Community Build & Server.'
+    required: false
+  team:
+    description: 'Optional team UUID for the Jira "Team" field.'
+    required: false
 
 outputs:
   ticket-key:
@@ -97,6 +103,8 @@ runs:
         INPUT_RELEASE_TICKET_KEY: ${{ inputs.release-ticket-key }}
         INPUT_LINK_TYPE: ${{ inputs.link-type }}
         INPUT_PARENT_EPIC: ${{ inputs.parent-epic }}
+        INPUT_EDITION: ${{ inputs.edition }}
+        INPUT_TEAM: ${{ inputs.team }}
         TICKET_SUMMARY: ${{ steps.validate_inputs.outputs.ticket_summary }}
       run: |
         python ${{ github.action_path }}/create_integration_ticket.py \
@@ -106,4 +114,6 @@ runs:
           --use-sandbox="$USE_SANDBOX" \
           --link-type "$INPUT_LINK_TYPE" \
           ${TICKET_DESCRIPTION:+--ticket-description "$TICKET_DESCRIPTION"} \
-          ${INPUT_PARENT_EPIC:+--parent-epic "$INPUT_PARENT_EPIC"} >> $GITHUB_OUTPUT
+          ${INPUT_PARENT_EPIC:+--parent-epic "$INPUT_PARENT_EPIC"} \
+          ${INPUT_EDITION:+--edition "$INPUT_EDITION"} \
+          ${INPUT_TEAM:+--team "$INPUT_TEAM"} >> $GITHUB_OUTPUT

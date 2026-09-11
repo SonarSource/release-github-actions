@@ -29,7 +29,12 @@ is needed, it belongs here with a `test_*.py`.
 
 `CUSTOM_FIELDS` values: `SHORT_DESCRIPTION` → `customfield_10146`,
 `LINK_TO_RELEASE_NOTES` → `customfield_10145`, `DOCUMENTATION_STATUS` → `customfield_10147`,
-`RULE_PROPS_CHANGED` → `customfield_11263`, `SONARLINT_CHANGELOG` → `customfield_11264`.
+`RULE_PROPS_CHANGED` → `customfield_11263`, `SONARLINT_CHANGELOG` → `customfield_11264`,
+`EDITION` → `customfield_10045`, `TEAM` → `customfield_10001`.
+
+`EDITION` is a single-select written as `{'value': <name>}`; `TEAM` is an `atlassian-team`
+picker written as a bare UUID. Field IDs are identical in the sandbox (a clone of production);
+team UUIDs are not — those are site-scoped.
 
 Used by [create-jira-release-ticket](/actions/create-jira-release-ticket.md),
 [create-jira-version](/actions/create-jira-version.md),

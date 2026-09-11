@@ -67,6 +67,8 @@ This workflow composes several actions from this repository:
 | `sq-cli-short-description`   | Short summary of SQ CLI related changes                                                                         | No       | -            |
 | `sqs-integration`            | Create SQS integration ticket and PR                                                                            | No       | `true`       |
 | `sqc-integration`            | Create SQC integration ticket and PR                                                                            | No       | `true`       |
+| `sqs-ticket-edition`         | Jira "Edition" value for the SQS integration ticket. One of: `N/A`, `Community Build`, `Server`, `Community Build & Server`. | No       | -            |
+| `sqs-sqc-ticket-team`        | **UUID** for the "Team" field of the SQS / SQC integration ticket.                                               | No       | -            |
 | `sqaa-integration`           | Create SQAA PR in sonar-analysis-as-a-service. Runs when both this and `sqc-integration` are true. Skipped silently if the analyzer is not yet onboarded to SQAA. | No       | `true`       |
 | `sqc-plugins-deployer-integration` | Deprecated, no-op. SQC integration always uses sonar-plugins-deployer.                                  | No       | `true`       |
 | `ktlo-jira-project-key`      | Jira project key where the KTLO epic lives. Defaults to `jira-project-key` if not provided.                    | No       | -            |
@@ -138,6 +140,8 @@ jobs:
       new-version: ${{ inputs.new-version }}
       sqs-integration: true
       sqc-integration: true
+      sqs-ticket-edition: "Community Build & Server"
+      sqs-sqc-ticket-team: "<your-team-uuid>"
       slack-channel: "release-notifications"
       verbose: ${{ inputs.verbose }}
 ```
@@ -167,6 +171,9 @@ jobs:
   the release-lock gate (see below) guards against this.
 - When `release-notes` is empty, Jira release notes are fetched and used.
 - Integration tickets and analyzer update PRs are created only if their respective flags are enabled and prerequisites are met.
+- `sqs-ticket-edition` and `sqs-sqc-ticket-team` are optional and applied at ticket creation, so
+  a bad value or a field missing from the project's create screen fails the job. `team` takes
+  the Atlassian team **UUID**, not the name — read `customfield_10001.id` off an existing ticket.
 - Summaries:
   - Each job includes a "Summary" step that writes to `$GITHUB_STEP_SUMMARY` only when `verbose: true`.
   - A short release announcement containing the project, released version, and GitHub release-notes link is sent to `#team-code-quality-pm-em-lead` by default after the GitHub release is created. Set `code-quality-leads-slack-notification: false` to opt out.

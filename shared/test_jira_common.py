@@ -9,14 +9,23 @@ from jira_common import CUSTOM_FIELDS, eprint, get_jira_instance, get_jira_url, 
 from jira.exceptions import JIRAError
 
 
+# Compared as a whole dict, not key by key, so a new entry cannot be added without an
+# assertion here.
+EXPECTED_FIELD_IDS = {
+    'SHORT_DESCRIPTION': 'customfield_10146',
+    'LINK_TO_RELEASE_NOTES': 'customfield_10145',
+    'DOCUMENTATION_STATUS': 'customfield_10147',
+    'RULE_PROPS_CHANGED': 'customfield_11263',
+    'SONARLINT_CHANGELOG': 'customfield_11264',
+    'EDITION': 'customfield_10045',
+    'TEAM': 'customfield_10001',
+}
+
+
 class TestCustomFields(unittest.TestCase):
     def test_field_ids(self):
         # Behaviour-lock: these IDs are a contract with Jira, not free to change.
-        self.assertEqual(CUSTOM_FIELDS['SHORT_DESCRIPTION'], 'customfield_10146')
-        self.assertEqual(CUSTOM_FIELDS['LINK_TO_RELEASE_NOTES'], 'customfield_10145')
-        self.assertEqual(CUSTOM_FIELDS['DOCUMENTATION_STATUS'], 'customfield_10147')
-        self.assertEqual(CUSTOM_FIELDS['RULE_PROPS_CHANGED'], 'customfield_11263')
-        self.assertEqual(CUSTOM_FIELDS['SONARLINT_CHANGELOG'], 'customfield_11264')
+        self.assertEqual(CUSTOM_FIELDS, EXPECTED_FIELD_IDS)
 
 
 class TestEprint(unittest.TestCase):

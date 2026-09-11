@@ -136,6 +136,14 @@ on:
         required: false
         type: boolean
         default: true
+      sqs-ticket-edition:
+        description: "Jira 'Edition' value for the SQS integration ticket. One of: N/A, Community Build, Server, Community Build & Server."
+        required: false
+        type: string
+      sqs-sqc-ticket-team:
+        description: "UUID for the 'Team' field of the SQS / SQC integration ticket."
+        required: false
+        type: string
       sqaa-integration:
         description: "Create SQAA PR in sonar-analysis-as-a-service when sqc-integration is true"
         required: false
@@ -859,6 +867,7 @@ jobs:
           ticket-description: ${{ inputs.short-description }}
           jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
           parent-epic: ${{ steps.resolve-ktlo-epic.outputs.epic-key }}
+          team: ${{ inputs.sqs-sqc-ticket-team }}
 
       - name: Create SQS Ticket
         if: ${{ inputs.sqs-integration }}
@@ -872,6 +881,8 @@ jobs:
           ticket-description: ${{ inputs.short-description }}
           jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
           parent-epic: ${{ steps.resolve-ktlo-epic.outputs.epic-key }}
+          edition: ${{ inputs.sqs-ticket-edition }}
+          team: ${{ inputs.sqs-sqc-ticket-team }}
 
       - name: Summary
         if: ${{ inputs.verbose }}
