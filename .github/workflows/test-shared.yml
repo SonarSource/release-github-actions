@@ -8,8 +8,7 @@ on:
       - '.github/workflows/test-shared.yml'
   push:
     branches:
-      - master
-      - v*
+      - branch-*
     paths:
       - 'shared/**'
       - '.github/workflows/test-shared.yml'
