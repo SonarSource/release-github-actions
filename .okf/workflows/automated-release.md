@@ -69,7 +69,8 @@ Key inputs (selected — full list in the action README): `jira-project-key`, `p
 `plugin-name`, `pm-email`, `short-description`, `rule-props-changed`, `branch`, `new-version`,
 `use-jira-sandbox` (default `true`), `is-draft-release` (default `true`), `freeze-branch`
 (default `true`), `check-releasability` (default `true`), `sqs-integration` /
-`sqc-integration` (default `true`), `sqs-ticket-edition` (Jira "Edition" for the SQS
+`sqc-integration` (default `true`), `sqs-base-branch` / `sqc-base-branch` (downstream product
+PR bases, both default `master`), `sqs-ticket-edition` (Jira "Edition" for the SQS
 integration ticket — one of `N/A`, `Community Build`, `Server`, `Community Build & Server`;
 SQS only, since `SC` has no Edition field), `sqs-sqc-ticket-team` (Atlassian team **UUID**
 shared by the SQS and SQC integration tickets), `sqaa-integration` (runs only when `sqc-integration` is
