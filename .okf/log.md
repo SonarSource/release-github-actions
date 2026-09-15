@@ -1,5 +1,11 @@
 # Update Log
 
+## 2026-09-15
+* **SQS product release branches**: the analyzer release workflow now exposes
+  `sqs-base-branch`, defaulting to `master`, and forwards it to
+  [update-analyzer](/actions/update-analyzer.md). This lets bugfix and backport releases target
+  a `sonar-enterprise` release branch while `sonar-plugins-deployer` continues to use `master`.
+
 ## 2026-09-11
 * **Edition and Team for integration tickets**: `create-integration-ticket` now accepts optional
   `edition` and `team` inputs, applied during `create_issue` via two new `shared/jira_common.py`

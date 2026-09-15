@@ -4,7 +4,7 @@ title: Automated Release (analyzer path)
 description: Orchestrates the full end-to-end analyzer release across Jira, GitHub, and downstream integration repos.
 resource: https://github.com/SonarSource/release-github-actions/blob/master/.github/workflows/automated-release.yml
 tags: [workflow, release, orchestrator, jira, github-release, slack]
-timestamp: 2026-08-26T00:00:00Z
+timestamp: 2026-09-15T00:00:00Z
 ---
 
 # Overview
