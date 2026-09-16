@@ -4,7 +4,7 @@ title: Automated Release (analyzer path)
 description: Orchestrates the full end-to-end analyzer release across Jira, GitHub, and downstream integration repos.
 resource: https://github.com/SonarSource/release-github-actions/blob/master/.github/workflows/automated-release.yml
 tags: [workflow, release, orchestrator, jira, github-release, slack]
-timestamp: 2026-09-15T00:00:00Z
+timestamp: 2026-09-16T00:00:00Z
 ---
 
 # Overview
@@ -90,10 +90,11 @@ Outputs: `new-version` (Jira version name), `sqaa-pull-request-url`.
   release start, to reduce the race window where a PR could merge before the version-bump PR
   opens. Best-effort — see the [release-lock gate](/workflows/release-lock.md) for the guard of
   last resort.
-- **Selected-branch releasability**: after the optional freeze, the workflow resolves
-  `inputs.branch` to its current head SHA and passes both values to
-  `SonarSource/gh-action_releasability@v3`. Dispatching the caller from a different ref does not
-  change the branch or commit being checked.
+- **Selected-branch releasability**: after the optional freeze, the workflow reads the repox
+  status for `inputs.branch` through [get-release-version](/actions/get-release-version.md) and
+  passes the branch and the status response's commit SHA to
+  `SonarSource/gh-action_releasability@v3`. The version and commit therefore come from the same
+  response, regardless of the ref from which the caller was dispatched.
 - **Freeze window ends early**: the branch unfreezes right after
   [publish-github-release](/actions/publish-github-release.md), *before* the version-bump PR is
   created — see [release-lock](/workflows/release-lock.md) for how that gap is closed.
