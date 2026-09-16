@@ -40,6 +40,11 @@ on:
         description: "SQAA Plugin artifacts"
         required: false
         type: string
+      sqs-base-branch:
+        description: "Base branch for the SQS pull request"
+        required: false
+        type: string
+        default: "master"
       sqaa-base-branch:
         description: "Base branch for the SQAA pull request"
         required: false
@@ -941,6 +946,7 @@ jobs:
           plugin-name: ${{ inputs.plugin-name }}
           secret-name: ${{ inputs.release-automation-secret-name || format('sonar-{0}-release-automation', inputs.plugin-name) }}
           plugin-artifacts: ${{inputs.plugin-artifacts-sqs }}
+          base-branch: ${{ inputs.sqs-base-branch }}
           draft: ${{ inputs.is-draft-release }}
           reviewers: ${{ github.actor }}
 
@@ -964,6 +970,7 @@ jobs:
           PLUGIN_NAME: ${{ inputs.plugin-name }}
           PLUGIN_ARTIFACTS_SQS: ${{ inputs.plugin-artifacts-sqs }}
           PLUGIN_ARTIFACTS_SQC: ${{ inputs.plugin-artifacts-sqc }}
+          SQS_BASE_BRANCH: ${{ inputs.sqs-base-branch }}
           IS_DRAFT_RELEASE: ${{ inputs.is-draft-release == true && 'true' || 'false' }}
           RELEASE_AUTOMATION_SECRET_NAME: ${{ inputs.release-automation-secret-name }}
           SQS_INTEGRATION: ${{ inputs.sqs-integration == true && 'true' || 'false' }}
@@ -974,6 +981,7 @@ jobs:
           echo "### What happened" >> $GITHUB_STEP_SUMMARY
           echo "- Prepared analyzer updates and opened PRs where requested." >> $GITHUB_STEP_SUMMARY
           echo "- Artifacts SQS: \`$([ -n "$PLUGIN_ARTIFACTS_SQS" ] && echo "$PLUGIN_ARTIFACTS_SQS" || echo "$PLUGIN_NAME" )\`, Artifacts SQC: \`$([ -n "$PLUGIN_ARTIFACTS_SQC" ] && echo "$PLUGIN_ARTIFACTS_SQC" || echo "$PLUGIN_NAME" )\`." >> $GITHUB_STEP_SUMMARY
+          echo "- SQS base branch: \`$SQS_BASE_BRANCH\`." >> $GITHUB_STEP_SUMMARY
           echo "- Draft PRs: \`$IS_DRAFT_RELEASE\`, Secret present: \`$([ -n "$RELEASE_AUTOMATION_SECRET_NAME" ] && echo true || echo false)\`." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Results" >> $GITHUB_STEP_SUMMARY

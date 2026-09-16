@@ -46,6 +46,7 @@ This workflow composes several actions from this repository:
 | `plugin-artifacts-sqs`       | Artifact identifier(s) for SQS; falls back to `plugin-name`                                                     | No       | -            |
 | `plugin-artifacts-sqc`       | Artifact identifier(s) for SQC; falls back to `plugin-name`                                                     | No       | -            |
 | `plugin-artifacts-sqaa`      | Artifact identifier(s) for SQAA; falls back to `plugin-name`                                                    | No       | -            |
+| `sqs-base-branch`            | Base branch for the SQS pull request                                                                            | No       | `master`     |
 | `sqaa-base-branch`           | Base branch for the SQAA pull request                                                                           | No       | `master`     |
 | `sqaa-reviewers`             | Comma-separated list of GitHub usernames to request a review on the SQAA pull request. Defaults to the release actor (`github.actor`). | No       | `github.actor` |
 | `use-jira-sandbox`           | Use Jira sandbox                                                                                                | No       | `true`       |
