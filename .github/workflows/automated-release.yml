@@ -378,8 +378,8 @@ jobs:
       - uses: SonarSource/gh-action_releasability@v3
         id: releasability
         with:
-          branch: ${{ github.ref_name }}
-          commit-sha: ${{ github.sha }}
+          branch: ${{ inputs.branch }}
+          commit-sha: ${{ steps.get-version.outputs.commit-sha }}
           organization: ${{ github.repository_owner }}
           repository: ${{ github.event.repository.name }}
           version: ${{ steps.get-version.outputs.release-version }}

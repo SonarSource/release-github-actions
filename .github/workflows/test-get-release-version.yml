@@ -15,6 +15,39 @@ on:
   workflow_dispatch:
 
 jobs:
+  status-response-tests:
+    name: Test Status Response Outputs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Mock GitHub status response
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          cat > "$RUNNER_TEMP/bin/gh" <<'EOF'
+          #!/usr/bin/env bash
+          printf '%s\n' "{\"sha\":\"0123456789abcdef0123456789abcdef01234567\",\"statuses\":[{\"context\":\"repox-test-branch\",\"description\":\"Release version '9.9.9.999'\"}]}"
+          EOF
+          chmod +x "$RUNNER_TEMP/bin/gh"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Get release version and commit SHA
+        id: get-version
+        uses: ./get-release-version
+        with:
+          github-token: test-token
+          branch: test-branch
+
+      - name: Verify outputs
+        env:
+          RELEASE_VERSION: ${{ steps.get-version.outputs.release-version }}
+          COMMIT_SHA: ${{ steps.get-version.outputs.commit-sha }}
+        run: |
+          test "$RELEASE_VERSION" = "9.9.9.999"
+          test "$COMMIT_SHA" = "0123456789abcdef0123456789abcdef01234567"
+
   validation-tests:
     name: Test Input Validation
     runs-on: ubuntu-latest

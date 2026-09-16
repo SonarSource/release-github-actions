@@ -6,6 +6,13 @@
   [update-analyzer](/actions/update-analyzer.md). This lets bugfix and backport releases target
   a `sonar-enterprise` release branch while `sonar-plugins-deployer` continues to use `master`.
 
+## 2026-09-14
+* **Selected-branch releasability**: after the optional freeze, the analyzer release workflow
+  reads the repox status for `inputs.branch` through
+  [get-release-version](/actions/get-release-version.md) and passes the branch and the status
+  response's commit SHA to `gh-action_releasability`. The version and commit therefore come from
+  the same response, regardless of the ref from which the caller was dispatched.
+
 ## 2026-09-11
 * **Edition and Team for integration tickets**: `create-integration-ticket` now accepts optional
   `edition` and `team` inputs, applied during `create_issue` via two new `shared/jira_common.py`

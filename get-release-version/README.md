@@ -1,14 +1,15 @@
 # Get Release Version Action
 
-This GitHub Action extracts the release version from the `repox` status on a specified branch and makes it available as both an output and environment variable.
+This GitHub Action extracts the release version and resolved commit SHA from the `repox` status on a specified branch.
 
 ## Description
 
-The action retrieves the release version by:
+The action retrieves the release version and its commit by:
 1. Calling the GitHub API to get the commit status for the specified branch (defaults to master)
 2. Filtering for statuses with context starting with `repox`
 3. Extracting the version from the status description using jq
-4. Setting the version as both an action output and environment variable
+4. Exposing the status response's commit SHA as an action output
+5. Setting the version as both an action output and environment variable
 
 ## Prerequisites
 
@@ -32,6 +33,7 @@ This action depends on:
 | Output            | Description                                     |
 |-------------------|-------------------------------------------------|
 | `release-version` | The extracted release version from repox status |
+| `commit-sha`      | The commit SHA associated with the repox status  |
 
 ## Environment Variables
 
@@ -79,7 +81,8 @@ After successful execution, the following environment variable is set:
 ## Implementation Details
 
 The action uses a shell script that:
-- Executes the gh CLI command: `gh api "/repos/{owner/repo}/commits/{branch}/status" --jq ".statuses[] | select(.context | startswith(\"repox\")) | .description | split(\"'\")[1]"`
+- Executes the gh CLI command: `gh api "/repos/{owner/repo}/commits/{branch}/status"`
+- Extracts both the release version and resolved commit SHA from the response
 - Uses the standard GitHub context `${{ github.repository }}` to get the repository owner and name
 - Uses the specified branch input (defaults to master if not provided)
 - Validates that a version was successfully extracted
