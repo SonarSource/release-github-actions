@@ -84,11 +84,14 @@ After successful execution, the following environment variable is set:
 
 The action uses a shell script that:
 - Fetches the commit status JSON once: `gh api "/repos/{owner/repo}/commits/{branch}/status"`
+- Extracts the response's `.sha` as the `commit-sha` output — the exact commit whose status
+  supplied the version
 - Looks for the exact context `repox-<repo-name>-<branch>` first (the repo's own promoted-build
   status), then falls back to any context starting with `repox-<branch>` if that isn't found
 - Uses the `GITHUB_REPOSITORY` runner env var for both the API call and to derive
   `<repo-name>` for the exact-match lookup
 - Validates that a version was successfully extracted and matches the expected `X.Y.Z.BUILD` shape
+- Validates that a commit SHA was successfully extracted
 - Sets both `GITHUB_OUTPUT` and `GITHUB_ENV` for maximum compatibility
 
 ### Why prefer the repo-specific context?
@@ -105,6 +108,7 @@ The action will fail with a non-zero exit code if:
 - No matching `repox` status is found (neither the repo-specific context nor the generic fallback)
 - The version cannot be extracted from the status description
 - The extracted version is empty or does not match the expected `X.Y.Z.BUILD` format
+- The commit SHA cannot be extracted from the status response
 
 ## Notes
 

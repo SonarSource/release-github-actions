@@ -32,6 +32,7 @@ runs:
       run: |
         STATUS_JSON=$(gh api "/repos/$GITHUB_REPOSITORY/commits/$BRANCH_NAME/status")
         REPO_NAME="${GITHUB_REPOSITORY#*/}"
+        COMMIT_SHA=$(echo "$STATUS_JSON" | jq -r '.sha // empty')
         RELEASE_VERSION=$(echo "$STATUS_JSON" | jq -r --arg ctx "repox-$REPO_NAME-$BRANCH_NAME" '.statuses[] | select(.context == $ctx) | ((.description // "") | split("\u0027")[1] // empty)')
 
         if [ -z "$RELEASE_VERSION" ]; then
@@ -40,6 +41,11 @@ runs:
 
         if [ -z "$RELEASE_VERSION" ]; then
           echo "❌ Could not extract release version from repox status"
+          exit 1
+        fi
+
+        if [ -z "$COMMIT_SHA" ]; then
+          echo "❌ Could not extract commit SHA from repox status"
           exit 1
         fi
 

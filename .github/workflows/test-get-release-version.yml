@@ -185,7 +185,7 @@ jobs:
             REPO_STATUS=', { "context": "repox-release-github-actions-master", "description": "Latest promoted build of '"'"'9.9.0.999'"'"' from branch '"'"'refs/heads/master'"'"'" }'
           fi
           cat > "$RUNNER_TEMP/gh-stub-fixture.json" <<JSON
-          { "statuses": [ { "context": "repox-master", "description": "Latest promoted build of '8.8.0.888' from branch 'refs/heads/master'" }$REPO_STATUS ] }
+          { "sha": "abcdef0123456789abcdef0123456789abcdef01", "statuses": [ { "context": "repox-master", "description": "Latest promoted build of '8.8.0.888' from branch 'refs/heads/master'" }$REPO_STATUS ] }
           JSON
 
       - name: Get release version
@@ -220,7 +220,7 @@ jobs:
           echo "$RUNNER_TEMP/stub-bin" >> "$GITHUB_PATH"
 
           cat > "$RUNNER_TEMP/gh-stub-fixture.json" <<JSON
-          { "statuses": [ { "context": "repox-master", "description": "Latest promoted build of '9.9.0-999' from branch 'refs/heads/master'" } ] }
+          { "sha": "abcdef0123456789abcdef0123456789abcdef01", "statuses": [ { "context": "repox-master", "description": "Latest promoted build of '9.9.0-999' from branch 'refs/heads/master'" } ] }
           JSON
 
       - name: Get release version
