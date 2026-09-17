@@ -4,15 +4,17 @@ title: Get Release Version
 description: Extracts the release version from the repox commit status on a branch.
 resource: https://github.com/SonarSource/release-github-actions/tree/master/get-release-version
 tags: [action, version, repox]
-timestamp: 2026-07-15T00:00:00Z
+timestamp: 2026-09-17T00:00:00Z
 ---
 
 # Overview
 
-Calls the GitHub API for the commit status on a branch (default `master`), filters for a
-context starting with `repox`, and extracts the version from the status description via `jq`.
-Every downstream job in [automated-release](/workflows/automated-release.md) keys off this
-output, yet the parse is inline shell with no unit test — see
+Calls the GitHub API for the commit status on a branch (default `master`). Prefers the exact
+`repox-<repo-name>-<branch>` context — the repo's own promoted-build status — falling back to
+any context starting with `repox-<branch>` if that isn't present, extracts the version from the
+status description via `jq`, and asserts it matches `X.Y.Z.BUILD` before exporting it. Every
+downstream job in [automated-release](/workflows/automated-release.md) keys off this output; the
+parse itself is still inline shell with no unit test — see
 [risk: fragile version parsing](/risks/fragile-version-parsing.md).
 
 # Schema

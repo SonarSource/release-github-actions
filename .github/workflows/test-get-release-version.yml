@@ -128,7 +128,7 @@ jobs:
             expected: "9.9.0.999"
           - scenario: falls-back-to-generic-mirror
             include_repo_context: "false"
-            expected: "9.9.0-999"
+            expected: "8.8.0.888"
 
     steps:
       - name: Checkout code
@@ -152,7 +152,7 @@ jobs:
             REPO_STATUS=', { "context": "repox-release-github-actions-master", "description": "Latest promoted build of '"'"'9.9.0.999'"'"' from branch '"'"'refs/heads/master'"'"'" }'
           fi
           cat > "$RUNNER_TEMP/gh-stub-fixture.json" <<JSON
-          { "statuses": [ { "context": "repox-master", "description": "Latest promoted build of '9.9.0-999' from branch 'refs/heads/master'" }$REPO_STATUS ] }
+          { "statuses": [ { "context": "repox-master", "description": "Latest promoted build of '8.8.0.888' from branch 'refs/heads/master'" }$REPO_STATUS ] }
           JSON
 
       - name: Get release version
@@ -166,3 +166,39 @@ jobs:
             exit 1
           fi
           echo "✓ Correctly selected ${{ matrix.expected }} for scenario: ${{ matrix.scenario }}"
+
+  shape-validation-tests:
+    name: Test Version Shape Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Stub gh CLI and write malformed fixture
+        run: |
+          mkdir -p "$RUNNER_TEMP/stub-bin"
+          cat > "$RUNNER_TEMP/stub-bin/gh" <<STUB
+          #!/usr/bin/env bash
+          [ "\$1" = "api" ] || { echo "unexpected gh invocation: \$*" >&2; exit 1; }
+          cat "$RUNNER_TEMP/gh-stub-fixture.json"
+          STUB
+          chmod +x "$RUNNER_TEMP/stub-bin/gh"
+          echo "$RUNNER_TEMP/stub-bin" >> "$GITHUB_PATH"
+
+          cat > "$RUNNER_TEMP/gh-stub-fixture.json" <<JSON
+          { "statuses": [ { "context": "repox-master", "description": "Latest promoted build of '9.9.0-999' from branch 'refs/heads/master'" } ] }
+          JSON
+
+      - name: Get release version
+        id: get-version
+        uses: ./get-release-version
+        continue-on-error: true
+
+      - name: Verify malformed version was rejected
+        run: |
+          if [ "${{ steps.get-version.outcome }}" = "success" ]; then
+            echo "✗ Action should have failed on a non-Maven-shaped version (got '${{ steps.get-version.outputs.release-version }}')"
+            exit 1
+          fi
+          echo "✓ Action correctly rejected the semver-mangled version"

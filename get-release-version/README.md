@@ -84,21 +84,17 @@ The action uses a shell script that:
 - Fetches the commit status JSON once: `gh api "/repos/{owner/repo}/commits/{branch}/status"`
 - Looks for the exact context `repox-<repo-name>-<branch>` first (the repo's own promoted-build
   status), then falls back to any context starting with `repox-<branch>` if that isn't found
-- Uses the standard GitHub context `${{ github.repository }}` for the API call, and the
-  `GITHUB_REPOSITORY` runner env var to derive `<repo-name>` for the exact-match lookup
-- Validates that a version was successfully extracted
+- Uses the `GITHUB_REPOSITORY` runner env var for both the API call and to derive
+  `<repo-name>` for the exact-match lookup
+- Validates that a version was successfully extracted and matches the expected `X.Y.Z.BUILD` shape
 - Sets both `GITHUB_OUTPUT` and `GITHUB_ENV` for maximum compatibility
 
 ### Why prefer the repo-specific context?
 
-Repox also posts a generic `repox-<branch>` status that mirrors whichever build-name was
-promoted most recently. For a repo that only ever promotes one artifact this is identical to its
-own `repox-<repo-name>-<branch>` status. But a repo that promotes more than one artifact under
-different build names (e.g. a Maven build plus a secondary npm/NuGet package) can have that
-generic status flip between the two, each with a different version format — the npm side, for
-example, needs valid semver and typically rewrites a `X.Y.Z.buildNumber` Maven version into a
-`X.Y.Z-buildNumber` prerelease tag. Preferring the repo-specific context avoids inheriting
-whichever artifact happened to promote last.
+A repo that promotes more than one artifact under different build names (e.g. a Maven build plus
+a secondary npm/NuGet package) can have the generic `repox-<branch>` status flip between formats
+depending on which one promoted last. Preferring `repox-<repo-name>-<branch>` avoids inheriting
+whichever artifact happened to promote most recently.
 
 ## Error Handling
 
@@ -106,7 +102,7 @@ The action will fail with a non-zero exit code if:
 - The GitHub API call fails
 - No matching `repox` status is found (neither the repo-specific context nor the generic fallback)
 - The version cannot be extracted from the status description
-- The extracted version is empty
+- The extracted version is empty or does not match the expected `X.Y.Z.BUILD` format
 
 ## Notes
 

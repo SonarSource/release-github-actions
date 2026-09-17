@@ -22,7 +22,11 @@ a real release run.
 # Recommendation
 
 Extract the parse into a tested `get_release_version.sh` (or `.py`) with `test_*` cases for the
-known status-text formats and a clear failure message; assert the shape (`X.Y.Z.build`).
+known status-text formats and a clear failure message.
+
+**Partially addressed:** the action now asserts the extracted value matches `X.Y.Z.BUILD` before
+exporting it, so a format drift fails loudly instead of silently exporting a mangled version. The
+parse itself remains untested inline shell.
 
 # Citations
 
