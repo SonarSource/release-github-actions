@@ -15,10 +15,21 @@ on:
   workflow_dispatch:
 
 jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run shell unit tests
+        run: bash update-analyzer/test_update_build_gradle.sh
+
   validation-tests:
     name: Test Input Validation
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -77,10 +88,10 @@ jobs:
   input-parameter-tests:
     name: Test Input Parameters
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Test Valid SONAR Ticket
         id: test-sonar-ticket
@@ -124,6 +135,19 @@ jobs:
           secret-name: "test-secret"
         continue-on-error: true
 
+      # Input-acceptance smoke test only: this job never reaches the build-file update step
+      # (Vault fails first). The sonar-/-plugin wrapping logic is covered by the unit-tests job.
+      - name: Test set-sonar-prefix Input Is Accepted
+        id: test-no-sonar-prefix
+        uses: ./update-analyzer
+        with:
+          release-version: "1.0.0.1"
+          ticket-key: "SONAR-12345"
+          plugin-name: "java-a3s-context-collector"
+          set-sonar-prefix: "false"
+          secret-name: "test-secret"
+        continue-on-error: true
+
       - name: Test Optional Parameters
         id: test-optional-params
         uses: ./update-analyzer
@@ -162,6 +186,7 @@ jobs:
           echo "SONAR ticket test outcome: ${{ steps.test-sonar-ticket.outcome }}"
           echo "SC ticket test outcome: ${{ steps.test-sc-ticket.outcome }}"
           echo "Plugin artifacts test outcome: ${{ steps.test-plugin-artifacts.outcome }}"
+          echo "set-sonar-prefix input acceptance test outcome: ${{ steps.test-no-sonar-prefix.outcome }}"
           echo "Optional parameters test outcome: ${{ steps.test-optional-params.outcome }}"
           echo "Special characters test outcome: ${{ steps.test-special-chars.outcome }}"
 

@@ -14,8 +14,16 @@ opens a PR through [create-pull-request](/actions/create-pull-request.md). Corre
 `sqs-integration` fan-out of [automated-release](/workflows/automated-release.md). Logic that
 previously called into `sonarcloud-core` was removed (see `d09b37a`).
 
-Inline shell (~121 lines) with no unit test — see
-[risk: bash actions with real logic are untested](/risks/untested-inline-shell.md).
+The `sonar-`/`-plugin` affixes are optional: `set-sonar-prefix: false` matches
+`plugin-name`/`plugin-artifacts` verbatim, for artifacts such as `java-a3s-context-collector`.
+The flag is validated — any value other than `true`/`false` exits 1, because falling through to
+verbatim matching is silent (the pattern matches nothing, and `create-pull-request` reports an
+unchanged build file as a successful no-op, so the release goes green with no version bump).
+
+The build-file rewrite lives in `update_build_gradle.sh` with `test_update_build_gradle.sh`,
+following the [update-plugins-deployer](/actions/update-plugins-deployer.md) precedent; the
+`unit-tests` job of `test-update-analyzer.yml` runs it. The remaining inline shell is the ticket
+prefix check in `Set up environment`.
 
 # Schema
 
