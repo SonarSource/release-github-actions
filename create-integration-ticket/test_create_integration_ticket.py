@@ -18,6 +18,7 @@ from create_integration_ticket import (
     validate_release_ticket, create_integration_ticket,
     link_tickets, main
 )
+from jira_common import CUSTOM_FIELDS
 from jira.exceptions import JIRAError
 
 
@@ -535,7 +536,9 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         '--release-ticket-key', 'REL-789',
         '--target-jira-project', 'DESC',
         '--use-sandbox', 'false',
-        '--link-type', 'depends on'
+        '--link-type', 'depends on',
+        '--edition', 'Community Build & Server',
+        '--team', 'f1da89c9-3712-4d15-b194-a4b24406e3e4'
     ])
     @patch('create_integration_ticket.get_jira_instance')
     @patch('create_integration_ticket.validate_release_ticket')
@@ -579,6 +582,8 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         self.assertEqual(args.target_jira_project, 'DESC')
         self.assertEqual(args.use_sandbox, 'false')
         self.assertEqual(args.link_type, 'depends on')
+        self.assertEqual(args.edition, 'Community Build & Server')
+        self.assertEqual(args.team, 'f1da89c9-3712-4d15-b194-a4b24406e3e4')
 
         # Verify link_tickets was called
         mock_link_tickets.assert_called_once_with(
@@ -627,6 +632,47 @@ class TestCreateIntegrationTicket(unittest.TestCase):
 
         call_args = mock_jira.create_issue.call_args[1]['fields']
         self.assertNotIn('parent', call_args)
+
+    def test_create_integration_ticket_edition_and_team_combinations(self):
+        """Edition and team are set independently of one another: neither is gated on the
+        other's presence, and both an empty string and a genuinely absent (None) argparse
+        value — what `${VAR:+--flag "$VAR"}` produces when the workflow input is unset — must
+        be treated as 'do not send this field'."""
+        cases = [
+            ('with both', 'Community Build & Server', 'f1da89c9-3712-4d15-b194-a4b24406e3e4', True, True),
+            ('edition only', 'Community Build & Server', '', True, False),
+            ('team only', '', 'f1da89c9-3712-4d15-b194-a4b24406e3e4', False, True),
+            ('neither, None', None, None, False, False),
+        ]
+        for label, edition, team, expect_edition, expect_team in cases:
+            with self.subTest(label):
+                mock_jira = Mock()
+                mock_jira.createmeta.return_value = {
+                    'projects': [{'issuetypes': [{'name': 'Maintenance'}]}]
+                }
+                mock_ticket = Mock()
+                mock_ticket.key = 'SQS-44'
+                mock_jira.create_issue.return_value = mock_ticket
+
+                args = Mock()
+                args.target_jira_project = 'SQS'
+                args.ticket_summary = 'Update sonar-security to 1.0.0'
+                args.ticket_description = None
+                args.parent_epic = None
+                args.edition = edition
+                args.team = team
+
+                create_integration_ticket(mock_jira, args)
+
+                call_args = mock_jira.create_issue.call_args[1]['fields']
+                if expect_edition:
+                    self.assertEqual(call_args[CUSTOM_FIELDS['EDITION']], {'value': edition})
+                else:
+                    self.assertNotIn(CUSTOM_FIELDS['EDITION'], call_args)
+                if expect_team:
+                    self.assertEqual(call_args[CUSTOM_FIELDS['TEAM']], team)
+                else:
+                    self.assertNotIn(CUSTOM_FIELDS['TEAM'], call_args)
 
 
 if __name__ == '__main__':

@@ -1,7 +1,7 @@
 ---
 type: GitHub Action
 title: Get Release Version
-description: Extracts the release version from the repox commit status on a branch.
+description: Extracts the release version and commit SHA from the repox commit status on a branch.
 resource: https://github.com/SonarSource/release-github-actions/tree/master/get-release-version
 tags: [action, version, repox]
 timestamp: 2026-09-17T00:00:00Z
@@ -27,6 +27,7 @@ parse itself is still inline shell with no unit test — see
 | Output | Description |
 |---|---|
 | `release-version` | The extracted release version |
+| `commit-sha` | The commit SHA whose repox status supplied the version |
 
 Also exported as the `RELEASE_VERSION` environment variable. Requires `statuses: read`.
 

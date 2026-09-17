@@ -4,7 +4,7 @@ title: Automated Release (analyzer path)
 description: Orchestrates the full end-to-end analyzer release across Jira, GitHub, and downstream integration repos.
 resource: https://github.com/SonarSource/release-github-actions/blob/master/.github/workflows/automated-release.yml
 tags: [workflow, release, orchestrator, jira, github-release, slack]
-timestamp: 2026-08-26T00:00:00Z
+timestamp: 2026-09-16T00:00:00Z
 ---
 
 # Overview
@@ -24,7 +24,7 @@ disable-auto-merge (if bump-version: true)
   freeze-branch (optional, lock_branch via lock-branch action)
         │
         ▼
-  check-releasability (SonarSource/gh-action_releasability@v3, exact commit SHA)
+  check-releasability (SonarSource/gh-action_releasability@v3, selected branch's exact head SHA)
         │
         ▼
   prepare-release (get-release-version, get-jira-version, get-jira-release-notes)
@@ -69,7 +69,11 @@ Key inputs (selected — full list in the action README): `jira-project-key`, `p
 `plugin-name`, `pm-email`, `short-description`, `rule-props-changed`, `branch`, `new-version`,
 `use-jira-sandbox` (default `true`), `is-draft-release` (default `true`), `freeze-branch`
 (default `true`), `check-releasability` (default `true`), `sqs-integration` /
-`sqc-integration` (default `true`), `sqaa-integration` (runs only when `sqc-integration` is
+`sqc-integration` (default `true`), `sqs-base-branch` (SQS product PR base, default `master`),
+`sqs-ticket-edition` (Jira "Edition" for the SQS
+integration ticket — one of `N/A`, `Community Build`, `Server`, `Community Build & Server`;
+SQS only, since `SC` has no Edition field), `sqs-sqc-ticket-team` (Atlassian team **UUID**
+shared by the SQS and SQC integration tickets), `sqaa-integration` (runs only when `sqc-integration` is
 also true; silently skipped if not onboarded), `create-slvs-ticket` / `create-slvscode-ticket` /
 `create-slcore-ticket` / `create-sle-ticket` / `create-sli-ticket` / `create-cli-ticket`
 (default `false`), `verbose`
@@ -86,9 +90,19 @@ Outputs: `new-version` (Jira version name), `sqaa-pull-request-url`.
   release start, to reduce the race window where a PR could merge before the version-bump PR
   opens. Best-effort — see the [release-lock gate](/workflows/release-lock.md) for the guard of
   last resort.
+- **Selected-branch releasability**: after the optional freeze, the workflow reads the repox
+  status for `inputs.branch` through [get-release-version](/actions/get-release-version.md) and
+  passes the branch and the status response's commit SHA to
+  `SonarSource/gh-action_releasability@v3`. The version and commit therefore come from the same
+  response, regardless of the ref from which the caller was dispatched.
 - **Freeze window ends early**: the branch unfreezes right after
   [publish-github-release](/actions/publish-github-release.md), *before* the version-bump PR is
   created — see [release-lock](/workflows/release-lock.md) for how that gap is closed.
+- **Optional integration-ticket fields**: `sqs-ticket-edition` and `sqs-sqc-ticket-team` are
+  both optional and passed straight through to
+  [create-integration-ticket](/actions/create-integration-ticket.md); a value Jira rejects, or a
+  field missing from the target project's create screen, fails the integration-ticket step
+  rather than being silently dropped.
 - **Default release visibility**: after the GitHub release is created, a short announcement
   containing the project, released version, and GitHub release-notes link is sent to the private
   Code Quality PM/EM leads Slack channel unless the caller sets

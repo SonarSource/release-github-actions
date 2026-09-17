@@ -1,5 +1,27 @@
 # Update Log
 
+## 2026-09-15
+* **SQS product release branches**: the analyzer release workflow now exposes
+  `sqs-base-branch`, defaulting to `master`, and forwards it to
+  [update-analyzer](/actions/update-analyzer.md). This lets bugfix and backport releases target
+  a `sonar-enterprise` release branch while `sonar-plugins-deployer` continues to use `master`.
+
+## 2026-09-14
+* **Selected-branch releasability**: after the optional freeze, the analyzer release workflow
+  reads the repox status for `inputs.branch` through
+  [get-release-version](/actions/get-release-version.md) and passes the branch and the status
+  response's commit SHA to `gh-action_releasability`. The version and commit therefore come from
+  the same response, regardless of the ref from which the caller was dispatched.
+
+## 2026-09-11
+* **Edition and Team for integration tickets**: `create-integration-ticket` now accepts optional
+  `edition` and `team` inputs, applied during `create_issue` via two new `shared/jira_common.py`
+  `CUSTOM_FIELDS` entries (`customfield_10045` EDITION, `customfield_10001` TEAM). The analyzer
+  release workflow exposes these as `sqs-ticket-edition` (SQS only) and a shared
+  `sqs-sqc-ticket-team` (SQS + SQC). A new sandbox job
+  (`test-fixtures/jira/assert_ticket_fields.py`) re-reads the created tickets and asserts the
+  stored values, guarding against a wrong custom field ID or value shape.
+
 ## 2026-08-14
 * **Releasability failure detail in summary**: The `check-releasability` job's `Summary` step now
   runs on any failure, not only when `verbose: true` — so its per-check ✅/❌ breakdown (e.g.

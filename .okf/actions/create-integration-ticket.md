@@ -22,8 +22,21 @@ after a release.
 | `release-ticket-key` | Key of the ticket to link to (e.g. `REL-123`) | Yes | - |
 | `target-jira-project` | Key of the project to create the ticket in | Yes | - |
 
-Uses the shared [Jira integration helpers](/shared/jira-common.md) and Vault-sourced
-credentials.
+Also accepts `parent-epic`, `edition` and `team`, applied to the created ticket. Uses the shared
+[Jira integration helpers](/shared/jira-common.md) and Vault-sourced credentials.
+
+# Optional Jira fields
+
+`parent-epic`, `edition` and `team` are applied during `create_issue`, so a value Jira rejects —
+or a field missing from the project's create screen — fails the step rather than being silently
+dropped. Availability differs per project (`SONAR`: both; `SC`: team only), which is why
+[automated-release](/workflows/automated-release.md) exposes `sqs-ticket-edition` and a shared
+`sqs-sqc-ticket-team`, but no `sqc-ticket-edition`.
+
+Covered by a real Jira sandbox job that re-reads the created tickets and asserts the stored
+values — the only check that catches a wrong custom field ID or value shape. It runs against
+fixed sandbox state (`SONAR-22193`, a fixed team UUID) instead of a setup script, like
+[get-jira-release-notes](/actions/get-jira-release-notes.md).
 
 # Citations
 

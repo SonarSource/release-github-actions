@@ -20,28 +20,30 @@ from jira.exceptions import JIRAError
 
 
 def delete_issues(jira, issue_keys):
-    """Deletes issues by key. Ignores errors (idempotent)."""
+    """Deletes issues by key. Ignores errors (idempotent), but warns loudly so a leak in the
+    shared sandbox surfaces in the run's Annotations panel instead of scrolling past in the log."""
     for key in issue_keys:
         try:
             issue = jira.issue(key)
             issue.delete()
             eprint(f"Deleted issue: {key}")
         except JIRAError as e:
-            eprint(f"Warning: Could not delete issue {key} (status={e.status_code}). Skipping.")
+            eprint(f"::warning::Could not delete issue {key} (status={e.status_code}) — it may be left behind in the sandbox.")
         except Exception as e:
-            eprint(f"Warning: Unexpected error deleting issue {key}: {e}. Skipping.")
+            eprint(f"::warning::Unexpected error deleting issue {key}: {e} — it may be left behind in the sandbox.")
 
 
 def delete_version(jira, version_id):
-    """Deletes a version by ID. Ignores errors (idempotent)."""
+    """Deletes a version by ID. Ignores errors (idempotent), but warns loudly so a leak in the
+    shared sandbox surfaces in the run's Annotations panel instead of scrolling past in the log."""
     try:
         version = jira.version(version_id)
         version.delete()
         eprint(f"Deleted version: {version_id}")
     except JIRAError as e:
-        eprint(f"Warning: Could not delete version {version_id} (status={e.status_code}). Skipping.")
+        eprint(f"::warning::Could not delete version {version_id} (status={e.status_code}) — it may be left behind in the sandbox.")
     except Exception as e:
-        eprint(f"Warning: Unexpected error deleting version {version_id}: {e}. Skipping.")
+        eprint(f"::warning::Unexpected error deleting version {version_id}: {e} — it may be left behind in the sandbox.")
 
 
 def main():

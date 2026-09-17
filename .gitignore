@@ -157,3 +157,6 @@ cython_debug/
 
 /tools/tools.iml
 /.idea/
+
+# macOS
+.DS_Store

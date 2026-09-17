@@ -24,6 +24,8 @@ CUSTOM_FIELDS = {
     'DOCUMENTATION_STATUS': 'customfield_10147',
     'RULE_PROPS_CHANGED': 'customfield_11263',
     'SONARLINT_CHANGELOG': 'customfield_11264',
+    'EDITION': 'customfield_10045',
+    'TEAM': 'customfield_10001',
 }
 
 

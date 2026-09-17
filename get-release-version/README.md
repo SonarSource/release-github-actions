@@ -1,16 +1,17 @@
 # Get Release Version Action
 
-This GitHub Action extracts the release version from the `repox` status on a specified branch and makes it available as both an output and environment variable.
+This GitHub Action extracts the release version and resolved commit SHA from the `repox` status on a specified branch.
 
 ## Description
 
-The action retrieves the release version by:
+The action retrieves the release version and its commit by:
 1. Calling the GitHub API to get the commit status for the specified branch (defaults to master)
 2. Preferring the repo's own promoted-build status, `repox-<repo-name>-<branch>` (e.g.
    `repox-sonar-analyzer-commons-master`) — falling back to any status starting with
    `repox-<branch>` if that repo-specific one isn't present
 3. Extracting the version from the status description using jq
-4. Setting the version as both an action output and environment variable
+4. Exposing the status response's commit SHA as an action output
+5. Setting the version as both an action output and environment variable
 
 ## Prerequisites
 
@@ -34,6 +35,7 @@ This action depends on:
 | Output            | Description                                     |
 |-------------------|-------------------------------------------------|
 | `release-version` | The extracted release version from repox status |
+| `commit-sha`      | The commit SHA associated with the repox status  |
 
 ## Environment Variables
 

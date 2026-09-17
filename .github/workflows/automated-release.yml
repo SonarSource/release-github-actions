@@ -40,6 +40,11 @@ on:
         description: "SQAA Plugin artifacts"
         required: false
         type: string
+      sqs-base-branch:
+        description: "Base branch for the SQS pull request"
+        required: false
+        type: string
+        default: "master"
       sqaa-base-branch:
         description: "Base branch for the SQAA pull request"
         required: false
@@ -136,6 +141,14 @@ on:
         required: false
         type: boolean
         default: true
+      sqs-ticket-edition:
+        description: "Jira 'Edition' value for the SQS integration ticket. One of: N/A, Community Build, Server, Community Build & Server."
+        required: false
+        type: string
+      sqs-sqc-ticket-team:
+        description: "UUID for the 'Team' field of the SQS / SQC integration ticket."
+        required: false
+        type: string
       sqaa-integration:
         description: "Create SQAA PR in sonar-analysis-as-a-service when sqc-integration is true"
         required: false
@@ -365,8 +378,8 @@ jobs:
       - uses: SonarSource/gh-action_releasability@v3
         id: releasability
         with:
-          branch: ${{ github.ref_name }}
-          commit-sha: ${{ github.sha }}
+          branch: ${{ inputs.branch }}
+          commit-sha: ${{ steps.get-version.outputs.commit-sha }}
           organization: ${{ github.repository_owner }}
           repository: ${{ github.event.repository.name }}
           version: ${{ steps.get-version.outputs.release-version }}
@@ -859,6 +872,7 @@ jobs:
           ticket-description: ${{ inputs.short-description }}
           jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
           parent-epic: ${{ steps.resolve-ktlo-epic.outputs.epic-key }}
+          team: ${{ inputs.sqs-sqc-ticket-team }}
 
       - name: Create SQS Ticket
         if: ${{ inputs.sqs-integration }}
@@ -872,6 +886,8 @@ jobs:
           ticket-description: ${{ inputs.short-description }}
           jira-release-url: ${{ needs.prepare-release.outputs.jira-release-url }}
           parent-epic: ${{ steps.resolve-ktlo-epic.outputs.epic-key }}
+          edition: ${{ inputs.sqs-ticket-edition }}
+          team: ${{ inputs.sqs-sqc-ticket-team }}
 
       - name: Summary
         if: ${{ inputs.verbose }}
@@ -930,6 +946,7 @@ jobs:
           plugin-name: ${{ inputs.plugin-name }}
           secret-name: ${{ inputs.release-automation-secret-name || format('sonar-{0}-release-automation', inputs.plugin-name) }}
           plugin-artifacts: ${{inputs.plugin-artifacts-sqs }}
+          base-branch: ${{ inputs.sqs-base-branch }}
           draft: ${{ inputs.is-draft-release }}
           reviewers: ${{ github.actor }}
 
@@ -953,6 +970,7 @@ jobs:
           PLUGIN_NAME: ${{ inputs.plugin-name }}
           PLUGIN_ARTIFACTS_SQS: ${{ inputs.plugin-artifacts-sqs }}
           PLUGIN_ARTIFACTS_SQC: ${{ inputs.plugin-artifacts-sqc }}
+          SQS_BASE_BRANCH: ${{ inputs.sqs-base-branch }}
           IS_DRAFT_RELEASE: ${{ inputs.is-draft-release == true && 'true' || 'false' }}
           RELEASE_AUTOMATION_SECRET_NAME: ${{ inputs.release-automation-secret-name }}
           SQS_INTEGRATION: ${{ inputs.sqs-integration == true && 'true' || 'false' }}
@@ -963,6 +981,7 @@ jobs:
           echo "### What happened" >> $GITHUB_STEP_SUMMARY
           echo "- Prepared analyzer updates and opened PRs where requested." >> $GITHUB_STEP_SUMMARY
           echo "- Artifacts SQS: \`$([ -n "$PLUGIN_ARTIFACTS_SQS" ] && echo "$PLUGIN_ARTIFACTS_SQS" || echo "$PLUGIN_NAME" )\`, Artifacts SQC: \`$([ -n "$PLUGIN_ARTIFACTS_SQC" ] && echo "$PLUGIN_ARTIFACTS_SQC" || echo "$PLUGIN_NAME" )\`." >> $GITHUB_STEP_SUMMARY
+          echo "- SQS base branch: \`$SQS_BASE_BRANCH\`." >> $GITHUB_STEP_SUMMARY
           echo "- Draft PRs: \`$IS_DRAFT_RELEASE\`, Secret present: \`$([ -n "$RELEASE_AUTOMATION_SECRET_NAME" ] && echo true || echo false)\`." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Results" >> $GITHUB_STEP_SUMMARY
