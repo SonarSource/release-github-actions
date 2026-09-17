@@ -90,7 +90,8 @@ The action uses a shell script that:
   status), then falls back to any context starting with `repox-<branch>` if that isn't found
 - Uses the `GITHUB_REPOSITORY` runner env var for both the API call and to derive
   `<repo-name>` for the exact-match lookup
-- Validates that a version was successfully extracted and matches the expected `X.Y.Z.BUILD` shape
+- Validates that a version was successfully extracted and matches the expected `X.Y.Z.BUILD` or
+  `X.Y.Z+BUILD` shape
 - Validates that a commit SHA was successfully extracted
 - Sets both `GITHUB_OUTPUT` and `GITHUB_ENV` for maximum compatibility
 
@@ -107,7 +108,7 @@ The action will fail with a non-zero exit code if:
 - The GitHub API call fails
 - No matching `repox` status is found (neither the repo-specific context nor the generic fallback)
 - The version cannot be extracted from the status description
-- The extracted version is empty or does not match the expected `X.Y.Z.BUILD` format
+- The extracted version is empty or does not match the expected `X.Y.Z.BUILD` or `X.Y.Z+BUILD` format
 - The commit SHA cannot be extracted from the status response
 
 ## Notes

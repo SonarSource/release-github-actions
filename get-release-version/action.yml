@@ -49,8 +49,8 @@ runs:
           exit 1
         fi
 
-        if ! [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          echo "❌ Extracted release version '$RELEASE_VERSION' does not match expected format X.Y.Z.BUILD"
+        if ! [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+|\+[0-9A-Za-z.]+)$ ]]; then
+          echo "❌ Extracted release version '$RELEASE_VERSION' does not match expected format X.Y.Z.BUILD or X.Y.Z+BUILD"
           exit 1
         fi
 

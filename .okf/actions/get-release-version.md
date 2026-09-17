@@ -12,8 +12,9 @@ timestamp: 2026-09-17T00:00:00Z
 Calls the GitHub API for the commit status on a branch (default `master`). Prefers the exact
 `repox-<repo-name>-<branch>` context — the repo's own promoted-build status — falling back to
 any context starting with `repox-<branch>` if that isn't present, extracts the version from the
-status description via `jq`, and asserts it matches `X.Y.Z.BUILD` before exporting it. Every
-downstream job in [automated-release](/workflows/automated-release.md) keys off this output; the
+status description via `jq`, and asserts it matches `X.Y.Z.BUILD` (Maven) or `X.Y.Z+BUILD`
+(semver build metadata) before exporting it. Every downstream job in
+[automated-release](/workflows/automated-release.md) keys off this output; the
 parse itself is still inline shell with no unit test — see
 [risk: fragile version parsing](/risks/fragile-version-parsing.md).
 
