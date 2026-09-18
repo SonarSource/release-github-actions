@@ -150,88 +150,82 @@ jobs:
           echo "✓ Branch parameter tests completed without syntax errors"
           echo "✓ Action accepts both default and custom branch parameters"
 
-  context-selection-tests:
-    name: Test Context Selection (${{ matrix.scenario }})
+  repox-status-scenarios:
+    name: Test Repox Status Scenarios (${{ matrix.scenario }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
           - scenario: prefers-repo-specific-status
-            include_repo_context: "true"
-            expected: "9.9.0.999"
+            expect_success: "true"
+            expected_version: "9.9.0.999"
+            fixture: |
+              { "sha": "abcdef0123456789abcdef0123456789abcdef01", "statuses": [ { "context": "repox-master", "description": "Latest promoted build of '8.8.0.888' from branch 'refs/heads/master'" }, { "context": "repox-release-github-actions-master", "description": "Latest promoted build of '9.9.0.999' from branch 'refs/heads/master'" } ] }
           - scenario: falls-back-to-generic-mirror
-            include_repo_context: "false"
-            expected: "8.8.0.888"
+            expect_success: "true"
+            expected_version: "8.8.0.888"
+            fixture: |
+              { "sha": "abcdef0123456789abcdef0123456789abcdef01", "statuses": [ { "context": "repox-master", "description": "Latest promoted build of '8.8.0.888' from branch 'refs/heads/master'" } ] }
+          - scenario: rejects-npm-mangled-generic-fallback
+            expect_success: "false"
+            expected_failure_reason: "invalid-shape"
+            fixture: |
+              { "sha": "abcdef0123456789abcdef0123456789abcdef01", "statuses": [ { "context": "repox-master", "description": "Latest promoted build of '9.9.0-999' from branch 'refs/heads/master'" } ] }
+          - scenario: accepts-semver-build-metadata
+            expect_success: "true"
+            expected_version: "5.2.3+80217"
+            fixture: |
+              { "sha": "abcdef0123456789abcdef0123456789abcdef01", "statuses": [ { "context": "repox-release-github-actions-master", "description": "Latest promoted build of '5.2.3+80217' from branch 'refs/heads/master'" } ] }
+          - scenario: no-repox-status-at-all
+            expect_success: "false"
+            expected_failure_reason: "no-version"
+            fixture: |
+              { "sha": "abcdef0123456789abcdef0123456789abcdef01", "statuses": [ { "context": "other-check", "description": "unrelated" } ] }
+          - scenario: null-statuses-field
+            expect_success: "false"
+            expected_failure_reason: "no-version"
+            fixture: |
+              { "sha": "abcdef0123456789abcdef0123456789abcdef01", "statuses": null }
+          - scenario: exact-context-malformed-fails-loud
+            expect_success: "false"
+            expected_failure_reason: "invalid-shape"
+            fixture: |
+              { "sha": "abcdef0123456789abcdef0123456789abcdef01", "statuses": [ { "context": "repox-release-github-actions-master", "description": "Latest promoted build of '9.9.0-999' from branch 'refs/heads/master'" }, { "context": "repox-master", "description": "Latest promoted build of '8.8.0.888' from branch 'refs/heads/master'" } ] }
 
     steps:
       - name: Checkout code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Stub gh CLI and write fixture
-        env:
-          INCLUDE_REPO_CONTEXT: ${{ matrix.include_repo_context }}
-        run: |
-          mkdir -p "$RUNNER_TEMP/stub-bin"
-          cat > "$RUNNER_TEMP/stub-bin/gh" <<STUB
-          #!/usr/bin/env bash
-          [ "\$1" = "api" ] || { echo "unexpected gh invocation: \$*" >&2; exit 1; }
-          cat "$RUNNER_TEMP/gh-stub-fixture.json"
-          STUB
-          chmod +x "$RUNNER_TEMP/stub-bin/gh"
-          echo "$RUNNER_TEMP/stub-bin" >> "$GITHUB_PATH"
-
-          REPO_STATUS=""
-          if [ "$INCLUDE_REPO_CONTEXT" = "true" ]; then
-            REPO_STATUS=', { "context": "repox-release-github-actions-master", "description": "Latest promoted build of '"'"'9.9.0.999'"'"' from branch '"'"'refs/heads/master'"'"'" }'
-          fi
-          cat > "$RUNNER_TEMP/gh-stub-fixture.json" <<JSON
-          { "sha": "abcdef0123456789abcdef0123456789abcdef01", "statuses": [ { "context": "repox-master", "description": "Latest promoted build of '8.8.0.888' from branch 'refs/heads/master'" }$REPO_STATUS ] }
-          JSON
-
-      - name: Get release version
-        id: get-version
-        uses: ./get-release-version
-
-      - name: Verify expected version was selected
-        run: |
-          if [ "${{ steps.get-version.outputs.release-version }}" != "${{ matrix.expected }}" ]; then
-            echo "✗ Expected ${{ matrix.expected }}, got '${{ steps.get-version.outputs.release-version }}'"
-            exit 1
-          fi
-          echo "✓ Correctly selected ${{ matrix.expected }} for scenario: ${{ matrix.scenario }}"
-
-  shape-validation-tests:
-    name: Test Version Shape Validation
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      - name: Stub gh CLI and write malformed fixture
-        run: |
-          mkdir -p "$RUNNER_TEMP/stub-bin"
-          cat > "$RUNNER_TEMP/stub-bin/gh" <<STUB
-          #!/usr/bin/env bash
-          [ "\$1" = "api" ] || { echo "unexpected gh invocation: \$*" >&2; exit 1; }
-          cat "$RUNNER_TEMP/gh-stub-fixture.json"
-          STUB
-          chmod +x "$RUNNER_TEMP/stub-bin/gh"
-          echo "$RUNNER_TEMP/stub-bin" >> "$GITHUB_PATH"
-
-          cat > "$RUNNER_TEMP/gh-stub-fixture.json" <<JSON
-          { "sha": "abcdef0123456789abcdef0123456789abcdef01", "statuses": [ { "context": "repox-master", "description": "Latest promoted build of '9.9.0-999' from branch 'refs/heads/master'" } ] }
-          JSON
+      - name: Stub gh CLI
+        uses: ./.github/actions/stub-gh-status
+        with:
+          fixture: ${{ matrix.fixture }}
 
       - name: Get release version
         id: get-version
         uses: ./get-release-version
         continue-on-error: true
 
-      - name: Verify malformed version was rejected
+      - name: Verify outcome
         run: |
-          if [ "${{ steps.get-version.outcome }}" = "success" ]; then
-            echo "✗ Action should have failed on a non-Maven-shaped version (got '${{ steps.get-version.outputs.release-version }}')"
-            exit 1
+          if [ "${{ matrix.expect_success }}" = "true" ]; then
+            if [ "${{ steps.get-version.outcome }}" != "success" ]; then
+              echo "✗ Expected success, action failed (reason: ${{ steps.get-version.outputs.failure-reason }})"
+              exit 1
+            fi
+            if [ "${{ steps.get-version.outputs.release-version }}" != "${{ matrix.expected_version }}" ]; then
+              echo "✗ Expected version ${{ matrix.expected_version }}, got '${{ steps.get-version.outputs.release-version }}'"
+              exit 1
+            fi
+            echo "✓ Correctly selected ${{ matrix.expected_version }} for scenario: ${{ matrix.scenario }}"
+          else
+            if [ "${{ steps.get-version.outcome }}" = "success" ]; then
+              echo "✗ Expected failure, action succeeded with version '${{ steps.get-version.outputs.release-version }}'"
+              exit 1
+            fi
+            if [ "${{ steps.get-version.outputs.failure-reason }}" != "${{ matrix.expected_failure_reason }}" ]; then
+              echo "✗ Expected failure-reason '${{ matrix.expected_failure_reason }}', got '${{ steps.get-version.outputs.failure-reason }}'"
+              exit 1
+            fi
+            echo "✓ Correctly rejected for scenario: ${{ matrix.scenario }} (reason: ${{ matrix.expected_failure_reason }})"
           fi
-          echo "✓ Action correctly rejected the semver-mangled version"

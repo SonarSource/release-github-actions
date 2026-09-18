@@ -36,6 +36,7 @@ This action depends on:
 |-------------------|-------------------------------------------------|
 | `release-version` | The extracted release version from repox status |
 | `commit-sha`      | The commit SHA associated with the repox status  |
+| `failure-reason`  | Machine-readable failure code (`no-version`, `no-commit-sha`, `invalid-shape`); empty on success |
 
 ## Environment Variables
 
@@ -110,6 +111,11 @@ The action will fail with a non-zero exit code if:
 - The version cannot be extracted from the status description
 - The extracted version is empty or does not match the expected `X.Y.Z.BUILD` or `X.Y.Z+BUILD` format
 - The commit SHA cannot be extracted from the status response
+
+If the repo-specific context exists but its version fails validation, the action fails immediately
+and does **not** fall back to the generic mirror — a malformed repo-specific status indicates a
+broken promotion for this repo, not an artifact-selection ambiguity, so silently trying the mirror
+would reintroduce the exact problem this action prevents.
 
 ## Notes
 

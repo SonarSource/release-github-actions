@@ -1,0 +1,25 @@
+name: 'Stub gh CLI for repox status'
+description: 'Installs a stub gh CLI on PATH that returns a fixed JSON fixture for any `gh api` call, for testing get-release-version.'
+
+inputs:
+  fixture:
+    description: 'JSON fixture the stub gh CLI should print for `gh api` calls.'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install stub gh CLI and write fixture
+      shell: bash
+      env:
+        FIXTURE_JSON: ${{ inputs.fixture }}
+      run: |
+        mkdir -p "$RUNNER_TEMP/stub-bin"
+        printf '%s' "$FIXTURE_JSON" > "$RUNNER_TEMP/gh-stub-fixture.json"
+        cat > "$RUNNER_TEMP/stub-bin/gh" <<STUB
+        #!/usr/bin/env bash
+        [ "\$1" = "api" ] || { echo "unexpected gh invocation: \$*" >&2; exit 1; }
+        cat "$RUNNER_TEMP/gh-stub-fixture.json"
+        STUB
+        chmod +x "$RUNNER_TEMP/stub-bin/gh"
+        echo "$RUNNER_TEMP/stub-bin" >> "$GITHUB_PATH"
