@@ -106,8 +106,9 @@ Outputs: `new-version` (Jira version name), `sqaa-pull-request-url`.
 - **Default release visibility**: after the GitHub release is created, a short announcement
   containing the project, released version, and GitHub release-notes link is sent to the private
   Code Quality PM/EM leads Slack channel unless the caller sets
-  `code-quality-leads-slack-notification: false`. The destination is fixed in the orchestrator;
-  the existing caller-provided full-summary `slack-channel` notification remains independent.
+  `code-quality-leads-slack-notification: false` or the run uses the Jira sandbox (dry run).
+  The destination is fixed in the orchestrator; the existing caller-provided full-summary
+  `slack-channel` notification remains independent.
 - This workflow has been the subject of an [architecture review](/decisions/architecture-review-2026-07.md)
   identifying reliability, testability, and observability gaps — see the
   [risks](/risks/index.md) directory.

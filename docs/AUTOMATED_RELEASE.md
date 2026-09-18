@@ -83,7 +83,7 @@ This workflow composes several actions from this repository:
 | `require-rule-metadata-update` | When `true`, runs the rule metadata update check before the release and fails it if metadata changes are detected and need to be merged first | No       | `false`      |
 | `rule-metadata-pr-labels`    | Labels applied to the rule metadata pull request when `require-rule-metadata-update` is `true`, e.g. `skip-qa,skip-pvf`                          | No       | -            |
 | `slack-channel`              | Slack channel to notify when locking/unlocking the branch                                                       | No       | -            |
-| `code-quality-leads-slack-notification` | When `false`, suppresses the release announcement sent to `#team-code-quality-pm-em-lead`                | No       | `true`       |
+| `code-quality-leads-slack-notification` | When `false`, suppresses the release announcement sent to `#team-code-quality-pm-em-lead`. The announcement is also suppressed during Jira-sandbox dry runs. | No       | `true`       |
 | `release-artifacts-public`   | Newline-separated Repox paths from public repositories to attach to the GitHub release                          | No       | -            |
 | `release-artifacts-private`  | Newline-separated Repox paths from private repositories to attach to the GitHub release                         | No       | -            |
 
