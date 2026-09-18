@@ -1,5 +1,12 @@
 # Update Log
 
+## 2026-09-17
+* **Repo-specific repox status preferred**: [get-release-version](/actions/get-release-version.md)
+  now reads the exact `repox-<repo-name>-<branch>` context first, falling back to the generic
+  `repox-<branch>` mirror only when it is absent, asserts the extracted value against
+  `X.Y.Z.BUILD`/`X.Y.Z+BUILD`, and exposes a `failure-reason` output
+  (`no-version`, `no-commit-sha`, `invalid-shape`).
+
 ## 2026-09-15
 * **SQS product release branches**: the analyzer release workflow now exposes
   `sqs-base-branch`, defaulting to `master`, and forwards it to

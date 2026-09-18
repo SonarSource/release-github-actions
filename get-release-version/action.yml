@@ -36,9 +36,11 @@ runs:
         STATUS_JSON=$(gh api "/repos/$GITHUB_REPOSITORY/commits/$BRANCH_NAME/status")
         REPO_NAME="${GITHUB_REPOSITORY#*/}"
         COMMIT_SHA=$(echo "$STATUS_JSON" | jq -r '.sha // empty')
-        RELEASE_VERSION=$(echo "$STATUS_JSON" | jq -r --arg ctx "repox-$REPO_NAME-$BRANCH_NAME" '(.statuses // [])[] | select(.context == $ctx) | ((.description // "") | split("\u0027")[1] // empty)')
+        EXACT_STATUS=$(echo "$STATUS_JSON" | jq -r --arg ctx "repox-$REPO_NAME-$BRANCH_NAME" 'first((.statuses // [])[] | select(.context == $ctx)) // empty')
 
-        if [ -z "$RELEASE_VERSION" ]; then
+        if [ -n "$EXACT_STATUS" ]; then
+          RELEASE_VERSION=$(echo "$EXACT_STATUS" | jq -r '((.description // "") | split("\u0027")[1] // empty)')
+        else
           RELEASE_VERSION=$(echo "$STATUS_JSON" | jq -r --arg prefix "repox-$BRANCH_NAME" 'first((.statuses // [])[] | select(.context | startswith($prefix)) | ((.description // "") | split("\u0027")[1] // empty))')
         fi
 

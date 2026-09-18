@@ -5,12 +5,14 @@ on:
   pull_request:
     paths:
       - 'get-release-version/**'
+      - '.github/actions/stub-gh-status/**'
       - '.github/workflows/test-get-release-version.yml'
   push:
     branches:
       - branch-*
     paths:
       - 'get-release-version/**'
+      - '.github/actions/stub-gh-status/**'
       - '.github/workflows/test-get-release-version.yml'
   workflow_dispatch:
 
@@ -191,6 +193,11 @@ jobs:
             expected_failure_reason: "invalid-shape"
             fixture: |
               { "sha": "abcdef0123456789abcdef0123456789abcdef01", "statuses": [ { "context": "repox-release-github-actions-master", "description": "Latest promoted build of '9.9.0-999' from branch 'refs/heads/master'" }, { "context": "repox-master", "description": "Latest promoted build of '8.8.0.888' from branch 'refs/heads/master'" } ] }
+          - scenario: missing-commit-sha
+            expect_success: "false"
+            expected_failure_reason: "no-commit-sha"
+            fixture: |
+              { "statuses": [ { "context": "repox-release-github-actions-master", "description": "Latest promoted build of '9.9.0.999' from branch 'refs/heads/master'" } ] }
 
     steps:
       - name: Checkout code
