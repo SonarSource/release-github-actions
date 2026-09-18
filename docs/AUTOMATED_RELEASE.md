@@ -49,7 +49,7 @@ This workflow composes several actions from this repository:
 | `sqs-base-branch`            | Base branch for the SQS pull request                                                                            | No       | `master`     |
 | `sqaa-base-branch`           | Base branch for the SQAA pull request                                                                           | No       | `master`     |
 | `sqaa-reviewers`             | Comma-separated list of GitHub usernames to request a review on the SQAA pull request. Defaults to the release actor (`github.actor`). | No       | `github.actor` |
-| `use-jira-sandbox`           | Use Jira sandbox                                                                                                | No       | `true`       |
+| `use-jira-sandbox`           | Use Jira sandbox. The workflow treats this as a dry run and suppresses the Code Quality leads release announcement. | No       | `true`       |
 | `is-draft-release`           | Create the GitHub release as a draft                                                                            | No       | `true`       |
 | `pm-email`                   | Product manager email to assign the release ticket after technical release                                      | Yes      | -            |
 | `release-automation-secret-name` | Secret name used to create analyzer update PRs. If omitted, defaults to `sonar-{plugin-name}-release-automation`. | No       | -            |
@@ -144,6 +144,7 @@ jobs:
       sqs-ticket-edition: "Community Build & Server"
       sqs-sqc-ticket-team: "<your-team-uuid>"
       slack-channel: "release-notifications"
+      use-jira-sandbox: false
       verbose: ${{ inputs.verbose }}
 ```
 
@@ -177,7 +178,7 @@ jobs:
   the Atlassian team **UUID**, not the name — read `customfield_10001.id` off an existing ticket.
 - Summaries:
   - Each job includes a "Summary" step that writes to `$GITHUB_STEP_SUMMARY` only when `verbose: true`.
-  - A short release announcement containing the project, released version, and GitHub release-notes link is sent to `#team-code-quality-pm-em-lead` by default after the GitHub release is created. Set `code-quality-leads-slack-notification: false` to opt out.
+  - For non-sandbox releases, a short release announcement containing the project, released version, and GitHub release-notes link is sent to `#team-code-quality-pm-em-lead` after the GitHub release is created. Set `code-quality-leads-slack-notification: false` to opt out. The announcement is skipped when `use-jira-sandbox: true` (the default dry-run mode).
 - Permissions and environments are scoped per job to minimize required privileges.
 
 ## Release lock gate

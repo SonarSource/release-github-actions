@@ -55,7 +55,7 @@ on:
         required: false
         type: string
       use-jira-sandbox:
-        description: "Use Jira sandbox"
+        description: "Use Jira sandbox (treated as a dry run)"
         required: false
         type: boolean
         default: true

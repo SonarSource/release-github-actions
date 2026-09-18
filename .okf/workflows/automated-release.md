@@ -67,7 +67,7 @@ Actions composed: [get-release-version](/actions/get-release-version.md),
 
 Key inputs (selected — full list in the action README): `jira-project-key`, `project-name`,
 `plugin-name`, `pm-email`, `short-description`, `rule-props-changed`, `branch`, `new-version`,
-`use-jira-sandbox` (default `true`), `is-draft-release` (default `true`), `freeze-branch`
+`use-jira-sandbox` (dry-run signal, default `true`), `is-draft-release` (default `true`), `freeze-branch`
 (default `true`), `check-releasability` (default `true`), `sqs-integration` /
 `sqc-integration` (default `true`), `sqs-base-branch` (SQS product PR base, default `master`),
 `sqs-ticket-edition` (Jira "Edition" for the SQS
@@ -78,7 +78,7 @@ also true; silently skipped if not onboarded), `create-slvs-ticket` / `create-sl
 `create-slcore-ticket` / `create-sle-ticket` / `create-sli-ticket` / `create-cli-ticket`
 (default `false`), `verbose`
 (default `false`), `code-quality-leads-slack-notification` (default `true`; opt out of the
-release announcement sent to the Code Quality PM/EM leads Slack channel),
+release announcement sent to the Code Quality PM/EM leads Slack channel for non-sandbox runs),
 `require-rule-metadata-update` (default `false`) and `rule-metadata-pr-labels` (labels for the
 PR that [update-rule-metadata](/actions/update-rule-metadata.md) opens when metadata is stale).
 
