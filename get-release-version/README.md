@@ -6,7 +6,9 @@ This GitHub Action extracts the release version and resolved commit SHA from the
 
 The action retrieves the release version and its commit by:
 1. Calling the GitHub API to get the commit status for the specified branch (defaults to master)
-2. Filtering for statuses with context starting with `repox`
+2. Preferring the repo's own promoted-build status, `repox-<repo-name>-<branch>` (e.g.
+   `repox-sonar-analyzer-commons-master`) — falling back to any status starting with
+   `repox-<branch>` if that repo-specific one isn't present
 3. Extracting the version from the status description using jq
 4. Exposing the status response's commit SHA as an action output
 5. Setting the version as both an action output and environment variable
@@ -34,6 +36,7 @@ This action depends on:
 |-------------------|-------------------------------------------------|
 | `release-version` | The extracted release version from repox status |
 | `commit-sha`      | The commit SHA associated with the repox status  |
+| `failure-reason`  | Machine-readable failure code (`no-version`, `no-commit-sha`, `invalid-shape`); empty on success |
 
 ## Environment Variables
 
@@ -81,24 +84,42 @@ After successful execution, the following environment variable is set:
 ## Implementation Details
 
 The action uses a shell script that:
-- Executes the gh CLI command: `gh api "/repos/{owner/repo}/commits/{branch}/status"`
-- Extracts both the release version and resolved commit SHA from the response
-- Uses the standard GitHub context `${{ github.repository }}` to get the repository owner and name
-- Uses the specified branch input (defaults to master if not provided)
-- Validates that a version was successfully extracted
+- Fetches the commit status JSON once: `gh api "/repos/{owner/repo}/commits/{branch}/status"`
+- Extracts the response's `.sha` as the `commit-sha` output — the exact commit whose status
+  supplied the version
+- Looks for the exact context `repox-<repo-name>-<branch>` first (the repo's own promoted-build
+  status), then falls back to any context starting with `repox-<branch>` if that isn't found
+- Uses the `GITHUB_REPOSITORY` runner env var for both the API call and to derive
+  `<repo-name>` for the exact-match lookup
+- Validates that a version was successfully extracted and matches the expected `X.Y.Z.BUILD` or
+  `X.Y.Z+BUILD` shape
+- Validates that a commit SHA was successfully extracted
 - Sets both `GITHUB_OUTPUT` and `GITHUB_ENV` for maximum compatibility
+
+### Why prefer the repo-specific context?
+
+A repo that promotes more than one artifact under different build names (e.g. a Maven build plus
+a secondary npm/NuGet package) can have the generic `repox-<branch>` status flip between formats
+depending on which one promoted last. Preferring `repox-<repo-name>-<branch>` avoids inheriting
+whichever artifact happened to promote most recently.
 
 ## Error Handling
 
 The action will fail with a non-zero exit code if:
 - The GitHub API call fails
-- No `repox` status is found
+- No matching `repox` status is found (neither the repo-specific context nor the generic fallback)
 - The version cannot be extracted from the status description
-- The extracted version is empty
+- The extracted version is empty or does not match the expected `X.Y.Z.BUILD` or `X.Y.Z+BUILD` format
+- The commit SHA cannot be extracted from the status response
+
+If the repo-specific context exists but its version fails validation, the action fails immediately
+and does **not** fall back to the generic mirror — a malformed repo-specific status indicates a
+broken promotion for this repo, not an artifact-selection ambiguity, so silently trying the mirror
+would reintroduce the exact problem this action prevents.
 
 ## Notes
 
-- This action assumes that the `repox` status contains the version in a specific format within single quotes
-- The action works with any context that starts with `repox` (e.g., `repox-master`, `someone/some_new_feature`)
+- This action assumes that the matched `repox` status contains the version in a specific format
+  within single quotes
 - The action requires read access to the repository's commit statuses
 - The `gh` CLI tool must be available in the runner environment (it's pre-installed on GitHub-hosted runners)

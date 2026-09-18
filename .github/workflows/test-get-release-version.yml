@@ -5,12 +5,14 @@ on:
   pull_request:
     paths:
       - 'get-release-version/**'
+      - '.github/actions/stub-gh-status/**'
       - '.github/workflows/test-get-release-version.yml'
   push:
     branches:
       - branch-*
     paths:
       - 'get-release-version/**'
+      - '.github/actions/stub-gh-status/**'
       - '.github/workflows/test-get-release-version.yml'
   workflow_dispatch:
 
@@ -144,8 +146,93 @@ jobs:
           echo "Branch parameter test results:"
           echo "Default branch test outcome: ${{ steps.test-default-branch.outcome }}"
           echo "Custom branch test outcome: ${{ steps.test-custom-branch.outcome }}"
-          
+
           # Both tests are expected to potentially fail due to missing repox status
           # We're testing that the parameter is accepted and doesn't cause syntax errors
           echo "✓ Branch parameter tests completed without syntax errors"
           echo "✓ Action accepts both default and custom branch parameters"
+
+  repox-status-scenarios:
+    name: Test Repox Status Scenarios (${{ matrix.scenario }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - scenario: prefers-repo-specific-status
+            expect_success: "true"
+            expected_version: "9.9.0.999"
+            fixture: |
+              { "sha": "abcdef0123456789abcdef0123456789abcdef01", "statuses": [ { "context": "repox-master", "description": "Latest promoted build of '8.8.0.888' from branch 'refs/heads/master'" }, { "context": "repox-release-github-actions-master", "description": "Latest promoted build of '9.9.0.999' from branch 'refs/heads/master'" } ] }
+          - scenario: falls-back-to-generic-mirror
+            expect_success: "true"
+            expected_version: "8.8.0.888"
+            fixture: |
+              { "sha": "abcdef0123456789abcdef0123456789abcdef01", "statuses": [ { "context": "repox-master", "description": "Latest promoted build of '8.8.0.888' from branch 'refs/heads/master'" } ] }
+          - scenario: rejects-npm-mangled-generic-fallback
+            expect_success: "false"
+            expected_failure_reason: "invalid-shape"
+            fixture: |
+              { "sha": "abcdef0123456789abcdef0123456789abcdef01", "statuses": [ { "context": "repox-master", "description": "Latest promoted build of '9.9.0-999' from branch 'refs/heads/master'" } ] }
+          - scenario: accepts-semver-build-metadata
+            expect_success: "true"
+            expected_version: "5.2.3+80217"
+            fixture: |
+              { "sha": "abcdef0123456789abcdef0123456789abcdef01", "statuses": [ { "context": "repox-release-github-actions-master", "description": "Latest promoted build of '5.2.3+80217' from branch 'refs/heads/master'" } ] }
+          - scenario: no-repox-status-at-all
+            expect_success: "false"
+            expected_failure_reason: "no-version"
+            fixture: |
+              { "sha": "abcdef0123456789abcdef0123456789abcdef01", "statuses": [ { "context": "other-check", "description": "unrelated" } ] }
+          - scenario: null-statuses-field
+            expect_success: "false"
+            expected_failure_reason: "no-version"
+            fixture: |
+              { "sha": "abcdef0123456789abcdef0123456789abcdef01", "statuses": null }
+          - scenario: exact-context-malformed-fails-loud
+            expect_success: "false"
+            expected_failure_reason: "invalid-shape"
+            fixture: |
+              { "sha": "abcdef0123456789abcdef0123456789abcdef01", "statuses": [ { "context": "repox-release-github-actions-master", "description": "Latest promoted build of '9.9.0-999' from branch 'refs/heads/master'" }, { "context": "repox-master", "description": "Latest promoted build of '8.8.0.888' from branch 'refs/heads/master'" } ] }
+          - scenario: missing-commit-sha
+            expect_success: "false"
+            expected_failure_reason: "no-commit-sha"
+            fixture: |
+              { "statuses": [ { "context": "repox-release-github-actions-master", "description": "Latest promoted build of '9.9.0.999' from branch 'refs/heads/master'" } ] }
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Stub gh CLI
+        uses: ./.github/actions/stub-gh-status
+        with:
+          fixture: ${{ matrix.fixture }}
+
+      - name: Get release version
+        id: get-version
+        uses: ./get-release-version
+        continue-on-error: true
+
+      - name: Verify outcome
+        run: |
+          if [ "${{ matrix.expect_success }}" = "true" ]; then
+            if [ "${{ steps.get-version.outcome }}" != "success" ]; then
+              echo "✗ Expected success, action failed (reason: ${{ steps.get-version.outputs.failure-reason }})"
+              exit 1
+            fi
+            if [ "${{ steps.get-version.outputs.release-version }}" != "${{ matrix.expected_version }}" ]; then
+              echo "✗ Expected version ${{ matrix.expected_version }}, got '${{ steps.get-version.outputs.release-version }}'"
+              exit 1
+            fi
+            echo "✓ Correctly selected ${{ matrix.expected_version }} for scenario: ${{ matrix.scenario }}"
+          else
+            if [ "${{ steps.get-version.outcome }}" = "success" ]; then
+              echo "✗ Expected failure, action succeeded with version '${{ steps.get-version.outputs.release-version }}'"
+              exit 1
+            fi
+            if [ "${{ steps.get-version.outputs.failure-reason }}" != "${{ matrix.expected_failure_reason }}" ]; then
+              echo "✗ Expected failure-reason '${{ matrix.expected_failure_reason }}', got '${{ steps.get-version.outputs.failure-reason }}'"
+              exit 1
+            fi
+            echo "✓ Correctly rejected for scenario: ${{ matrix.scenario }} (reason: ${{ matrix.expected_failure_reason }})"
+          fi

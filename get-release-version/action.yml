@@ -19,6 +19,9 @@ outputs:
   commit-sha:
     description: 'The commit SHA whose repox status supplied the release version.'
     value: ${{ steps.get_release_version.outputs.commit-sha }}
+  failure-reason:
+    description: 'Machine-readable reason the action failed: "no-version", "no-commit-sha", or "invalid-shape". Empty on success.'
+    value: ${{ steps.get_release_version.outputs.failure-reason }}
 
 runs:
   using: 'composite'
@@ -30,17 +33,32 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         BRANCH_NAME: ${{ inputs.branch }}
       run: |
-        STATUS_RESPONSE=$(gh api "/repos/${{ github.repository }}/commits/$BRANCH_NAME/status")
-        RELEASE_VERSION=$(jq -r ".statuses[] | select(.context | startswith(\"repox-$BRANCH_NAME\")) | .description | split(\"'\")[1]" <<< "$STATUS_RESPONSE")
-        COMMIT_SHA=$(jq -r '.sha // empty' <<< "$STATUS_RESPONSE")
+        STATUS_JSON=$(gh api "/repos/$GITHUB_REPOSITORY/commits/$BRANCH_NAME/status")
+        REPO_NAME="${GITHUB_REPOSITORY#*/}"
+        COMMIT_SHA=$(echo "$STATUS_JSON" | jq -r '.sha // empty')
+        EXACT_STATUS=$(echo "$STATUS_JSON" | jq -r --arg ctx "repox-$REPO_NAME-$BRANCH_NAME" 'first((.statuses // [])[] | select(.context == $ctx)) // empty')
+
+        if [ -n "$EXACT_STATUS" ]; then
+          RELEASE_VERSION=$(echo "$EXACT_STATUS" | jq -r '((.description // "") | split("\u0027")[1] // empty)')
+        else
+          RELEASE_VERSION=$(echo "$STATUS_JSON" | jq -r --arg prefix "repox-$BRANCH_NAME" 'first((.statuses // [])[] | select(.context | startswith($prefix)) | ((.description // "") | split("\u0027")[1] // empty))')
+        fi
 
         if [ -z "$RELEASE_VERSION" ]; then
           echo "❌ Could not extract release version from repox status"
+          echo "failure-reason=no-version" >> "$GITHUB_OUTPUT"
           exit 1
         fi
 
         if [ -z "$COMMIT_SHA" ]; then
           echo "❌ Could not extract commit SHA from repox status"
+          echo "failure-reason=no-commit-sha" >> "$GITHUB_OUTPUT"
+          exit 1
+        fi
+
+        if ! [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+|\+[0-9A-Za-z.]+)$ ]]; then
+          echo "❌ Extracted release version '$RELEASE_VERSION' does not match expected format X.Y.Z.BUILD or X.Y.Z+BUILD"
+          echo "failure-reason=invalid-shape" >> "$GITHUB_OUTPUT"
           exit 1
         fi
 
