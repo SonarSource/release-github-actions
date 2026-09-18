@@ -88,7 +88,7 @@ runs:
         secrets: |
           development/kv/data/slack token | SLACK_TOKEN;
     - name: Send Slack Notification
-      uses: SonarSource/release-github-actions/notify-slack@master
+      uses: SonarSource/release-github-actions/notify-slack@279e14e6c7636163516a5ccb93b0e29005bbd776
       with:
         project-name: ${{ inputs.project-name }}
         slack-channel: ${{ inputs.slack-channel }}

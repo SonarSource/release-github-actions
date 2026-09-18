@@ -61,7 +61,7 @@ runs:
       esac
 
   - name: Create Pull Request for Version Bump
-    uses: SonarSource/release-github-actions/create-pull-request@master
+    uses: SonarSource/release-github-actions/create-pull-request@279e14e6c7636163516a5ccb93b0e29005bbd776
     id: create-pr
     env:
       TITLE_MESSAGE: Prepare next development iteration ${{ inputs.version }}

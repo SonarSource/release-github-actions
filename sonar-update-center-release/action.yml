@@ -70,7 +70,7 @@ runs:
 
     - name: Create Pull Request
       id: create-pr
-      uses: SonarSource/release-github-actions/create-pull-request@master
+      uses: SonarSource/release-github-actions/create-pull-request@279e14e6c7636163516a5ccb93b0e29005bbd776
       with:
         author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
         commit-message: Update ${{ inputs.file }} with version ${{ inputs.version }}
