@@ -5,8 +5,8 @@ on:
   pull_request:
     paths:
       - 'resolve-ktlo-epic/**'
-      - 'test-fixtures/jira/setup_ktlo.py'
-      - 'test-fixtures/jira/cleanup_ktlo.py'
+      - 'shared/**'
+      - 'test-fixtures/jira/**'
       - '.github/workflows/test-resolve-ktlo-epic.yml'
   push:
     branches:
@@ -14,8 +14,8 @@ on:
       - v*
     paths:
       - 'resolve-ktlo-epic/**'
-      - 'test-fixtures/jira/setup_ktlo.py'
-      - 'test-fixtures/jira/cleanup_ktlo.py'
+      - 'shared/**'
+      - 'test-fixtures/jira/**'
       - '.github/workflows/test-resolve-ktlo-epic.yml'
   workflow_dispatch:
 
