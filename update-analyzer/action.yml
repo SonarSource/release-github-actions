@@ -18,6 +18,10 @@ inputs:
   plugin-artifacts:
     description: 'Comma-separated list of plugin artifact names to update instead of plugin-name.'
     required: false
+  set-sonar-prefix:
+    description: "A boolean value indicating whether the artifact follows the sonar-<name>-plugin naming convention. When false, plugin-name / plugin-artifacts are matched verbatim in the build file (e.g. java-a3s-context-collector). Must be 'true' or 'false'; any other value fails the action."
+    required: false
+    default: 'true'
   base-branch:
     description: 'The base branch for the product pull request.'
     required: false
@@ -84,27 +88,10 @@ runs:
       env:
         PLUGIN_ARTIFACTS: ${{ inputs.plugin-artifacts }}
         PLUGIN_NAME: ${{ inputs.plugin-name }}
+        SET_SONAR_PREFIX: ${{ inputs.set-sonar-prefix }}
         RELEASE_VERSION: ${{ inputs.release-version }}
-      run: |
-        set -euo pipefail
-        # Prepare the list of plugins to update
-        if [[ -n "$PLUGIN_ARTIFACTS" ]]; then
-          echo "Using plugin-artifacts: $PLUGIN_ARTIFACTS"
-          IFS=',' read -ra PLUGINS <<< "$PLUGIN_ARTIFACTS"
-        else
-          echo "Using plugin-name: $PLUGIN_NAME"
-          PLUGINS=("${PLUGIN_NAME}.*")
-        fi
-
-        # Update each plugin
-        for plugin in "${PLUGINS[@]}"; do
-          plugin=$(echo "$plugin" | xargs)
-          echo "Updating analyzer version in ${{ env.BUILD_GRADLE_FILE }} for plugin $plugin"
-          sed -i "s/\(:sonar-$plugin-plugin:\)[0-9.]*/\1$RELEASE_VERSION/g" ${{ env.BUILD_GRADLE_FILE }}
-        done
-
-        echo "Showing diff:"
-        git --no-pager diff ${{ env.BUILD_GRADLE_FILE }}
+        BUILD_GRADLE_FILE: ${{ env.BUILD_GRADLE_FILE }}
+      run: bash ${{ github.action_path }}/update_build_gradle.sh
 
     - name: Create Pull Request
       id: create_pr
