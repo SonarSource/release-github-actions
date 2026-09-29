@@ -8,7 +8,6 @@ on:
       - '.github/workflows/test-update-plugins-deployer.yml'
   push:
     branches:
-      - master
       - v*
     paths:
       - 'update-plugins-deployer/**'
