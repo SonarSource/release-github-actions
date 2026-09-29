@@ -68,12 +68,14 @@ jobs:
             with_optional_checks: "true"
             fixture: |
               { "statuses": [ { "context": "Releasability", "state": "success", "description": "FAILED OPTIONAL CHECKS" } ] }
+          # Deliberately paired with a fixture that would otherwise be accepted, so a
+          # non-zero gh exit status is the only thing that can make this scenario fail.
           - scenario: status-api-failure
             expect_success: "false"
             with_optional_checks: "true"
             stub_exit_code: "1"
             fixture: |
-              { "statuses": [] }
+              { "statuses": [ { "context": "Releasability", "state": "success", "description": "All checks passed" } ] }
 
     steps:
       - name: Checkout code
