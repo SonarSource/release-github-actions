@@ -5,81 +5,165 @@ on:
   pull_request:
     paths:
       - 'check-releasability-status/**'
+      - '.github/actions/stub-gh-status/**'
       - '.github/workflows/test-check-releasability-status.yml'
   push:
     branches:
       - branch-*
     paths:
       - 'check-releasability-status/**'
+      - '.github/actions/stub-gh-status/**'
       - '.github/workflows/test-check-releasability-status.yml'
   workflow_dispatch:
 
 jobs:
-  integration-tests:
-    name: Run Integration Tests
+  releasability-scenarios:
+    name: Releasability scenarios (${{ matrix.scenario }})
     runs-on: ubuntu-latest
-    
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - scenario: success-clean-description
+            expect_success: "true"
+            with_optional_checks: "true"
+            expected_state: success
+            expected_description: All checks passed
+            fixture: |
+              { "statuses": [ { "context": "Releasability", "state": "success", "description": "All checks passed" } ] }
+          - scenario: state-failure-is-rejected
+            expect_success: "false"
+            with_optional_checks: "true"
+            fixture: |
+              { "statuses": [ { "context": "Releasability", "state": "failure", "description": "QA failed" } ] }
+          - scenario: state-pending-is-rejected
+            expect_success: "false"
+            with_optional_checks: "true"
+            fixture: |
+              { "statuses": [ { "context": "Releasability", "state": "pending", "description": "Still running" } ] }
+          - scenario: releasability-context-absent
+            expect_success: "false"
+            with_optional_checks: "true"
+            fixture: |
+              { "statuses": [ { "context": "some-other-check", "state": "success", "description": "unrelated" } ] }
+          - scenario: null-statuses-field
+            expect_success: "false"
+            with_optional_checks: "true"
+            fixture: |
+              { "statuses": null }
+          - scenario: failed-optional-checks-rejected-when-enabled
+            expect_success: "false"
+            with_optional_checks: "true"
+            fixture: |
+              { "statuses": [ { "context": "Releasability", "state": "success", "description": "Passed but failed optional checks" } ] }
+          - scenario: failed-optional-checks-allowed-when-disabled
+            expect_success: "true"
+            with_optional_checks: "false"
+            expected_state: success
+            expected_description: Passed but failed optional checks
+            fixture: |
+              { "statuses": [ { "context": "Releasability", "state": "success", "description": "Passed but failed optional checks" } ] }
+          - scenario: failed-optional-checks-match-is-case-insensitive
+            expect_success: "false"
+            with_optional_checks: "true"
+            fixture: |
+              { "statuses": [ { "context": "Releasability", "state": "success", "description": "FAILED OPTIONAL CHECKS" } ] }
+          # Deliberately paired with a fixture that would otherwise be accepted, so a
+          # non-zero gh exit status is the only thing that can make this scenario fail.
+          - scenario: status-api-failure
+            expect_success: "false"
+            with_optional_checks: "true"
+            stub_exit_code: "1"
+            fixture: |
+              { "statuses": [ { "context": "Releasability", "state": "success", "description": "All checks passed" } ] }
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Test Action with Real Repository Context
-        run: |
-          echo "Testing with real repository context..."
-          echo "Repository: ${{ github.repository }}"
-          echo "Branch: master"
-          
-          # The action may succeed or fail depending on whether Releasability status exists
-          # We're primarily testing that the action runs without syntax errors
-          if [ "${{ steps.test-action.outcome }}" = "success" ]; then
-            echo "✓ Action executed successfully - Releasability status is success"
-          else
-            echo "✓ Action failed as expected (likely no Releasability status exists or not success)"
-            echo "This is normal for test repositories that don't have the expected status context"
-          fi
+      - name: Stub gh CLI
+        uses: ./.github/actions/stub-gh-status
+        with:
+          fixture: ${{ matrix.fixture }}
+          exit-code: ${{ matrix.stub_exit_code || '0' }}
 
-  validation-tests:
-    name: Test Input Validation
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Test Without GitHub Token
-        id: test-no-token
+      - name: Check releasability status
+        id: check
         uses: ./check-releasability-status
         with:
-          github-token: ""
+          github-token: test-token
+          with-optional-checks: ${{ matrix.with_optional_checks }}
         continue-on-error: true
 
-      - name: Verify No Token Failure
-        if: steps.test-no-token.outcome == 'success'
+      - name: Verify outcome
+        env:
+          SCENARIO: ${{ matrix.scenario }}
+          EXPECT_SUCCESS: ${{ matrix.expect_success }}
+          OUTCOME: ${{ steps.check.outcome }}
+          STATE: ${{ steps.check.outputs.releasability-state }}
+          DESCRIPTION: ${{ steps.check.outputs.releasability-description }}
+          EXPECTED_STATE: ${{ matrix.expected_state }}
+          EXPECTED_DESCRIPTION: ${{ matrix.expected_description }}
         run: |
-          echo "✗ Action should have failed when no GitHub token is provided"
-          exit 1
+          set -euo pipefail
+          if [ "$EXPECT_SUCCESS" = "true" ]; then
+            if [ "$OUTCOME" != "success" ]; then
+              echo "::error::[$SCENARIO] expected the action to succeed, got '$OUTCOME'"
+              exit 1
+            fi
+            if [ "$STATE" != "$EXPECTED_STATE" ]; then
+              echo "::error::[$SCENARIO] expected releasability-state '$EXPECTED_STATE', got '$STATE'"
+              exit 1
+            fi
+            if [ "$DESCRIPTION" != "$EXPECTED_DESCRIPTION" ]; then
+              echo "::error::[$SCENARIO] expected releasability-description '$EXPECTED_DESCRIPTION', got '$DESCRIPTION'"
+              exit 1
+            fi
+            echo "[$SCENARIO] accepted, and both outputs match"
+          else
+            if [ "$OUTCOME" = "success" ]; then
+              echo "::error::[$SCENARIO] expected the action to fail, but it succeeded"
+              exit 1
+            fi
+            echo "[$SCENARIO] correctly rejected"
+          fi
 
-      - name: Confirm No Token Failure
-        if: steps.test-no-token.outcome == 'failure'
-        run: |
-          echo "✓ Action correctly failed when no GitHub token is provided"
+  branch-input-is-used:
+    name: Branch input reaches the status API
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Test Default Token Usage
-        id: test-default-token
+      - name: Stub gh CLI
+        uses: ./.github/actions/stub-gh-status
+        with:
+          fixture: |
+            { "statuses": [ { "context": "Releasability", "state": "success", "description": "ok" } ] }
+
+      - name: Check a non-default branch
         uses: ./check-releasability-status
-        continue-on-error: true
+        with:
+          github-token: test-token
+          branch: release-9.9
 
-      - name: Verify Default Token Behavior
-        run: |
-          echo "Default token test completed"
-          echo "Outcome: ${{ steps.test-default-token.outcome }}"
-          echo "✓ Action uses default github.token when no token is explicitly provided"
+      - name: Check the default branch
+        uses: ./check-releasability-status
+        with:
+          github-token: test-token
 
-      - name: Summary of Validation Tests
+      - name: Verify the requested branch is the one queried
         run: |
-          echo "================================"
-          echo "Validation Test Results Summary:"
-          echo "================================"
-          echo "✓ Missing token validation: ${{ steps.test-no-token.outcome == 'failure' && 'PASS' || 'FAIL' }}"
-          echo "✓ Default token usage: TESTED"
-          echo "================================"
+          set -euo pipefail
+          log="$RUNNER_TEMP/gh-stub-args.log"
+          echo "gh was called with:"
+          cat "$log"
+          if ! grep -qF '/commits/release-9.9/status' "$log"; then
+            echo "::error::the branch input was not forwarded to the status API"
+            exit 1
+          fi
+          if ! grep -qF '/commits/master/status' "$log"; then
+            echo "::error::the documented default branch (master) was not used when branch was omitted"
+            exit 1
+          fi
+          echo "Both the explicit branch and the declared default reached the API"
