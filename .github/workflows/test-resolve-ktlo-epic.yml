@@ -10,7 +10,6 @@ on:
       - '.github/workflows/test-resolve-ktlo-epic.yml'
   push:
     branches:
-      - master
       - v*
     paths:
       - 'resolve-ktlo-epic/**'

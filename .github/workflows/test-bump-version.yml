@@ -3,7 +3,10 @@ name: Test Bump Version Script
 on:
   workflow_call:
   push:
-    branches: [ master ]
+    branches: [ branch-* ]
+    paths:
+      - 'bump-version/**'
+      - '.github/workflows/test-bump-version.yml'
   pull_request:
     paths:
       - 'bump-version/**'
