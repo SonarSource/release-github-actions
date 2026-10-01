@@ -74,7 +74,7 @@ python assert_ticket_fields.py --use-sandbox true --ticket-key SONAR-101 \
 - name: Set up Python
   uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
   with:
-    python-version: '3.10'
+    python-version-file: .python-version
 
 - name: Install fixture dependencies
   run: pip install -r test-fixtures/jira/requirements.txt
