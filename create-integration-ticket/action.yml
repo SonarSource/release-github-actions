@@ -34,6 +34,13 @@ inputs:
   team:
     description: 'Optional team UUID for the Jira "Team" field.'
     required: false
+  secret-name:
+    description: 'Release automation vault secret name with read access to sonar-enterprise (e.g. sonar-foo-release-automation). Defaults to {REPO_OWNER_NAME_DASH}-release-automation.'
+    required: false
+  token:
+    description: 'GitHub token for reading sonar-enterprise tags; fallback if the vault token is unavailable.'
+    required: false
+    default: ${{ github.token }}
 
 outputs:
   ticket-key:
@@ -53,6 +60,35 @@ runs:
         secrets: |
           development/kv/data/jira user | JIRA_USER;
           development/kv/data/jira token | JIRA_TOKEN;
+
+    - name: Get GitHub token from Vault
+      id: github_secrets
+      if: ${{ inputs.edition != '' }}
+      continue-on-error: true
+      uses: SonarSource/vault-action-wrapper@320bd31b03e5dacaac6be51bbbb15adf7caccc32 # v3.1
+      with:
+        secrets: |
+          development/github/token/${{ inputs.secret-name && format('SonarSource-{0}', inputs.secret-name) || '{REPO_OWNER_NAME_DASH}-release-automation' }} token | VAULT_GITHUB_TOKEN;
+
+    - name: Resolve GitHub token
+      id: resolve_github_token
+      if: ${{ inputs.edition != '' }}
+      shell: bash
+      env:
+        VAULT_OUTCOME: ${{ steps.github_secrets.outcome }}
+        VAULT_TOKEN: ${{ steps.github_secrets.outcome == 'success' && fromJSON(steps.github_secrets.outputs.vault).VAULT_GITHUB_TOKEN || '' }}
+        INPUT_TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+        if [[ "$VAULT_OUTCOME" == "success" && -n "$VAULT_TOKEN" ]]; then
+          echo "Using vault token"
+          echo "token=${VAULT_TOKEN}" >> "$GITHUB_OUTPUT"
+        elif [[ -n "$INPUT_TOKEN" ]]; then
+          echo "Vault token not available, using input token"
+          echo "token=${INPUT_TOKEN}" >> "$GITHUB_OUTPUT"
+        else
+          echo "::warning::No GitHub token available, Fix versions will not be cross-checked against sonar-enterprise tags."
+        fi
 
     - name: Set up Python
       uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
@@ -94,6 +130,7 @@ runs:
       env:
         JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
+        GITHUB_TOKEN: ${{ steps.resolve_github_token.outputs.token }}
         USE_SANDBOX: ${{ inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX }}
         TICKET_DESCRIPTION: |
           ${{ inputs.ticket-description }}${{ inputs.jira-release-url && inputs.ticket-description && '

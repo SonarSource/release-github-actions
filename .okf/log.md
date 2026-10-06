@@ -1,5 +1,17 @@
 # Update Log
 
+## 2026-10-06
+* **Fix versions skip sonar-enterprise tags**: `create-integration-ticket` skips versions already
+  tagged in `sonar-enterprise`, via a vault or new `token` input (see
+  [actions/create-integration-ticket.md](/actions/create-integration-ticket.md)).
+* **Configurable vault secret for integration tickets**: `create-integration-ticket` takes a
+  `secret-name` input, passed from `automated-release.yml` like the update-analyzer steps.
+
+## 2026-10-05
+* **Automatic Fix versions for integration tickets**: With `edition` set, `create-integration-ticket`
+  fills `fixVersions` with the lowest open `sqcb-*`/`sqs-*` version (see
+  [actions/create-integration-ticket.md](/actions/create-integration-ticket.md)).
+
 ## 2026-09-17
 * **Repo-specific repox status preferred**: [get-release-version](/actions/get-release-version.md)
   now reads the exact `repox-<repo-name>-<branch>` context first, falling back to the generic

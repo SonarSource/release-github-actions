@@ -6,6 +6,7 @@ Unit tests for create_integration_ticket.py
 """
 
 import unittest
+import requests
 from unittest.mock import Mock, patch
 import sys
 import os
@@ -16,10 +17,20 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from create_integration_ticket import (
     validate_release_ticket, create_integration_ticket,
-    link_tickets, main
+    link_tickets, main, version_sort_key, find_lowest_version, resolve_fix_versions,
+    fetch_shipped_versions, list_tag_refs, parse_shipped_versions, fetch_open_versions,
+    exclude_shipped_versions
 )
 from jira_common import CUSTOM_FIELDS
 from jira.exceptions import JIRAError
+
+
+def make_version(name, released=False, archived=False):
+    version = Mock()
+    version.name = name
+    version.released = released
+    version.archived = archived
+    return version
 
 
 class TestCreateIntegrationTicket(unittest.TestCase):
@@ -650,6 +661,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
                 mock_jira.createmeta.return_value = {
                     'projects': [{'issuetypes': [{'name': 'Maintenance'}]}]
                 }
+                mock_jira.project_versions.return_value = []
                 mock_ticket = Mock()
                 mock_ticket.key = 'SQS-44'
                 mock_jira.create_issue.return_value = mock_ticket
@@ -673,6 +685,373 @@ class TestCreateIntegrationTicket(unittest.TestCase):
                     self.assertEqual(call_args[CUSTOM_FIELDS['TEAM']], team)
                 else:
                     self.assertNotIn(CUSTOM_FIELDS['TEAM'], call_args)
+
+    def test_version_sort_key_ordering(self):
+        """'major.minor' versions sort numerically, not lexicographically (so '26.10' > '26.9')."""
+        names = ['26.11', '26.9', '26.10']
+        self.assertEqual(sorted(names, key=version_sort_key), ['26.9', '26.10', '26.11'])
+
+    def test_find_lowest_version_picks_lowest(self):
+        versions = [
+            make_version('sqcb-26.11'),
+            make_version('sqcb-26.9'),
+            make_version('sqcb-26.10'),
+        ]
+        self.assertEqual(find_lowest_version(versions, 'sqcb-'), 'sqcb-26.9')
+
+    def test_find_lowest_version_filters_by_prefix(self):
+        versions = [make_version('sqs-2026.5'), make_version('2026.4')]
+        self.assertIsNone(find_lowest_version(versions, 'sqcb-'))
+
+    def test_find_lowest_version_no_candidates(self):
+        self.assertIsNone(find_lowest_version([], 'sqcb-'))
+
+    def test_find_lowest_version_skips_bugfix_versions(self):
+        """Bugfix versions ('major.minor.patch') are ignored."""
+        versions = [make_version('sqs-2025.4.9'), make_version('sqs-2025.5')]
+        self.assertEqual(find_lowest_version(versions, 'sqs-'), 'sqs-2025.5')
+
+    def test_find_lowest_version_skips_non_matching_format(self):
+        versions = [make_version('sqcb-26.10-RC1'), make_version('sqcb-26.11')]
+        self.assertEqual(find_lowest_version(versions, 'sqcb-'), 'sqcb-26.11')
+
+    def test_resolve_fix_versions_community_build(self):
+        mock_jira = Mock()
+        mock_jira.project_versions.return_value = [
+            make_version('sqcb-26.10'), make_version('sqcb-26.9'), make_version('sqs-2026.5'),
+        ]
+        self.assertEqual(resolve_fix_versions(mock_jira, 'SONAR', 'Community Build', None), ['sqcb-26.9'])
+
+    def test_resolve_fix_versions_server(self):
+        mock_jira = Mock()
+        mock_jira.project_versions.return_value = [
+            make_version('sqcb-26.9'), make_version('sqs-2026.6'), make_version('sqs-2026.5'),
+        ]
+        self.assertEqual(resolve_fix_versions(mock_jira, 'SONAR', 'Server', None), ['sqs-2026.5'])
+
+    def test_resolve_fix_versions_community_build_and_server_orders_sqcb_first(self):
+        mock_jira = Mock()
+        mock_jira.project_versions.return_value = [
+            make_version('sqs-2026.5'), make_version('sqcb-26.9'),
+        ]
+        self.assertEqual(
+            resolve_fix_versions(mock_jira, 'SONAR', 'Community Build & Server', None),
+            ['sqcb-26.9', 'sqs-2026.5']
+        )
+        mock_jira.project_versions.assert_called_once_with('SONAR')
+
+    def test_resolve_fix_versions_na_skips_lookup_entirely(self):
+        mock_jira = Mock()
+        self.assertEqual(resolve_fix_versions(mock_jira, 'SONAR', 'N/A', None), [])
+        mock_jira.project_versions.assert_not_called()
+
+    def test_resolve_fix_versions_unknown_edition(self):
+        mock_jira = Mock()
+        self.assertEqual(resolve_fix_versions(mock_jira, 'SONAR', 'Something Else', None), [])
+        mock_jira.project_versions.assert_not_called()
+
+    def test_resolve_fix_versions_no_matching_version(self):
+        mock_jira = Mock()
+        mock_jira.project_versions.return_value = [make_version('sqs-2026.5')]
+        self.assertEqual(resolve_fix_versions(mock_jira, 'SONAR', 'Community Build', None), [])
+
+    def test_resolve_fix_versions_skips_released_and_archived(self):
+        mock_jira = Mock()
+        mock_jira.project_versions.return_value = [
+            make_version('sqcb-26.9', released=True),
+            make_version('sqcb-26.10', archived=True),
+            make_version('sqcb-26.11'),
+        ]
+        self.assertEqual(resolve_fix_versions(mock_jira, 'SONAR', 'Community Build', None), ['sqcb-26.11'])
+
+    @patch('create_integration_ticket.eprint')
+    def test_resolve_fix_versions_lookup_error_is_non_fatal(self, mock_eprint):
+        mock_jira = Mock()
+        mock_jira.project_versions.side_effect = JIRAError(status_code=500, text="Server Error")
+        self.assertEqual(resolve_fix_versions(mock_jira, 'SONAR', 'Community Build', None), [])
+        warnings = ' '.join(call.args[0] for call in mock_eprint.call_args_list)
+        self.assertIn('Failed to fetch versions', warnings)
+        self.assertIn("Skipping automatic 'Fix versions' assignment", warnings)
+
+    def test_find_lowest_version_accepts_single_digit_major(self):
+        """A single-digit major (e.g. '9.1') must not be rejected by the name pattern."""
+        versions = [make_version('sqcb-9.1'), make_version('sqcb-26.9')]
+        self.assertEqual(find_lowest_version(versions, 'sqcb-'), 'sqcb-9.1')
+
+    def test_find_lowest_version_accepts_three_digit_minor(self):
+        """A three-digit minor like '2026.100' is accepted."""
+        versions = [make_version('sqs-2026.100'), make_version('sqs-2026.99')]
+        self.assertEqual(find_lowest_version(versions, 'sqs-'), 'sqs-2026.99')
+
+    def test_find_lowest_version_rejects_prefix_collision(self):
+        """Names with extra text after the prefix (e.g. 'sqcb-lts-26.9') are ignored."""
+        versions = [make_version('sqcb-lts-26.9'), make_version('sqs-next'), make_version('sqcb-26.10')]
+        self.assertEqual(find_lowest_version(versions, 'sqcb-'), 'sqcb-26.10')
+        self.assertIsNone(find_lowest_version(versions, 'sqs-'))
+
+    @patch.dict(os.environ, {'GITHUB_TOKEN': ''})
+    def test_create_integration_ticket_sets_fix_versions_for_edition(self):
+        """Community Build & Server pulls both an sqcb- and an sqs- fix version onto the ticket."""
+        mock_jira = Mock()
+        mock_jira.createmeta.return_value = {
+            'projects': [{'issuetypes': [{'name': 'Maintenance'}]}]
+        }
+        mock_jira.project_versions.return_value = [
+            make_version('sqcb-26.9'), make_version('sqs-2026.5'),
+        ]
+        mock_ticket = Mock()
+        mock_ticket.key = 'SQS-50'
+        mock_jira.create_issue.return_value = mock_ticket
+
+        args = Mock()
+        args.target_jira_project = 'SONAR'
+        args.ticket_summary = 'Update sonar-security to 1.0.0'
+        args.ticket_description = None
+        args.parent_epic = None
+        args.edition = 'Community Build & Server'
+        args.team = None
+
+        create_integration_ticket(mock_jira, args)
+
+        call_args = mock_jira.create_issue.call_args[1]['fields']
+        self.assertEqual(call_args['fixVersions'], [{'name': 'sqcb-26.9'}, {'name': 'sqs-2026.5'}])
+
+    @patch.dict(os.environ, {'GITHUB_TOKEN': ''})
+    def test_create_integration_ticket_sets_edition_team_and_fix_versions_together(self):
+        """Edition, team and fix versions coexist in a single create_issue payload."""
+        mock_jira = Mock()
+        mock_jira.createmeta.return_value = {
+            'projects': [{'issuetypes': [{'name': 'Maintenance'}]}]
+        }
+        mock_jira.project_versions.return_value = [
+            make_version('sqcb-26.9'), make_version('sqs-2026.5'),
+        ]
+        mock_ticket = Mock()
+        mock_ticket.key = 'SQS-54'
+        mock_jira.create_issue.return_value = mock_ticket
+
+        args = Mock()
+        args.target_jira_project = 'SONAR'
+        args.ticket_summary = 'Update sonar-security to 1.0.0'
+        args.ticket_description = None
+        args.parent_epic = None
+        args.edition = 'Community Build & Server'
+        args.team = 'f1da89c9-3712-4d15-b194-a4b24406e3e4'
+
+        create_integration_ticket(mock_jira, args)
+
+        call_args = mock_jira.create_issue.call_args[1]['fields']
+        self.assertEqual(call_args[CUSTOM_FIELDS['EDITION']], {'value': 'Community Build & Server'})
+        self.assertEqual(call_args[CUSTOM_FIELDS['TEAM']], 'f1da89c9-3712-4d15-b194-a4b24406e3e4')
+        self.assertEqual(call_args['fixVersions'], [{'name': 'sqcb-26.9'}, {'name': 'sqs-2026.5'}])
+
+    def test_create_integration_ticket_na_edition_sets_no_fix_versions(self):
+        mock_jira = Mock()
+        mock_jira.createmeta.return_value = {
+            'projects': [{'issuetypes': [{'name': 'Maintenance'}]}]
+        }
+        mock_ticket = Mock()
+        mock_ticket.key = 'SQS-51'
+        mock_jira.create_issue.return_value = mock_ticket
+
+        args = Mock()
+        args.target_jira_project = 'SONAR'
+        args.ticket_summary = 'Update sonar-security to 1.0.0'
+        args.ticket_description = None
+        args.parent_epic = None
+        args.edition = 'N/A'
+        args.team = None
+
+        create_integration_ticket(mock_jira, args)
+
+        call_args = mock_jira.create_issue.call_args[1]['fields']
+        self.assertNotIn('fixVersions', call_args)
+        mock_jira.project_versions.assert_not_called()
+
+    def test_create_integration_ticket_no_edition_sets_no_fix_versions(self):
+        mock_jira = Mock()
+        mock_jira.createmeta.return_value = {
+            'projects': [{'issuetypes': [{'name': 'Maintenance'}]}]
+        }
+        mock_ticket = Mock()
+        mock_ticket.key = 'SQS-52'
+        mock_jira.create_issue.return_value = mock_ticket
+
+        args = Mock()
+        args.target_jira_project = 'SONAR'
+        args.ticket_summary = 'Update sonar-security to 1.0.0'
+        args.ticket_description = None
+        args.parent_epic = None
+        args.edition = None
+        args.team = None
+
+        create_integration_ticket(mock_jira, args)
+
+        call_args = mock_jira.create_issue.call_args[1]['fields']
+        self.assertNotIn('fixVersions', call_args)
+        mock_jira.project_versions.assert_not_called()
+
+    def test_create_integration_ticket_no_matching_version_sets_no_fix_versions(self):
+        mock_jira = Mock()
+        mock_jira.createmeta.return_value = {
+            'projects': [{'issuetypes': [{'name': 'Maintenance'}]}]
+        }
+        mock_jira.project_versions.return_value = []
+        mock_ticket = Mock()
+        mock_ticket.key = 'SQS-53'
+        mock_jira.create_issue.return_value = mock_ticket
+
+        args = Mock()
+        args.target_jira_project = 'SONAR'
+        args.ticket_summary = 'Update sonar-security to 1.0.0'
+        args.ticket_description = None
+        args.parent_epic = None
+        args.edition = 'Community Build'
+        args.team = None
+
+        create_integration_ticket(mock_jira, args)
+
+        call_args = mock_jira.create_issue.call_args[1]['fields']
+        self.assertNotIn('fixVersions', call_args)
+
+    def test_resolve_fix_versions_skips_versions_already_tagged(self):
+        """An open Jira version with a sonar-enterprise tag is already shipped, so the next one wins."""
+        mock_jira = Mock()
+        mock_jira.project_versions.return_value = [make_version('sqcb-26.9'), make_version('sqcb-26.10')]
+        with patch('create_integration_ticket.fetch_shipped_versions', return_value={'sqcb-26.9'}):
+            self.assertEqual(
+                resolve_fix_versions(mock_jira, 'SONAR', 'Community Build', 'token'), ['sqcb-26.10']
+            )
+
+    def test_resolve_fix_versions_filters_each_prefix_by_its_own_tags(self):
+        mock_jira = Mock()
+        mock_jira.project_versions.return_value = [
+            make_version('sqcb-26.9'), make_version('sqcb-26.10'),
+            make_version('sqs-2026.5'), make_version('sqs-2026.6'),
+        ]
+        shipped = {'sqcb-': {'sqcb-26.9'}, 'sqs-': set()}
+        with patch('create_integration_ticket.fetch_shipped_versions',
+                   side_effect=lambda token, prefix: shipped[prefix]):
+            self.assertEqual(
+                resolve_fix_versions(mock_jira, 'SONAR', 'Community Build & Server', 'token'),
+                ['sqcb-26.10', 'sqs-2026.5']
+            )
+
+    def test_resolve_fix_versions_all_candidates_tagged_yields_none(self):
+        mock_jira = Mock()
+        mock_jira.project_versions.return_value = [make_version('sqs-2026.5')]
+        with patch('create_integration_ticket.fetch_shipped_versions', return_value={'sqs-2026.5'}):
+            self.assertEqual(resolve_fix_versions(mock_jira, 'SONAR', 'Server', 'token'), [])
+
+    def test_resolve_fix_versions_tag_lookup_failure_falls_back_to_jira(self):
+        mock_jira = Mock()
+        mock_jira.project_versions.return_value = [make_version('sqcb-26.9'), make_version('sqcb-26.10')]
+        with patch('create_integration_ticket.fetch_shipped_versions', return_value=None):
+            self.assertEqual(
+                resolve_fix_versions(mock_jira, 'SONAR', 'Community Build', 'token'), ['sqcb-26.9']
+            )
+
+    @patch('create_integration_ticket.eprint')
+    def test_resolve_fix_versions_without_token_warns_and_skips_tag_lookup(self, mock_eprint):
+        mock_jira = Mock()
+        mock_jira.project_versions.return_value = [make_version('sqcb-26.9')]
+        with patch('create_integration_ticket.fetch_shipped_versions') as mock_fetch:
+            self.assertEqual(resolve_fix_versions(mock_jira, 'SONAR', 'Community Build', None), ['sqcb-26.9'])
+        mock_fetch.assert_not_called()
+        warnings = ' '.join(call.args[0] for call in mock_eprint.call_args_list)
+        self.assertIn('No GITHUB_TOKEN', warnings)
+
+    def test_resolve_fix_versions_na_makes_no_tag_lookup(self):
+        with patch('create_integration_ticket.fetch_shipped_versions') as mock_fetch:
+            self.assertEqual(resolve_fix_versions(Mock(), 'SONAR', 'N/A', 'token'), [])
+        mock_fetch.assert_not_called()
+
+    @patch('create_integration_ticket.eprint')
+    def test_resolve_fix_versions_without_token_warns_once_for_all_prefixes(self, mock_eprint):
+        mock_jira = Mock()
+        mock_jira.project_versions.return_value = [make_version('sqcb-26.9'), make_version('sqs-2026.5')]
+        resolve_fix_versions(mock_jira, 'SONAR', 'Community Build & Server', None)
+        warnings = [c for c in mock_eprint.call_args_list if 'No GITHUB_TOKEN' in c.args[0]]
+        self.assertEqual(len(warnings), 1)
+
+    def test_parse_shipped_versions_maps_tags_to_jira_versions(self):
+        """Bugfix and build-number tag segments collapse onto the 'major.minor' Jira version."""
+        refs = [
+            'refs/tags/sqs-2026.5.0.132233',
+            'refs/tags/sqs-2026.5.2.132813',
+            'refs/tags/sqs-2026.4.1.126914',
+            'refs/tags/sqs-2026.6',
+        ]
+        self.assertEqual(parse_shipped_versions(refs, 'sqs-'), {'sqs-2026.5', 'sqs-2026.4'})
+
+    def test_parse_shipped_versions_ignores_other_prefixes_and_malformed_refs(self):
+        refs = ['refs/tags/sqsx-2026.5.0.1', 'refs/tags/sqs-foo', 'refs/tags/sqcb-26.9.0.1']
+        self.assertEqual(parse_shipped_versions(refs, 'sqs-'), set())
+
+    def test_parse_shipped_versions_empty(self):
+        self.assertEqual(parse_shipped_versions([], 'sqs-'), set())
+
+    @patch('create_integration_ticket.requests.get')
+    def test_list_tag_refs_sends_token_and_returns_ref_names(self, mock_get):
+        response = Mock(links={})
+        response.json.return_value = [{'ref': 'refs/tags/sqs-2026.5.0.1'}]
+        mock_get.return_value = response
+        self.assertEqual(list_tag_refs('token', 'sqs-'), ['refs/tags/sqs-2026.5.0.1'])
+        self.assertEqual(mock_get.call_args.kwargs['headers']['Authorization'], 'Bearer token')
+        self.assertTrue(mock_get.call_args.args[0].endswith('/tags/sqs-'))
+
+    @patch('create_integration_ticket.requests.get')
+    def test_list_tag_refs_follows_pagination(self, mock_get):
+        page1 = Mock(links={'next': {'url': 'https://api.github.com/next'}})
+        page1.json.return_value = [{'ref': 'refs/tags/sqs-2025.1.0.1'}]
+        page2 = Mock(links={})
+        page2.json.return_value = [{'ref': 'refs/tags/sqs-2026.5.0.2'}]
+        mock_get.side_effect = [page1, page2]
+        self.assertEqual(
+            list_tag_refs('token', 'sqs-'), ['refs/tags/sqs-2025.1.0.1', 'refs/tags/sqs-2026.5.0.2']
+        )
+        self.assertEqual(mock_get.call_args.args[0], 'https://api.github.com/next')
+
+    @patch('create_integration_ticket.requests.get')
+    def test_list_tag_refs_raises_on_http_error(self, mock_get):
+        mock_get.return_value.raise_for_status.side_effect = requests.HTTPError('404 Not Found')
+        with self.assertRaises(requests.HTTPError):
+            list_tag_refs('token', 'sqs-')
+
+    def test_fetch_shipped_versions_combines_listing_and_parsing(self):
+        with patch('create_integration_ticket.list_tag_refs', return_value=['refs/tags/sqs-2026.5.0.1']):
+            self.assertEqual(fetch_shipped_versions('token', 'sqs-'), {'sqs-2026.5'})
+
+    @patch('create_integration_ticket.eprint')
+    def test_fetch_shipped_versions_http_error_returns_none(self, mock_eprint):
+        with patch('create_integration_ticket.list_tag_refs', side_effect=requests.HTTPError('404 Not Found')):
+            self.assertIsNone(fetch_shipped_versions('token', 'sqs-'))
+        self.assertIn('Failed to list sonar-enterprise', mock_eprint.call_args.args[0])
+
+    def test_fetch_open_versions_filters_released_and_archived(self):
+        mock_jira = Mock()
+        open_version = make_version('sqs-2026.6')
+        mock_jira.project_versions.return_value = [
+            make_version('sqs-2026.4', released=True), make_version('sqs-2026.5', archived=True), open_version,
+        ]
+        self.assertEqual(fetch_open_versions(mock_jira, 'SONAR'), [open_version])
+
+    @patch('create_integration_ticket.eprint')
+    def test_fetch_open_versions_returns_none_on_jira_error(self, mock_eprint):
+        mock_jira = Mock()
+        mock_jira.project_versions.side_effect = JIRAError(status_code=500)
+        self.assertIsNone(fetch_open_versions(mock_jira, 'SONAR'))
+
+    def test_exclude_shipped_versions_removes_tagged(self):
+        tagged, untagged = make_version('sqs-2026.5'), make_version('sqs-2026.6')
+        with patch('create_integration_ticket.fetch_shipped_versions', return_value={'sqs-2026.5'}):
+            self.assertEqual(exclude_shipped_versions([tagged, untagged], 'token', 'sqs-'), [untagged])
+
+    def test_exclude_shipped_versions_unchanged_when_lookup_fails_or_empty(self):
+        versions = [make_version('sqs-2026.5')]
+        for shipped in (None, set()):
+            with patch('create_integration_ticket.fetch_shipped_versions', return_value=shipped):
+                self.assertEqual(exclude_shipped_versions(versions, 'token', 'sqs-'), versions)
 
 
 if __name__ == '__main__':

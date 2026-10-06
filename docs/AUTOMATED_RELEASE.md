@@ -176,6 +176,7 @@ jobs:
 - `sqs-ticket-edition` and `sqs-sqc-ticket-team` are optional and applied at ticket creation, so
   a bad value or a field missing from the project's create screen fails the job. `team` takes
   the Atlassian team **UUID**, not the name — read `customfield_10001.id` off an existing ticket.
+- The SQS ticket's `Fix versions` skip versions already tagged in `sonar-enterprise` (vault token from `release-automation-secret-name`, default `sonar-{plugin-name}-release-automation`).
 - Summaries:
   - Each job includes a "Summary" step that writes to `$GITHUB_STEP_SUMMARY` only when `verbose: true`.
   - For non-sandbox releases, a short release announcement containing the project, released version, and GitHub release-notes link is sent to `#team-code-quality-pm-em-lead` after the GitHub release is created. Set `code-quality-leads-slack-notification: false` to opt out. The announcement is skipped when `use-jira-sandbox: true` (the default dry-run mode).

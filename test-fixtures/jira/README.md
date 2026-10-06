@@ -47,17 +47,17 @@ python cleanup.py \
 
 ### `assert_ticket_fields.py`
 
-Re-reads a ticket and asserts its Edition/Team values, catching a wrong custom field ID or
-value shape. Used by the `create-integration-ticket` sandbox integration test, which has no
-setup script — it links against the long-lived sandbox ticket `SONAR-22193` instead, and cleans
-up only the tickets it creates via `cleanup.py --issue-keys` above.
+Re-reads a ticket and asserts its Edition/Team/Fix versions values, catching a wrong custom
+field ID or value shape. Used by the `create-integration-ticket` sandbox integration test, which
+has no setup script — it links against the long-lived sandbox ticket `SONAR-22193` instead, and
+cleans up only the tickets it creates via `cleanup.py --issue-keys` above.
 
-Both `--team` and `--edition` are required, with `NONE` meaning "must be unset", so a run
-cannot pass without asserting anything.
+`--team`, `--edition` and `--fix-versions` are required. `NONE` means "must be unset";
+`--fix-versions` also accepts `ANY`, meaning "must be set".
 
 ```bash
 python assert_ticket_fields.py --use-sandbox true --ticket-key SONAR-101 \
-  --team "$TEAM_UUID" --edition "Community Build & Server"
+  --team "$TEAM_UUID" --edition "Community Build & Server" --fix-versions ANY
 ```
 
 ## Usage in GitHub Actions Workflows

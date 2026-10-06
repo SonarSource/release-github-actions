@@ -91,8 +91,10 @@ jobs:
             --use-sandbox "true" \
             --ticket-key "$TICKET_KEY" \
             --team "f1da89c9-3712-4d15-b194-a4b24406e3e4" \
-            --edition NONE
+            --edition NONE \
+            --fix-versions NONE
 
+      # Sandbox only proves fixVersions is stored; which version wins is unit-tested.
       - name: Create ticket with edition and team
         id: with-edition
         uses: ./create-integration-ticket
@@ -104,7 +106,7 @@ jobs:
           team: 'f1da89c9-3712-4d15-b194-a4b24406e3e4'
           use-jira-sandbox: 'true'
 
-      - name: Verify edition and team were set in step before
+      - name: Verify edition, team and fix versions were set in step before
         env:
           JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
           JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
@@ -115,7 +117,32 @@ jobs:
             --use-sandbox "true" \
             --ticket-key "$TICKET_KEY" \
             --team "f1da89c9-3712-4d15-b194-a4b24406e3e4" \
-            --edition "Community Build & Server"
+            --edition "Community Build & Server" \
+            --fix-versions ANY
+
+      - name: Create ticket with N/A edition
+        id: with-na-edition
+        uses: ./create-integration-ticket
+        with:
+          target-jira-project: SONAR
+          release-ticket-key: 'SONAR-22193'
+          ticket-summary: 'Integration ticket test ${{ github.run_id }} — N/A edition'
+          edition: 'N/A'
+          use-jira-sandbox: 'true'
+
+      - name: Verify N/A edition sets no fix versions
+        env:
+          JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
+          JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
+          TICKET_KEY: ${{ steps.with-na-edition.outputs.ticket-key }}
+        run: |
+          set -euo pipefail
+          python test-fixtures/jira/assert_ticket_fields.py \
+            --use-sandbox "true" \
+            --ticket-key "$TICKET_KEY" \
+            --team NONE \
+            --edition "N/A" \
+            --fix-versions NONE
 
       - name: Create ticket without edition or team
         id: without-fields
@@ -139,7 +166,8 @@ jobs:
             --use-sandbox "true" \
             --ticket-key "$TICKET_KEY" \
             --team NONE \
-            --edition NONE
+            --edition NONE \
+            --fix-versions NONE
 
       # Deleting the created tickets also removes the issue links they added to SONAR-22193.
       - name: Clean up created tickets
@@ -148,7 +176,7 @@ jobs:
           JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
           JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
           CREATED_KEYS: >-
-            ${{ steps.with-team.outputs.ticket-key }},${{ steps.with-edition.outputs.ticket-key }},${{ steps.without-fields.outputs.ticket-key }}
+            ${{ steps.with-team.outputs.ticket-key }},${{ steps.with-edition.outputs.ticket-key }},${{ steps.with-na-edition.outputs.ticket-key }},${{ steps.without-fields.outputs.ticket-key }}
         run: |
           python test-fixtures/jira/cleanup.py \
             --use-sandbox "true" \

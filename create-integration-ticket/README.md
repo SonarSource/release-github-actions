@@ -34,6 +34,8 @@ This action requires:
 | `parent-epic`         | Jira issue key to set as parent of the created ticket (e.g. CPP-7858)                                                                     | No       | -            |
 | `edition`             | Jira "Edition" value. One of: `N/A`, `Community Build`, `Server`, `Community Build & Server`                                              | No       | -            |
 | `team`                | Atlassian team **UUID** for the Jira "Team" field                                                                                         | No       | -            |
+| `secret-name`         | Release automation vault secret name (read as `SonarSource-<secret-name>`) with access to `sonar-enterprise`; defaults to `{REPO_OWNER_NAME_DASH}-release-automation` | No       | -            |
+| `token`               | GitHub token for reading `sonar-enterprise` tags; fallback if the vault token is unavailable                                              | No       | `${{ github.token }}` |
 
 **Note:** Either `ticket-summary` must be provided, or both `plugin-name` and `release-version` must be provided. If `ticket-summary` is not provided, it will be automatically generated as "Update {plugin-name} to {release-version}".
 
@@ -45,6 +47,24 @@ request and the action fails. `edition` is available on `SONAR`, not on `SC`; `t
 
 `team` takes the team UUID, not the name (find it via `customfield_10001.id` on an existing
 ticket's `/rest/api/2/issue/<KEY>`). UUIDs differ between production and sandbox.
+
+### Automatic 'Fix versions'
+
+When `edition` is set, `Fix versions` is filled with the lowest open version per prefix:
+
+| `edition`                    | Fix versions set                   |
+|-------------------------------|-------------------------------------|
+| `N/A`                          | none                                |
+| `Community Build`             | next unreleased `sqcb-*`            |
+| `Server`                       | next unreleased `sqs-*`             |
+| `Community Build & Server`    | next unreleased `sqcb-*` and `sqs-*`|
+
+Released, archived and `sonar-enterprise`-tagged versions (tag `sqs-2026.5.2.1` ⇒ `sqs-2026.5`) are
+skipped. Failures never block ticket creation.
+
+The tag lookup uses the vault `SonarSource-<secret-name>` token if `secret-name` is set, else
+`{REPO_OWNER_NAME_DASH}-release-automation`, falling back to `token`, as in
+[`create-pull-request`](../create-pull-request). Without access to `sonar-enterprise`, only Jira is consulted.
 
 ## Outputs
 

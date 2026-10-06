@@ -36,7 +36,16 @@ dropped. Availability differs per project (`SONAR`: both; `SC`: team only), whic
 Covered by a real Jira sandbox job that re-reads the created tickets and asserts the stored
 values — the only check that catches a wrong custom field ID or value shape. It runs against
 fixed sandbox state (`SONAR-22193`, a fixed team UUID) instead of a setup script, like
-[get-jira-release-notes](/actions/get-jira-release-notes.md).
+[get-jira-release-notes](/actions/get-jira-release-notes.md). `fixVersions` is only asserted as
+set, since which version wins is unit-tested.
+
+# Automatic Fix versions
+
+When `edition` is set, `fixVersions` gets the lowest open `major.minor` version per prefix:
+`sqcb-` (Community Build), `sqs-` (Server) or both; `N/A` sets nothing. Released, archived and
+`sonar-enterprise`-tagged versions are skipped. The tag lookup uses a token resolved like
+[create-pull-request](/actions/create-pull-request.md) (vault `SonarSource-<secret-name>` if the `secret-name` input is set, else `-release-automation`, else the `token`
+input; no token only warns). Any failure falls back to Jira-only or no fix version, never blocking.
 
 # Citations
 
