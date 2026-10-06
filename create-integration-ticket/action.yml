@@ -63,7 +63,7 @@ runs:
 
     - name: Get GitHub token from Vault
       id: github_secrets
-      if: ${{ inputs.edition != '' }}
+      if: ${{ inputs.edition != '' && inputs.edition != 'N/A' }}
       continue-on-error: true
       uses: SonarSource/vault-action-wrapper@320bd31b03e5dacaac6be51bbbb15adf7caccc32 # v3.1
       with:
@@ -72,7 +72,7 @@ runs:
 
     - name: Resolve GitHub token
       id: resolve_github_token
-      if: ${{ inputs.edition != '' }}
+      if: ${{ inputs.edition != '' && inputs.edition != 'N/A' }}
       shell: bash
       env:
         VAULT_OUTCOME: ${{ steps.github_secrets.outcome }}

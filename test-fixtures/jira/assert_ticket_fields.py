@@ -33,7 +33,7 @@ def actual_fix_versions(fields):
     return {v['name'] for v in fields.get('fixVersions', [])}
 
 
-def check(name, expected_arg, got, parse_expected, empty):
+def check(expected_arg, got, parse_expected, empty):
     """Compares one field: NONE = must be empty, ANY = must be set, else exact match."""
     if expected_arg == UNSET:
         ok, expected = got == empty, empty
@@ -41,7 +41,7 @@ def check(name, expected_arg, got, parse_expected, empty):
         ok, expected = got != empty, f'<{ANY}>'
     else:
         expected = parse_expected(expected_arg)
-        ok, expected = got == expected, expected
+        ok = got == expected
     return ok, expected
 
 
@@ -63,7 +63,7 @@ def main():
         ('edition', args.edition, actual(fields, CUSTOM_FIELDS['EDITION'], 'value'), lambda v: v, None),
         ('fixVersions', args.fix_versions, actual_fix_versions(fields), lambda v: set(v.split(',')), set()),
     ]:
-        ok, expected = check(name, expected_arg, got, parse_expected, empty)
+        ok, expected = check(expected_arg, got, parse_expected, empty)
         if ok:
             eprint(f"✅ {args.ticket_key} {name}: {got!r}")
         else:

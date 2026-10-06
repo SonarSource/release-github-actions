@@ -51,7 +51,7 @@ def find_lowest_version(versions, prefix):
 
 
 def list_tag_refs(github_token, prefix):
-    """sonar-enterprise tag refs starting with prefix; raises on HTTP/JSON errors."""
+    """sonar-enterprise tag refs starting with prefix; raises on HTTP errors and malformed payloads."""
     refs = []
     url, params = SONAR_ENTERPRISE_TAGS_URL + prefix, {'per_page': 100}
     while url:
@@ -78,7 +78,7 @@ def fetch_shipped_versions(github_token, prefix):
     """Jira version names already tagged in sonar-enterprise, or None on failure."""
     try:
         return parse_shipped_versions(list_tag_refs(github_token, prefix), prefix)
-    except (requests.RequestException, ValueError) as e:
+    except (requests.RequestException, ValueError, KeyError, TypeError) as e:
         eprint(f"Warning: Failed to list sonar-enterprise '{prefix}*' tags: {e}")
         return None
 
