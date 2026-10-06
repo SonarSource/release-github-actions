@@ -36,6 +36,11 @@ def version_sort_key(name):
     return int(major), int(minor)
 
 
+def sort_by_version(names, prefix):
+    """Sorts 'prefix' + 'major.minor' names numerically, so 'sqcb-26.9' < 'sqcb-26.10'."""
+    return sorted(names, key=lambda name: version_sort_key(name[len(prefix):]))
+
+
 def find_lowest_version(versions, prefix):
     """Lowest 'prefix' + 'major.minor' version name, or None."""
     candidates = [
@@ -45,7 +50,7 @@ def find_lowest_version(versions, prefix):
     if not candidates:
         eprint(f"No open '{prefix}*' version found.")
         return None
-    candidates.sort(key=lambda name: version_sort_key(name[len(prefix):]))
+    candidates = sort_by_version(candidates, prefix)
     eprint(f"Found '{prefix}*' versions {candidates}, using '{candidates[0]}'.")
     return candidates[0]
 
@@ -102,7 +107,10 @@ def exclude_shipped_versions(versions, github_token, prefix):
     shipped = fetch_shipped_versions(github_token, prefix)
     if not shipped:
         return versions
-    eprint(f"Skipping '{prefix}*' versions already tagged in sonar-enterprise: {sorted(shipped)}")
+    already_tagged = [v.name for v in versions if v.name in shipped]
+    if already_tagged:
+        eprint(f"Skipping unreleased '{prefix}*' versions already tagged in sonar-enterprise: "
+               f"{sort_by_version(already_tagged, prefix)}")
     return [v for v in versions if v.name not in shipped]
 
 
@@ -110,8 +118,10 @@ def resolve_fix_versions(jira_client, project_key, edition, github_token):
     """Fix version names for the edition, skipping tagged ones; [] on failure, never blocks."""
     prefixes = EDITION_VERSION_PREFIXES.get(edition)
     if not prefixes:
+        eprint(f"No fix versions for edition '{edition}'.")
         return []
 
+    eprint(f"\nResolving fix versions for edition '{edition}' in project '{project_key}'...")
     open_versions = fetch_open_versions(jira_client, project_key)
     if open_versions is None:
         return []
@@ -122,8 +132,11 @@ def resolve_fix_versions(jira_client, project_key, edition, github_token):
     fix_versions = []
     for prefix in prefixes:
         candidates = exclude_shipped_versions(open_versions, github_token, prefix) if github_token else open_versions
-        fix_versions.append(find_lowest_version(candidates, prefix))
-    return [name for name in fix_versions if name]
+        lowest = find_lowest_version(candidates, prefix)
+        if lowest:
+            fix_versions.append(lowest)
+    eprint(f"Adding fix versions: {', '.join(fix_versions)}" if fix_versions else "No fix versions to add.")
+    return fix_versions
 
 
 def validate_release_ticket(jira_client, release_ticket_key):
@@ -190,6 +203,7 @@ def create_integration_ticket(jira_client, args):
         ticket_details['parent'] = {'key': args.parent_epic}
 
     if getattr(args, 'edition', None):
+        eprint(f"Setting Edition: {args.edition}")
         ticket_details[CUSTOM_FIELDS['EDITION']] = {'value': args.edition}
         fix_versions = resolve_fix_versions(
             jira_client, args.target_jira_project, args.edition, os.environ.get('GITHUB_TOKEN')

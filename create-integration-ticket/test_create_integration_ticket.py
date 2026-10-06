@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from create_integration_ticket import (
     validate_release_ticket, create_integration_ticket,
-    link_tickets, main, version_sort_key, find_lowest_version, resolve_fix_versions,
+    link_tickets, main, version_sort_key, sort_by_version,find_lowest_version, resolve_fix_versions,
     fetch_shipped_versions, list_tag_refs, parse_shipped_versions, fetch_open_versions,
     exclude_shipped_versions
 )
@@ -692,6 +692,11 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         names = ['26.11', '26.9', '26.10']
         self.assertEqual(sorted(names, key=version_sort_key), ['26.9', '26.10', '26.11'])
 
+    def test_sort_by_version_orders_numerically_ignoring_prefix(self):
+        self.assertEqual(
+            sort_by_version(['sqcb-26.10', 'sqcb-26.9'], 'sqcb-'), ['sqcb-26.9', 'sqcb-26.10']
+        )
+
     def test_find_lowest_version_picks_lowest(self):
         versions = [
             make_version('sqcb-26.11'),
@@ -994,6 +999,60 @@ class TestCreateIntegrationTicket(unittest.TestCase):
         for shipped in (None, set()):
             with patch('create_integration_ticket.fetch_shipped_versions', return_value=shipped):
                 self.assertEqual(exclude_shipped_versions(versions, 'token', 'sqs-'), versions)
+
+    @patch('create_integration_ticket.eprint')
+    def test_exclude_shipped_versions_logs_only_skipped_open_versions_sorted(self, mock_eprint):
+        versions = [make_version('sqcb-26.10'), make_version('sqcb-26.9'), make_version('sqcb-26.11')]
+        shipped = {'sqcb-24.12', 'sqcb-26.9', 'sqcb-26.10'}
+        with patch('create_integration_ticket.fetch_shipped_versions', return_value=shipped):
+            exclude_shipped_versions(versions, 'token', 'sqcb-')
+        mock_eprint.assert_called_once_with(
+            "Skipping unreleased 'sqcb-*' versions already tagged in sonar-enterprise: ['sqcb-26.9', 'sqcb-26.10']"
+        )
+
+    @patch('create_integration_ticket.eprint')
+    def test_exclude_shipped_versions_logs_nothing_when_no_open_version_is_tagged(self, mock_eprint):
+        with patch('create_integration_ticket.fetch_shipped_versions', return_value={'sqs-2025.1'}):
+            exclude_shipped_versions([make_version('sqs-2026.6')], 'token', 'sqs-')
+        mock_eprint.assert_not_called()
+
+    @patch('create_integration_ticket.eprint')
+    def test_resolve_fix_versions_logs_header_and_summary(self, mock_eprint):
+        mock_jira = Mock()
+        mock_jira.project_versions.return_value = [make_version('sqcb-26.11'), make_version('sqs-2026.6')]
+        with patch('create_integration_ticket.fetch_shipped_versions', return_value=set()):
+            resolve_fix_versions(mock_jira, 'SONAR', 'Community Build & Server', 'token')
+        messages = [call.args[0] for call in mock_eprint.call_args_list]
+        self.assertEqual(
+            messages[0], "\nResolving fix versions for edition 'Community Build & Server' in project 'SONAR'..."
+        )
+        self.assertEqual(messages[-1], 'Adding fix versions: sqcb-26.11, sqs-2026.6')
+
+    @patch('create_integration_ticket.eprint')
+    def test_resolve_fix_versions_logs_when_nothing_to_add(self, mock_eprint):
+        mock_jira = Mock()
+        mock_jira.project_versions.return_value = []
+        resolve_fix_versions(mock_jira, 'SONAR', 'Server', None)
+        self.assertEqual(mock_eprint.call_args.args[0], 'No fix versions to add.')
+
+    @patch('create_integration_ticket.eprint')
+    def test_resolve_fix_versions_logs_editions_without_prefix(self, mock_eprint):
+        self.assertEqual(resolve_fix_versions(Mock(), 'SONAR', 'N/A', 'token'), [])
+        mock_eprint.assert_called_once_with("No fix versions for edition 'N/A'.")
+
+    @patch('create_integration_ticket.eprint')
+    def test_create_integration_ticket_logs_edition(self, mock_eprint):
+        mock_jira = Mock()
+        mock_jira.project.return_value = Mock(issueTypes=[Mock(**{'name': 'Task'})])
+        mock_jira.createmeta.return_value = {'projects': [{'issuetypes': [{'name': 'Task'}]}]}
+        args = Mock(
+            target_jira_project='INT', ticket_summary='s', ticket_description=None,
+            issue_type='Task', parent_epic=None, edition='N/A', team=None,
+        )
+        with patch('create_integration_ticket.resolve_fix_versions', return_value=[]):
+            create_integration_ticket(mock_jira, args)
+        messages = [call.args[0] for call in mock_eprint.call_args_list]
+        self.assertIn('Setting Edition: N/A', messages)
 
 
 if __name__ == '__main__':
