@@ -43,10 +43,10 @@ set, since which version wins is unit-tested.
 
 When `edition` is set, `fixVersions` gets the lowest open `major.minor` version per prefix:
 `sqcb-` (Community Build), `sqs-` (Server) or both; `N/A` sets nothing. Released, archived and
-`sonar-enterprise`-tagged versions are skipped. The tag lookup uses a token from vault `SonarSource-<secret-name>` if the `secret-name` input is
-set, else `{REPO_OWNER_NAME_DASH}-release-automation`, falling back to the `token` input (the same
-vault-then-token fallback as [create-pull-request](/actions/create-pull-request.md)); no token only
-warns. Any failure falls back to Jira-only or no fix version, never blocking.
+`sonar-enterprise`-tagged versions are skipped. The tag lookup uses a token from vault
+`SonarSource-<secret-name>` if the `secret-name` input is set, else
+`{REPO_OWNER_NAME_DASH}-release-automation`. An unavailable token only warns.
+Any failure falls back to Jira-only or no fix version, never blocking.
 
 # Citations
 

@@ -35,7 +35,6 @@ This action requires:
 | `edition`             | Jira "Edition" value. One of: `N/A`, `Community Build`, `Server`, `Community Build & Server`                                              | No       | -            |
 | `team`                | Atlassian team **UUID** for the Jira "Team" field                                                                                         | No       | -            |
 | `secret-name`         | Release automation vault secret name (read as `SonarSource-<secret-name>`) with access to `sonar-enterprise`; defaults to `{REPO_OWNER_NAME_DASH}-release-automation` | No       | -            |
-| `token`               | GitHub token for reading `sonar-enterprise` tags; fallback if the vault token is unavailable                                              | No       | `${{ github.token }}` |
 
 **Note:** Either `ticket-summary` must be provided, or both `plugin-name` and `release-version` must be provided. If `ticket-summary` is not provided, it will be automatically generated as "Update {plugin-name} to {release-version}".
 
@@ -63,8 +62,8 @@ Released, archived and `sonar-enterprise`-tagged versions (tag `sqs-2026.5.2.1` 
 skipped. Failures never block ticket creation.
 
 The tag lookup uses the vault `SonarSource-<secret-name>` token if `secret-name` is set, else
-`{REPO_OWNER_NAME_DASH}-release-automation`, falling back to `token`, as in
-[`create-pull-request`](../create-pull-request). Without access to `sonar-enterprise`, only Jira is consulted.
+`{REPO_OWNER_NAME_DASH}-release-automation`. If the vault token is unavailable or cannot access
+`sonar-enterprise`, the action warns and only Jira is consulted.
 
 ## Outputs
 
