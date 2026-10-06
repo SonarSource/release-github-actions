@@ -877,7 +877,7 @@ jobs:
       - name: Create SQS Ticket
         if: ${{ inputs.sqs-integration }}
         id: create-sqs-ticket
-        uses: SonarSource/release-github-actions/create-integration-ticket@jw/integration-ticket-fix-versions
+        uses: SonarSource/release-github-actions/create-integration-ticket@master
         with:
           plugin-name: ${{ inputs.plugin-name }}
           release-version: ${{ needs.prepare-release.outputs.release-version }}
