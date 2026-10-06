@@ -92,8 +92,8 @@ def fetch_open_versions(jira_client, project_key):
     """Unreleased, non-archived project versions, or None on failure."""
     try:
         versions = jira_client.project_versions(project_key)
-    except JIRAError as e:
-        eprint(f"Warning: Failed to fetch versions for project '{project_key}'. Status: {e.status_code}")
+    except (JIRAError, requests.RequestException, ValueError) as e:
+        eprint(f"Warning: Failed to fetch versions for project '{project_key}': {e}")
         eprint("Warning: Skipping automatic 'Fix versions' assignment.")
         return None
     return [

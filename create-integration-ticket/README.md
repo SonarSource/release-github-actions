@@ -59,7 +59,8 @@ When `edition` is set, `Fix versions` is filled with the lowest open version per
 | `Community Build & Server`    | next unreleased `sqcb-*` and `sqs-*`|
 
 Released, archived and `sonar-enterprise`-tagged versions (tag `sqs-2026.5.2.1` ⇒ `sqs-2026.5`) are
-skipped. Failures never block ticket creation.
+skipped. If Jira version lookup fails (including connection errors, timeouts or invalid JSON),
+the action warns and creates the ticket without automatic Fix versions.
 
 The tag lookup uses the vault `SonarSource-<secret-name>` token if `secret-name` is set, else
 `{REPO_OWNER_NAME_DASH}-release-automation`. If the vault token is unavailable or cannot access
@@ -155,3 +156,4 @@ The action will fail if:
 The action will continue but warn if:
 - The description field cannot be set (due to project configuration or permissions)
 - Ticket linking fails (the ticket is still created successfully)
+- Automatic Fix versions lookup fails (Jira failure omits Fix versions; GitHub failure uses Jira-only selection)

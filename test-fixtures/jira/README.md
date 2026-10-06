@@ -52,12 +52,20 @@ field ID or value shape. Used by the `create-integration-ticket` sandbox integra
 has no setup script — it links against the long-lived sandbox ticket `SONAR-22193` instead, and
 cleans up only the tickets it creates via `cleanup.py --issue-keys` above.
 
-`--team`, `--edition` and `--fix-versions` are required. `NONE` means "must be unset";
-`--fix-versions` also accepts `ANY`, meaning "must be set".
+`--team` and `--edition` are required, with `NONE` meaning "must be unset". Supply exactly one of:
+
+- `--fix-versions`: comma-separated exact names, `NONE` (unset), or `ANY` (nonempty).
+- `--fix-version-prefixes`: comma-separated prefixes, requiring exactly one version per prefix
+  and no unrelated versions. The integration ticket sandbox test uses this to require both
+  `sqcb-*` and `sqs-*` without hardcoding release numbers.
+
+The `SONAR` sandbox must contain an eligible unreleased, non-archived `major.minor` version
+for each prefix, excluding versions already tagged in `sonar-enterprise` when tag lookup is
+available. Version selection and the `N/A` edition are covered by local unit tests.
 
 ```bash
 python assert_ticket_fields.py --use-sandbox true --ticket-key SONAR-101 \
-  --team "$TEAM_UUID" --edition "Community Build & Server" --fix-versions ANY
+  --team "$TEAM_UUID" --edition "Community Build & Server" --fix-version-prefixes sqcb-,sqs-
 ```
 
 ## Usage in GitHub Actions Workflows

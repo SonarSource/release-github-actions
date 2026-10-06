@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Re-reads a Jira ticket and asserts its Edition, Team and Fix versions (NONE = unset, ANY = set).
+Re-reads a Jira ticket and asserts its Edition, Team and Fix versions.
 
 Usage:
     python assert_ticket_fields.py --use-sandbox true --ticket-key SONAR-101 \
         --team f1da89c9-3712-4d15-b194-a4b24406e3e4 --edition "Community Build & Server" \
-        --fix-versions ANY
+        --fix-version-prefixes sqcb-,sqs-
     python assert_ticket_fields.py --use-sandbox true --ticket-key GHA-102 \
         --team NONE --edition NONE --fix-versions NONE
 """
@@ -45,25 +45,51 @@ def check(expected_arg, got, parse_expected, empty):
     return ok, expected
 
 
+def check_fix_version_prefixes(expected_arg, got):
+    """Requires exactly one version per prefix and no unrelated versions."""
+    prefixes = expected_arg.split(',')
+    expected = {f'{prefix}*' for prefix in prefixes}
+    ok = (
+        all(prefixes)
+        and len(got) == len(prefixes)
+        and all(sum(name.startswith(prefix) for name in got) == 1 for prefix in prefixes)
+        and all(any(name.startswith(prefix) for prefix in prefixes) for name in got)
+    )
+    return ok, expected
+
+
 def main():
     parser = argparse.ArgumentParser(description="Assert Edition/Team/Fix versions on a Jira ticket.")
     parser.add_argument("--use-sandbox", default="false")
     parser.add_argument("--ticket-key", required=True)
     parser.add_argument("--team", required=True, help=f"Expected team UUID, or {UNSET}.")
     parser.add_argument("--edition", required=True, help=f"Expected Edition value, or {UNSET}.")
-    parser.add_argument("--fix-versions", required=True,
-                         help=f"Comma-separated expected Fix versions names, {UNSET}, or {ANY}.")
+    fix_versions = parser.add_mutually_exclusive_group(required=True)
+    fix_versions.add_argument("--fix-versions",
+                              help=f"Comma-separated expected Fix versions names, {UNSET}, or {ANY}.")
+    fix_versions.add_argument("--fix-version-prefixes",
+                              help="Comma-separated prefixes; require exactly one Fix version per prefix.")
     args = parser.parse_args()
 
     fields = get_jira_instance(args.use_sandbox).issue(args.ticket_key).raw['fields']
 
+    values = {
+        'team': actual(fields, CUSTOM_FIELDS['TEAM'], 'id'),
+        'edition': actual(fields, CUSTOM_FIELDS['EDITION'], 'value'),
+        'fixVersions': actual_fix_versions(fields),
+    }
+    checks = {
+        'team': check(args.team, values['team'], str, None),
+        'edition': check(args.edition, values['edition'], str, None),
+        'fixVersions': (
+            check_fix_version_prefixes(args.fix_version_prefixes, values['fixVersions'])
+            if args.fix_version_prefixes is not None
+            else check(args.fix_versions, values['fixVersions'], lambda v: set(v.split(',')), set())
+        ),
+    }
     failed = False
-    for name, expected_arg, got, parse_expected, empty in [
-        ('team', args.team, actual(fields, CUSTOM_FIELDS['TEAM'], 'id'), lambda v: v, None),
-        ('edition', args.edition, actual(fields, CUSTOM_FIELDS['EDITION'], 'value'), lambda v: v, None),
-        ('fixVersions', args.fix_versions, actual_fix_versions(fields), lambda v: set(v.split(',')), set()),
-    ]:
-        ok, expected = check(expected_arg, got, parse_expected, empty)
+    for name, (ok, expected) in checks.items():
+        got = values[name]
         if ok:
             eprint(f"✅ {args.ticket_key} {name}: {got!r}")
         else:
