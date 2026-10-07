@@ -91,7 +91,7 @@ runs:
 
     - name: Send Slack Notification
       if: ${{ inputs.slack-channel != '' }}
-      uses: SonarSource/release-github-actions/notify-slack@master
+      uses: SonarSource/release-github-actions/notify-slack@e9a93a9d84a482a3a90d750cd3079d645b7d423a
       with:
         project-name: ${{ github.repository }}
         slack-channel: ${{ inputs.slack-channel }}

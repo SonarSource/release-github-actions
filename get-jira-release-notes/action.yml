@@ -49,7 +49,7 @@ runs:
 
     - name: Get JIRA_VERSION_NAME if not provided
       if: ${{ !inputs.jira-version-name && !env.JIRA_VERSION_NAME }}
-      uses: SonarSource/release-github-actions/get-jira-version@master
+      uses: SonarSource/release-github-actions/get-jira-version@e9a93a9d84a482a3a90d750cd3079d645b7d423a
 
     - name: Get Jira release notes and URL
       id: get_notes
