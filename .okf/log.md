@@ -1,13 +1,9 @@
 # Update Log
 
 ## 2026-10-06
-* **Automatic integration ticket Fix versions**: Selects the lowest open `sqcb-*`/`sqs-*`
-  versions by edition, skipping `sonar-enterprise` tags; adds a `secret-name` input
-  and forwards the release automation secret from `automated-release.yml`.
-* **Integration ticket test consolidation**: Replaces overlapping helper and logging tests
-  with behavior cases, covers lookup failures and token propagation through ticket creation,
-  and requires one stored fix version per edition prefix in the sandbox. Jira connection
-  errors, timeouts and invalid JSON no longer block ticket creation.
+* **Automatic integration ticket Fix versions**: Selects versions by edition, excluding
+  `sonar-enterprise` tags; adds `secret-name`, forwarded by `automated-release.yml`.
+* **Sandbox assertions**: Require one Fix version per edition prefix and no unrelated versions.
 
 ## 2026-09-17
 * **Repo-specific repox status preferred**: [get-release-version](/actions/get-release-version.md)

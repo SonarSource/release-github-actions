@@ -56,12 +56,10 @@ cleans up only the tickets it creates via `cleanup.py --issue-keys` above.
 
 - `--fix-versions`: comma-separated exact names, `NONE` (unset), or `ANY` (nonempty).
 - `--fix-version-prefixes`: comma-separated prefixes, requiring exactly one version per prefix
-  and no unrelated versions. The integration ticket sandbox test uses this to require both
-  `sqcb-*` and `sqs-*` without hardcoding release numbers.
+  and no unrelated versions.
 
-The `SONAR` sandbox must contain an eligible unreleased, non-archived `major.minor` version
-for each prefix, excluding versions already tagged in `sonar-enterprise` when tag lookup is
-available. Version selection and the `N/A` edition are covered by local unit tests.
+The sandbox test requires an [eligible version](../../create-integration-ticket/README.md#automatic-fix-versions)
+for each of `sqcb-` and `sqs-` in `SONAR`.
 
 ```bash
 python assert_ticket_fields.py --use-sandbox true --ticket-key SONAR-101 \

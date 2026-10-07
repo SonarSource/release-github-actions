@@ -52,7 +52,7 @@ This workflow composes several actions from this repository:
 | `use-jira-sandbox`           | Use Jira sandbox. The workflow treats this as a dry run and suppresses the Code Quality leads release announcement. | No       | `true`       |
 | `is-draft-release`           | Create the GitHub release as a draft                                                                            | No       | `true`       |
 | `pm-email`                   | Product manager email to assign the release ticket after technical release                                      | Yes      | -            |
-| `release-automation-secret-name` | Secret name used to create analyzer update PRs. If omitted, defaults to `sonar-{plugin-name}-release-automation`. | No       | -            |
+| `release-automation-secret-name` | Token secret for analyzer update PRs and `sonar-enterprise` tag lookup. Defaults to `sonar-{plugin-name}-release-automation`. | No       | -            |
 | `short-description`          | Brief summary for release and integration tickets                                                               | Yes      | -            |
 | `rule-props-changed`         | Whether rule properties changed (`true`/`false`); mapped to Yes/No in the release ticket                        | Yes      | -            |
 | `branch`                     | Branch to release from                                                                                          | Yes      | `master`     |
@@ -176,7 +176,7 @@ jobs:
 - `sqs-ticket-edition` and `sqs-sqc-ticket-team` are optional and applied at ticket creation, so
   a bad value or a field missing from the project's create screen fails the job. `team` takes
   the Atlassian team **UUID**, not the name — read `customfield_10001.id` off an existing ticket.
-- The SQS ticket's `Fix versions` skip versions already tagged in `sonar-enterprise` (vault token from `release-automation-secret-name`, default `sonar-{plugin-name}-release-automation`).
+- When `sqs-ticket-edition` is set, [automatic Fix versions](../create-integration-ticket/README.md#automatic-fix-versions) uses `release-automation-secret-name` for tag lookup.
 - Summaries:
   - Each job includes a "Summary" step that writes to `$GITHUB_STEP_SUMMARY` only when `verbose: true`.
   - For non-sandbox releases, a short release announcement containing the project, released version, and GitHub release-notes link is sent to `#team-code-quality-pm-em-lead` after the GitHub release is created. Set `code-quality-leads-slack-notification: false` to opt out. The announcement is skipped when `use-jira-sandbox: true` (the default dry-run mode).

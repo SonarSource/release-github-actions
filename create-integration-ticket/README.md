@@ -34,7 +34,7 @@ This action requires:
 | `parent-epic`         | Jira issue key to set as parent of the created ticket (e.g. CPP-7858)                                                                     | No       | -            |
 | `edition`             | Jira "Edition" value. One of: `N/A`, `Community Build`, `Server`, `Community Build & Server`                                              | No       | -            |
 | `team`                | Atlassian team **UUID** for the Jira "Team" field                                                                                         | No       | -            |
-| `secret-name`         | Release automation vault secret name (read as `SonarSource-<secret-name>`) with access to `sonar-enterprise`; defaults to `{REPO_OWNER_NAME_DASH}-release-automation` | No       | -            |
+| `secret-name`         | Vault token secret with read access to `sonar-enterprise`; read as `SonarSource-<secret-name>` when supplied | No       | `{REPO_OWNER_NAME_DASH}-release-automation` |
 
 **Note:** Either `ticket-summary` must be provided, or both `plugin-name` and `release-version` must be provided. If `ticket-summary` is not provided, it will be automatically generated as "Update {plugin-name} to {release-version}".
 
@@ -47,24 +47,20 @@ request and the action fails. `edition` is available on `SONAR`, not on `SC`; `t
 `team` takes the team UUID, not the name (find it via `customfield_10001.id` on an existing
 ticket's `/rest/api/2/issue/<KEY>`). UUIDs differ between production and sandbox.
 
-### Automatic 'Fix versions'
+### Automatic Fix versions
 
-When `edition` is set, `Fix versions` is filled with the lowest open version per prefix:
+When `edition` is set, Fix versions uses the lowest unreleased, non-archived `major.minor`
+version per prefix, excluding versions already tagged in `sonar-enterprise`:
 
-| `edition`                    | Fix versions set                   |
-|-------------------------------|-------------------------------------|
-| `N/A`                          | none                                |
-| `Community Build`             | next unreleased `sqcb-*`            |
-| `Server`                       | next unreleased `sqs-*`             |
-| `Community Build & Server`    | next unreleased `sqcb-*` and `sqs-*`|
+| `edition`                  | Version prefixes |
+|----------------------------|------------------|
+| `N/A`                      | none             |
+| `Community Build`          | `sqcb-`          |
+| `Server`                   | `sqs-`           |
+| `Community Build & Server` | `sqcb-`, `sqs-`  |
 
-Released, archived and `sonar-enterprise`-tagged versions (tag `sqs-2026.5.2.1` ⇒ `sqs-2026.5`) are
-skipped. If Jira version lookup fails (including connection errors, timeouts or invalid JSON),
-the action warns and creates the ticket without automatic Fix versions.
-
-The tag lookup uses the vault `SonarSource-<secret-name>` token if `secret-name` is set, else
-`{REPO_OWNER_NAME_DASH}-release-automation`. If the vault token is unavailable or cannot access
-`sonar-enterprise`, the action warns and only Jira is consulted.
+For example, tag `sqs-2026.5.2.1` excludes Jira version `sqs-2026.5`.
+Tag lookup uses the `secret-name` token. Missing candidates are omitted.
 
 ## Outputs
 
@@ -156,4 +152,4 @@ The action will fail if:
 The action will continue but warn if:
 - The description field cannot be set (due to project configuration or permissions)
 - Ticket linking fails (the ticket is still created successfully)
-- Automatic Fix versions lookup fails (Jira failure omits Fix versions; GitHub failure uses Jira-only selection)
+- Automatic Fix versions lookup fails: Jira lookup failure omits Fix versions; an unavailable token or GitHub lookup failure uses Jira-only selection.
