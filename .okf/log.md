@@ -1,5 +1,10 @@
 # Update Log
 
+## 2026-10-06
+* **Automatic integration ticket Fix versions**: Selects versions by edition, excluding
+  `sonar-enterprise` tags; adds `secret-name`, forwarded by `automated-release.yml`.
+* **Sandbox assertions**: Require one Fix version per edition prefix and no unrelated versions.
+
 ## 2026-09-17
 * **Repo-specific repox status preferred**: [get-release-version](/actions/get-release-version.md)
   now reads the exact `repox-<repo-name>-<branch>` context first, falling back to the generic

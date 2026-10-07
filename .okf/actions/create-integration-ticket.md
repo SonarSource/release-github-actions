@@ -4,7 +4,7 @@ title: Create Integration Ticket
 description: Creates a Jira integration ticket with a custom summary and links it to an existing release ticket.
 resource: https://github.com/SonarSource/release-github-actions/tree/master/create-integration-ticket
 tags: [action, jira, integration-ticket]
-timestamp: 2026-08-05T00:00:00Z
+timestamp: 2026-10-06T00:00:00Z
 ---
 
 # Overview
@@ -36,7 +36,15 @@ dropped. Availability differs per project (`SONAR`: both; `SC`: team only), whic
 Covered by a real Jira sandbox job that re-reads the created tickets and asserts the stored
 values — the only check that catches a wrong custom field ID or value shape. It runs against
 fixed sandbox state (`SONAR-22193`, a fixed team UUID) instead of a setup script, like
-[get-jira-release-notes](/actions/get-jira-release-notes.md).
+[get-jira-release-notes](/actions/get-jira-release-notes.md). The sandbox also asserts exactly
+one Fix version per edition prefix and no unrelated versions, requiring eligible open versions.
+
+# Automatic Fix versions
+
+When `edition` is set, `fixVersions` gets the lowest unreleased, non-archived `major.minor`
+version per prefix: `sqcb-` (Community Build), `sqs-` (Server) or both; `N/A` sets nothing.
+The `secret-name` token excludes `sonar-enterprise`-tagged versions. Jira lookup failure omits
+Fix versions; unavailable GitHub lookup uses Jira-only selection.
 
 # Citations
 

@@ -34,6 +34,9 @@ inputs:
   team:
     description: 'Optional team UUID for the Jira "Team" field.'
     required: false
+  secret-name:
+    description: 'Release automation vault secret name with read access to sonar-enterprise (e.g. sonar-foo-release-automation). Defaults to {REPO_OWNER_NAME_DASH}-release-automation.'
+    required: false
 
 outputs:
   ticket-key:
@@ -53,6 +56,15 @@ runs:
         secrets: |
           development/kv/data/jira user | JIRA_USER;
           development/kv/data/jira token | JIRA_TOKEN;
+
+    - name: Get GitHub token from Vault
+      id: github_secrets
+      if: ${{ inputs.edition != '' && inputs.edition != 'N/A' }}
+      continue-on-error: true
+      uses: SonarSource/vault-action-wrapper@320bd31b03e5dacaac6be51bbbb15adf7caccc32 # v3.1
+      with:
+        secrets: |
+          development/github/token/${{ inputs.secret-name && format('SonarSource-{0}', inputs.secret-name) || '{REPO_OWNER_NAME_DASH}-release-automation' }} token | VAULT_GITHUB_TOKEN;
 
     - name: Set up Python
       uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
@@ -94,6 +106,7 @@ runs:
       env:
         JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
         JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
+        GITHUB_TOKEN: ${{ steps.github_secrets.outcome == 'success' && fromJSON(steps.github_secrets.outputs.vault).VAULT_GITHUB_TOKEN || '' }}
         USE_SANDBOX: ${{ inputs.use-jira-sandbox || env.USE_JIRA_SANDBOX }}
         TICKET_DESCRIPTION: |
           ${{ inputs.ticket-description }}${{ inputs.jira-release-url && inputs.ticket-description && '
