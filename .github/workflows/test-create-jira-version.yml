@@ -5,12 +5,14 @@ on:
   pull_request:
     paths:
       - 'create-jira-version/**'
+      - 'shared/**'
       - '.github/workflows/test-create-jira-version.yml'
   push:
     branches:
       - branch-*
     paths:
       - 'create-jira-version/**'
+      - 'shared/**'
       - '.github/workflows/test-create-jira-version.yml'
   workflow_dispatch:
 
