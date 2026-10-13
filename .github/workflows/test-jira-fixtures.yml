@@ -38,7 +38,7 @@ jobs:
       - name: Run unit tests
         run: |
           cd test-fixtures/jira
-          python -m pytest test_jira_client.py test_setup.py test_cleanup.py -v --cov=jira_client --cov=setup --cov=cleanup --cov-report=term-missing --cov-report=xml:coverage.xml
+          python -m pytest test_*.py -v --cov=jira_client --cov=setup --cov=cleanup --cov=assert_ticket_fields --cov-report=term-missing --cov-report=xml:coverage.xml
 
       - name: Upload coverage report
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

@@ -888,6 +888,7 @@ jobs:
           parent-epic: ${{ steps.resolve-ktlo-epic.outputs.epic-key }}
           edition: ${{ inputs.sqs-ticket-edition }}
           team: ${{ inputs.sqs-sqc-ticket-team }}
+          secret-name: ${{ inputs.release-automation-secret-name || format('sonar-{0}-release-automation', inputs.plugin-name) }}
 
       - name: Summary
         if: ${{ inputs.verbose }}

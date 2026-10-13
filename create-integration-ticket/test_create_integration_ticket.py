@@ -22,6 +22,7 @@ from jira_common import CUSTOM_FIELDS
 from jira.exceptions import JIRAError
 
 
+@patch.dict(os.environ, {'GITHUB_TOKEN': ''})
 class TestCreateIntegrationTicket(unittest.TestCase):
 
     def setUp(self):
@@ -650,6 +651,7 @@ class TestCreateIntegrationTicket(unittest.TestCase):
                 mock_jira.createmeta.return_value = {
                     'projects': [{'issuetypes': [{'name': 'Maintenance'}]}]
                 }
+                mock_jira.project_versions.return_value = []
                 mock_ticket = Mock()
                 mock_ticket.key = 'SQS-44'
                 mock_jira.create_issue.return_value = mock_ticket
@@ -673,7 +675,6 @@ class TestCreateIntegrationTicket(unittest.TestCase):
                     self.assertEqual(call_args[CUSTOM_FIELDS['TEAM']], team)
                 else:
                     self.assertNotIn(CUSTOM_FIELDS['TEAM'], call_args)
-
 
 if __name__ == '__main__':
     unittest.main()

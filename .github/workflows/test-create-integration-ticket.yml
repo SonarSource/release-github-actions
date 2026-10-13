@@ -41,7 +41,7 @@ jobs:
       - name: Run unit tests
         run: |
           cd create-integration-ticket
-          python -m pytest test_create_integration_ticket.py -v --cov=create_integration_ticket --cov-report=term-missing
+          python -m pytest test_*.py -v --cov=create_integration_ticket --cov-report=term-missing
 
   integration-tests:
     name: Integration Tests (Jira Sandbox)
@@ -91,8 +91,10 @@ jobs:
             --use-sandbox "true" \
             --ticket-key "$TICKET_KEY" \
             --team "f1da89c9-3712-4d15-b194-a4b24406e3e4" \
-            --edition NONE
+            --edition NONE \
+            --fix-versions NONE
 
+      # Requires an eligible open version per prefix in SONAR; which version wins is unit-tested.
       - name: Create ticket with edition and team
         id: with-edition
         uses: ./create-integration-ticket
@@ -104,7 +106,7 @@ jobs:
           team: 'f1da89c9-3712-4d15-b194-a4b24406e3e4'
           use-jira-sandbox: 'true'
 
-      - name: Verify edition and team were set in step before
+      - name: Verify edition, team and fix versions were set in step before
         env:
           JIRA_USER: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_USER }}
           JIRA_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).JIRA_TOKEN }}
@@ -115,7 +117,8 @@ jobs:
             --use-sandbox "true" \
             --ticket-key "$TICKET_KEY" \
             --team "f1da89c9-3712-4d15-b194-a4b24406e3e4" \
-            --edition "Community Build & Server"
+            --edition "Community Build & Server" \
+            --fix-version-prefixes sqcb-,sqs-
 
       - name: Create ticket without edition or team
         id: without-fields
@@ -139,7 +142,8 @@ jobs:
             --use-sandbox "true" \
             --ticket-key "$TICKET_KEY" \
             --team NONE \
-            --edition NONE
+            --edition NONE \
+            --fix-versions NONE
 
       # Deleting the created tickets also removes the issue links they added to SONAR-22193.
       - name: Clean up created tickets
