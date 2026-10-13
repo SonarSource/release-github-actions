@@ -86,7 +86,8 @@ action-name/
 ### Key Patterns
 - All actions use `using: "composite"` (not JavaScript/Docker)
 - Credentials from `SonarSource/vault-action-wrapper@v3`
-- Python actions use Python 3.10
+- Python actions read the version from the root `.python-version` with `python-version-file: ${{ github.action_path }}/../.python-version`
+- Test workflows read the same file after checkout with `python-version-file: .python-version`
 - Error output via stderr (`eprint()`), values via stdout to `$GITHUB_OUTPUT`
 - Input precedence: explicit input > environment variable > default
 
@@ -186,7 +187,7 @@ Scripts call `get_jira_instance(args.use_sandbox)` — URL resolution happens in
 
 ### Conventions for every new action
 
-- `using: "composite"`; Python 3.10; use the canonical JIRA URL expression above.
+- `using: "composite"`; use the root `.python-version` for Python setup as described above; use the canonical JIRA URL expression above.
 - Outputs via stdout `key=value` → `action.yml` redirects `>> $GITHUB_OUTPUT`; diagnostics via `eprint()` to stderr.
 - External (non-SonarSource) actions pinned to a full commit SHA with a version comment.
 - New action → `README.md` in its directory + link from root `README.md`.
