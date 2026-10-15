@@ -20,7 +20,7 @@ runs:
           VERSION=$(echo "$RELEASE_VERSION" | cut -d '+' -f 1 | cut -d '.' -f 1-3)
           
           # Remove trailing '.0' if it exists (to match Jira version format)
-          JIRA_VERSION_NAME=$(echo "$VERSION" | sed 's/\.0$//')
+          JIRA_VERSION_NAME=$(echo "$VERSION" | sed -E 's/^([^.]+\.[^.]+)\.0$/\1/')
 
           echo "JIRA_VERSION_NAME: ${JIRA_VERSION_NAME}"
           echo "JIRA_VERSION_NAME=${JIRA_VERSION_NAME}" >> "$GITHUB_ENV"
