@@ -34,6 +34,8 @@ class TestNormalizeVersionName(unittest.TestCase):
     def test_handles_two_part_versions(self):
         """Test that two-part versions are unchanged."""
         self.assertEqual(normalize_version_name('1.2'), '1.2')
+        self.assertEqual(normalize_version_name('12.0'), '12.0')
+        self.assertEqual(normalize_version_name('v12.0'), 'v12.0')
 
     def test_handles_single_zero(self):
         """Test edge case with just 0."""
