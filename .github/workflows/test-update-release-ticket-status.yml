@@ -5,12 +5,14 @@ on:
   pull_request:
     paths:
       - 'update-release-ticket-status/**'
+      - 'shared/**'
       - '.github/workflows/test-update-release-ticket-status.yml'
   push:
     branches:
       - branch-*
     paths:
       - 'update-release-ticket-status/**'
+      - 'shared/**'
       - '.github/workflows/test-update-release-ticket-status.yml'
   workflow_dispatch:
 

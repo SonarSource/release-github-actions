@@ -5,12 +5,14 @@ on:
   pull_request:
     paths:
       - 'get-jira-release-notes/**'
+      - 'shared/**'
       - '.github/workflows/test-get-jira-release-notes.yml'
   push:
     branches:
       - branch-*
     paths:
       - 'get-jira-release-notes/**'
+      - 'shared/**'
       - '.github/workflows/test-get-jira-release-notes.yml'
   workflow_dispatch:
 
