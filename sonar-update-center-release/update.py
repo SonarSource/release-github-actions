@@ -56,11 +56,13 @@ def main():
         if insert_block_after_next_blank and stripped == '':
             output_lines.append(line)
             v = args.version
-            output_lines.append(f'{v}.description={args.description}\n')
-            output_lines.append(f'{v}.date={args.date}\n')
-            output_lines.append(f'{v}.changelogUrl={args.changelogUrl}\n')
-            output_lines.append(f'{v}.downloadUrl={args.downloadUrl}\n')
-            output_lines.append('\n')
+            output_lines.extend([
+                f'{v}.description={args.description}\n',
+                f'{v}.date={args.date}\n',
+                f'{v}.changelogUrl={args.changelogUrl}\n',
+                f'{v}.downloadUrl={args.downloadUrl}\n',
+                '\n',
+            ])
             insert_block_after_next_blank = False
             continue
 
