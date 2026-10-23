@@ -7,7 +7,6 @@ This script automates creating a version in Jira.
 
 import argparse
 import os
-import re
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'shared'))
@@ -18,12 +17,11 @@ from jira.exceptions import JIRAError
 def normalize_version_name(version_name):
     """
     Normalizes a version name by removing .0 patch suffix.
-    For example: 1.2.0 -> 1.2, but 1.2.4 stays as 1.2.4
+    For example: 1.2.0 -> 1.2, but 1.2.4 stays as 1.2.4 and 12.0 stays as 12.0
     """
-    # Match versions ending in .0 (e.g., 1.2.0, 10.20.0)
-    match = re.match(r'^(.+)\.0$', version_name)
-    if match:
-        return match.group(1)
+    parts = version_name.split('.')
+    if len(parts) > 2 and parts[-1] == '0':
+        return '.'.join(parts[:-1])
     return version_name
 
 
