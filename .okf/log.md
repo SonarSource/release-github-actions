@@ -1,5 +1,11 @@
 # Update Log
 
+## 2026-10-27
+* **Jira version from the release branch**: [automated-release](/workflows/automated-release.md)
+  now passes the releasability-resolved `RELEASE_VERSION` to `get-jira-version`. Previously, with
+  `check-releasability` enabled, it fell back to master's version (e.g. `2.54` for a
+  `branch-2.53.1` release).
+
 ## 2026-10-06
 * **Automatic integration ticket Fix versions**: Selects versions by edition, excluding
   `sonar-enterprise` tags; adds `secret-name`, forwarded by `automated-release.yml`.
