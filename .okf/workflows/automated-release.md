@@ -109,6 +109,11 @@ Outputs: `new-version` (Jira version name), `sqaa-pull-request-url`.
   `code-quality-leads-slack-notification: false` or the run uses the Jira sandbox (dry run).
   The destination is fixed in the orchestrator; the existing caller-provided full-summary
   `slack-channel` notification remains independent.
+- **Jira version follows the selected branch**: `prepare-release` passes the already-resolved
+  release version (from `check-releasability`, or its own `get-release-version` step when that
+  job is skipped) to [get-jira-version](/actions/get-jira-version.md) as `RELEASE_VERSION`.
+  Without it, `get-jira-version` re-resolves via `get-release-version` with the default `master`
+  branch, so a `branch-X.Y.Z` release would use master's Jira version.
 - This workflow has been the subject of an [architecture review](/decisions/architecture-review-2026-07.md)
   identifying reliability, testability, and observability gaps — see the
   [risks](/risks/index.md) directory.

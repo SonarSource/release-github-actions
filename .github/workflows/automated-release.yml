@@ -512,6 +512,8 @@ jobs:
       - name: Get Jira Version
         id: get-jira-version
         uses: SonarSource/release-github-actions/get-jira-version@master
+        env:
+          RELEASE_VERSION: ${{ needs.check-releasability.outputs.release-version || steps.get-release-version.outputs.release-version }}
 
       - name: Get Jira Release Notes
         id: get-jira-release-notes
