@@ -1,0 +1,43 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>SonarSource/renovate-config:languages-team"
+  ],
+  "schedule": [
+    // Run monthly on a first Wednesday before 4am.
+    // Note: according to Renovate docs, minutes should always be set to a star.
+    "* 0-4 1-7 * 3"
+  ],
+  "rebaseWhen": "conflicted",
+  "internalChecksAsSuccess": true,
+  "enabledManagers": [
+    "github-actions",
+    "custom.regex",     // keeps the preset's mise-version manager
+    "pip_requirements",
+    "pyenv"
+  ],
+  "packageRules": [
+    {
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchPackageNames": [
+        "SonarSource/*"
+      ],
+      "pinDigests": false,
+      "groupName": "all Sonar GitHub Actions",
+      "groupSlug": "all-sonar-github-actions"
+    },
+    {
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchPackageNames": [
+        "!SonarSource/*"
+      ],
+      "pinDigests": true,
+      "groupName": "all third-party GitHub Actions",
+      "groupSlug": "all-3rd-party-github-actions"
+    }
+  ]
+}
