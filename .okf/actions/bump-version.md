@@ -14,6 +14,11 @@ build files, optionally excluding specific modules, and opens a pull request wit
 Used as the `bump-version` step in [automated-release](/workflows/automated-release.md) to
 prepare the next development iteration after a release.
 
+For `tool=maven`, the action authenticates to Repox with the calling repository's
+public/private reader role from Vault. Explicit Maven settings mirror all repositories
+through Repox, including parent POM and plugin resolution; credentials are scoped to the
+version-bump step. Callers must grant `id-token: write` for Vault authentication.
+
 # Schema
 
 | Input | Description | Required | Default |

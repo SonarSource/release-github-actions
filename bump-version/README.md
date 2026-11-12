@@ -36,5 +36,6 @@ This action updates the version in Maven and Gradle files across your repository
 
 ## How it works
 - If `tool` is set to `maven`, runs `mvn versions:set` to update the version. The calling repository must provide a `mise.toml` that specifies `maven` and a JDK — these are installed via `mise-action` before `mvn versions:set` runs.
+- Maven uses the action's settings to mirror all repositories through Repox, including parent POMs, dependencies, and plugins. Reader credentials come from Vault using the calling repository's public/private reader role and are scoped to the version-bump step. The calling job must grant `id-token: write` for Vault authentication.
 - Otherwise, updates all `pom.xml` and `gradle.properties` files to the new version, skipping modules listed in `excluded-modules`.
 - Commits changes and creates a pull request.
