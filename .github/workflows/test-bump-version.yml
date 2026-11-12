@@ -26,3 +26,22 @@ jobs:
         run: |
           bash bump-version/test_bump_version.sh
 
+      - name: Check Maven repository routing
+        shell: python
+        run: |
+          import xml.etree.ElementTree as ET
+
+          ns = {"m": "http://maven.apache.org/SETTINGS/1.2.0"}
+          settings = ET.parse("bump-version/maven-settings.xml")
+          mirrors = settings.findall("m:mirrors/m:mirror", ns)
+          assert len(mirrors) == 1
+          mirror = mirrors[0]
+          assert mirror.findtext("m:mirrorOf", namespaces=ns) == "*", "All repositories must use Repox"
+          assert mirror.findtext("m:url", namespaces=ns) == "https://repox.jfrog.io/artifactory/sonarsource"
+          servers = settings.findall("m:servers/m:server", ns)
+          assert len(servers) == 1
+          server = servers[0]
+          assert server.findtext("m:id", namespaces=ns) == mirror.findtext("m:id", namespaces=ns)
+          assert server.findtext("m:username", namespaces=ns) == "${env.ARTIFACTORY_USERNAME}"
+          assert server.findtext("m:password", namespaces=ns) == "${env.ARTIFACTORY_ACCESS_TOKEN}"
+

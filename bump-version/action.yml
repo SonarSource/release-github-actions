@@ -40,16 +40,27 @@ runs:
       version: 2026.10.17
     if: ${{ inputs.tool == 'maven' }}
 
+  - name: Get Repox reader credentials
+    if: ${{ inputs.tool == 'maven' }}
+    id: artifactory
+    uses: SonarSource/vault-action-wrapper@v3
+    with:
+      secrets: |
+        development/artifactory/token/{REPO_OWNER_NAME_DASH}-${{ github.event.repository.visibility == 'public' && 'public-reader' || 'private-reader' }} username | ARTIFACTORY_USERNAME;
+        development/artifactory/token/{REPO_OWNER_NAME_DASH}-${{ github.event.repository.visibility == 'public' && 'public-reader' || 'private-reader' }} access_token | ARTIFACTORY_ACCESS_TOKEN;
+
   - name: Bump version
     shell: bash
     env:
       TOOL: ${{ inputs.tool }}
       VERSION: "${{ inputs.version }}-SNAPSHOT"
       EXCLUDED_MODULES: ${{ inputs.excluded-modules || '' }}
+      ARTIFACTORY_USERNAME: ${{ steps.artifactory.outputs.vault && fromJSON(steps.artifactory.outputs.vault).ARTIFACTORY_USERNAME || '' }}
+      ARTIFACTORY_ACCESS_TOKEN: ${{ steps.artifactory.outputs.vault && fromJSON(steps.artifactory.outputs.vault).ARTIFACTORY_ACCESS_TOKEN || '' }}
     run: |
       case "$TOOL" in
         maven)
-          mvn versions:set -DgenerateBackupPoms=false -DnewVersion="${VERSION}"
+          mvn --batch-mode --settings "${GITHUB_ACTION_PATH}/maven-settings.xml" versions:set -DgenerateBackupPoms=false -DnewVersion="${VERSION}"
           ;;
         '')
           bash "${GITHUB_ACTION_PATH}/bump_version.sh"

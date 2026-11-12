@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.2.0">
+  <mirrors>
+    <mirror>
+      <id>repox</id>
+      <mirrorOf>*</mirrorOf>
+      <url>https://repox.jfrog.io/artifactory/sonarsource</url>
+    </mirror>
+  </mirrors>
+  <servers>
+    <server>
+      <id>repox</id>
+      <username>${env.ARTIFACTORY_USERNAME}</username>
+      <password>${env.ARTIFACTORY_ACCESS_TOKEN}</password>
+    </server>
+  </servers>
+</settings>
