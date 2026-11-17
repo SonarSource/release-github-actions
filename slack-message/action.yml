@@ -21,7 +21,7 @@ runs:
 
     - name: Convert Markdown to Slack
       id: slackify
-      uses: LoveToKnow/slackify-markdown-action@698a1d4d0ff1794152a93c03ee8ca5e03a310d4e # v1.1.1
+      uses: step-security/slackify-markdown-action@a529cd4b9b199c5a0acd7d05e099eb53b8387188 # v1.1.3
       with:
         text: ${{ inputs.message-markdown }}
 
