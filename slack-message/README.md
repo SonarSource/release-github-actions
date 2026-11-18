@@ -15,5 +15,5 @@ Unlike `rtCamp/action-slack-notify`, this action uses `slackapi/slack-github-act
 
 This action depends on:
 
-- [LoveToKnow/slackify-markdown-action](https://github.com/LoveToKnow/slackify-markdown-action) to convert markdown to Slack's mrkdwn format
+- [step-security/slackify-markdown-action](https://github.com/step-security/slackify-markdown-action) to convert markdown to Slack's mrkdwn format
 - [slackapi/slack-github-action](https://github.com/slackapi/slack-github-action) to send the message via `chat.postMessage`
