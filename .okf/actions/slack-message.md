@@ -12,7 +12,7 @@ timestamp: 2026-07-15T00:00:00Z
 Posts a markdown message (converted to Slack mrkdwn) to a channel. Unlike
 `rtCamp/action-slack-notify`, uses `slackapi/slack-github-action` and needs no Docker. The
 caller builds the message string; this action only delivers it. Depends on
-`LoveToKnow/slackify-markdown-action` for markdown conversion and
+`step-security/slackify-markdown-action` for markdown conversion and
 `slackapi/slack-github-action` for `chat.postMessage`.
 
 # Schema
